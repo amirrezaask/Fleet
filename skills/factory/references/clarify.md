@@ -8,7 +8,9 @@ knowledge about affected areas/workflows. Inspect actors, writers and interfaces
 beyond the edited files. Keep future requirements in the brief until implemented;
 do not initialize a full project baseline without ADMIN's `/atlas` command.
 
-Ask the highest-impact unresolved question first. Keep related questions small
+When the request is large or ambiguous, run the [grilling method](grilling.md):
+ask the whole askable frontier in numbered rounds with recommended answers.
+Otherwise ask the highest-impact unresolved question first. Keep related questions small
 enough to answer together; follow ADMIN's vocabulary and build on their answers.
 Do not ask a fixed questionnaire or revisit settled decisions. Offer a concrete
 proposal to correct when that is more useful than asking an abstract question.

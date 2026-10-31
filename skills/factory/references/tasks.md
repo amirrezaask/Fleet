@@ -36,6 +36,9 @@ contradict, its parent brief; record "Approval: not required, subtask of
 `<parent>`". The board shows a `done/total subtasks` count on the parent card and
 does not move subtasks; moving a parent moves its subtasks with it.
 
+Dependencies between sibling subtasks live in `TASK.md` under `## Depends on`;
+see [subtask graphs](subtasks.md).
+
 Subtasks nest recursively without limit: any subtask may hold its own
 `subtasks/<status>/…` tree with the same structure and rules. The parent card's
 count covers every descendant at all depths.

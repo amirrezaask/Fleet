@@ -13,5 +13,8 @@ updated: "<YYYY-MM-DD>"
 ## Outcome
 <Link to docs/reports/YYYY-MM-DD-task-name.md after the debrief is written.>
 
+## Depends on
+<Sibling subtasks that must be done first, or None. Subtasks only.>
+
 ## Subtasks
 <Names of subtasks under subtasks/<status>/, or None.>

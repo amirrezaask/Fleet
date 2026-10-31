@@ -33,6 +33,9 @@ Factory may read targeted maintenance references without invoking a full baselin
 - **Maintain specs after a change or reconcile drift:** read
   [maintenance](references/maintenance.md). A new Factory task is unnecessary
   for standalone documentation work.
+- **Resolve vocabulary and intent with ADMIN:** when evidence leaves consequential
+  terms or rules unresolved, run the optional [interview pass](references/interview.md)
+  and record settled answers in `docs/domain.md`.
 - **Discuss a future system:** draft proposed rules with ADMIN; keep them
   distinguishable from implemented behavior. Factory owns delivery briefs.
 

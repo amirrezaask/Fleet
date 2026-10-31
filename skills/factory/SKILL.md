@@ -65,6 +65,9 @@ parent: `docs/tasks/<status>/<task>/subtasks/<status>/<subtask>/`. Differences:
 - A parent moves to `done` only after every subtask is `done` and the parent's
   own acceptance is verified. Subtasks reuse the parent's debrief unless they
   produced findings worth their own.
+- Subtasks may depend on sibling subtasks. Read [subtask graphs](references/subtasks.md)
+  to cut vertical slices, record dependencies and run the ready subtasks in
+  parallel with subagents.
 - Nesting is recursive and unlimited: a subtask can have its own `subtasks/`,
   and those can have theirs. Every level has the same files, statuses and rules,
   and each brief refines its immediate parent's. A task moves to `done` only
