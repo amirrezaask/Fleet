@@ -248,7 +248,7 @@ function main(): void {
     },
     {
       source: join(repo, "skills", "factory", "assets", "task-board", "bin.js"),
-      destination: join(home, ".local", "bin", "factoryboard"),
+      destination: join(home, ".local", "bin", "production-line"),
     },
   ];
 
