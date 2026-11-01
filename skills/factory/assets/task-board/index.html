@@ -128,6 +128,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   ChevronRight,
   ChevronsUpDown,
   CircleAlert,
@@ -765,6 +766,70 @@ function sendTargets(id: string) {
   ];
 }
 
+function SendMenu({ taskId, className }: { taskId: string; className?: string }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    const away = (event: MouseEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    };
+
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", escape);
+
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} data-send-menu={open ? "" : undefined} className={cn("z-10", className)}>
+      <Button
+        ref={triggerRef}
+        variant="outline"
+        size="sm"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <Send aria-hidden />
+        Send to
+        <ChevronDown className="text-faint" aria-hidden />
+      </Button>
+      {open ? (
+        <div
+          role="menu"
+          aria-label="Send task to"
+          className="absolute top-full right-0 mt-2 w-40 rounded-xl border border-border bg-card p-1.5 shadow-dialog"
+        >
+          {sendTargets(taskId).map((target) => (
+            <a
+              key={target.name}
+              role="menuitem"
+              href={target.href}
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center rounded-lg px-3 py-2 text-body transition-colors duration-150 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+            >
+              {target.name}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TaskReader({
   root,
   onClose,
@@ -869,6 +934,9 @@ function TaskReader({
           event.preventDefault();
           closeRef.current?.focus();
         }}
+        onEscapeKeyDown={(event) => {
+          if (document.querySelector("[data-send-menu]")) event.preventDefault();
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           document
@@ -953,26 +1021,7 @@ function TaskReader({
             </Button>
           </DialogPrimitive.Close>
           {task ? (
-            <div className="absolute top-14 right-4 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 text-meta text-muted-foreground focus-within:ring-2 focus-within:ring-ring hover:bg-muted">
-              <Send className="size-3.5" aria-hidden />
-              <select
-                aria-label="Send task to"
-                value=""
-                className="h-8 cursor-pointer bg-transparent pr-1 focus:outline-none"
-                onChange={(event) => {
-                  window.location.href = event.target.value;
-                }}
-              >
-                <option value="" disabled>
-                  Send to
-                </option>
-                {sendTargets(task.id).map((target) => (
-                  <option key={target.name} value={target.href}>
-                    {target.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SendMenu taskId={task.id} className="absolute top-14 right-4" />
           ) : null}
         </header>
         <DialogPrimitive.Description className="sr-only">
