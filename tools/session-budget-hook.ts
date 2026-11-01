@@ -190,12 +190,30 @@ function blockerSection(markdown: string): string {
     .trim();
 }
 
-// A task is escalated when its TASK.md Blocker section names a real blocker.
-function escalated(task: string): boolean {
-  const file = join(task, "TASK.md");
+// Text between <h2>Blocker</h2> and the next <h2>, with tags and entities removed.
+function htmlBlockerSection(html: string): string {
+  const section = /<h2[^>]*>\s*Blocker\s*<\/h2>([\s\S]*?)(?=<h2[\s>]|<\/main>|<\/body>|$)/i.exec(html);
 
-  if (!existsSync(file)) return false;
-  const blocker = blockerSection(readFileSync(file, "utf8"));
+  return (section?.[1] ?? "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// A task is escalated when its TASK.html (or legacy TASK.md) Blocker section names a real blocker.
+function escalated(task: string): boolean {
+  const html = join(task, "TASK.html");
+  const markdown = join(task, "TASK.md");
+
+  const blocker = existsSync(html)
+    ? htmlBlockerSection(readFileSync(html, "utf8"))
+    : existsSync(markdown)
+      ? blockerSection(readFileSync(markdown, "utf8"))
+      : "";
 
   return blocker !== "" && !/^(none\.?|<[^>]*>)$/i.test(blocker);
 }
@@ -204,7 +222,7 @@ function escalated(task: string): boolean {
 // A task moved to done/ or blocked/ no longer exists at the recorded path.
 function openTasks(text: string, cwd: string): string[] {
   const tasks = new Set<string>();
-  const documents = /docs\/tasks\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF)\.md/g;
+  const documents = /docs\/tasks\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF)\.(?:html|md)/g;
 
   for (const match of text.matchAll(documents)) {
     // The root is the session's cwd, or an absolute prefix (which may contain
@@ -260,7 +278,7 @@ function sessionStart(input: HookInput): void {
 
   const resumed =
     input.source === "compact" || input.source === "resume"
-      ? " Context was compacted or resumed: re-read the task's TASK.md, PLAN.md Handoff and the git diff before the next step."
+      ? " Context was compacted or resumed: re-read the task's TASK.html, PLAN.html Handoff (or legacy .md) and the git diff before the next step."
       : "";
 
   const listed = tasks.length
@@ -269,7 +287,7 @@ function sessionStart(input: HookInput): void {
 
   context(
     "SessionStart",
-    `Autonomous session (AGENTS.md): never ask ADMIN anything or end a turn waiting for ADMIN; decide, record the decision in PLAN.md, continue. Before working a task, call list_sessions: if a live session already works that task, take a different unowned subtask or end. Title this session after its task. Start other sessions only for independent subtasks. Never start one to continue this task: Claude Code compacts the context itself.${resumed}${listed}`,
+    `Autonomous session (AGENTS.md): never ask ADMIN anything or end a turn waiting for ADMIN; decide, record the decision in PLAN.html, continue. Before working a task, call list_sessions: if a live session already works that task, take a different unowned subtask or end. Title this session after its task. Start other sessions only for independent subtasks. Never start one to continue this task: Claude Code compacts the context itself.${resumed}${listed}`,
   );
 }
 
@@ -296,7 +314,7 @@ function newestCall(lines: TranscriptLine[], name: string, pending?: string): nu
 }
 
 const escalation =
-  "Only a change to an approved BRIEF requirement, or an action outside the repository and sessions, goes to ADMIN, and then as the task's Blocker in TASK.md (referenced from the PLAN.md Handoff), never as a question.";
+  "Only a change to an approved BRIEF requirement, or an action outside the repository and sessions, goes to ADMIN, and then as the task's Blocker in TASK.html (referenced from the PLAN.html Handoff), never as a question.";
 
 function preToolUse(input: HookInput): void {
   if (!autonomous) return;
@@ -305,7 +323,7 @@ function preToolUse(input: HookInput): void {
 
   if (tool === "AskUserQuestion") {
     deny(
-      `ADMIN does not answer questions in these sessions. Decide yourself, record the decision and its reason in PLAN.md, and continue. ${escalation}`,
+      `ADMIN does not answer questions in these sessions. Decide yourself, record the decision and its reason in PLAN.html, and continue. ${escalation}`,
     );
 
     return;
@@ -323,7 +341,7 @@ function preToolUse(input: HookInput): void {
 
   if (tool === handOff) {
     deny(
-      "hand_off_to_session forks this whole context into a second worker. Keep working here: Claude Code compacts the context automatically, and the PLAN.md Handoff carries the task across it.",
+      "hand_off_to_session forks this whole context into a second worker. Keep working here: Claude Code compacts the context automatically, and the PLAN.html Handoff carries the task across it.",
     );
 
     return;
@@ -381,7 +399,7 @@ function stop(input: HookInput): void {
 
   emit({
     decision: "block",
-    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.map((task) => relative(cwd, task) || task).join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.md, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.md, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
+    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.map((task) => relative(cwd, task) || task).join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.html, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.html, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
   });
 }
 

@@ -8,14 +8,14 @@ headings. Contracts stay in areas and decision reasoning stays in linked tasks.
 
 | Destination | Owns | Template |
 | --- | --- | --- |
-| `docs/README.md` | Purpose, actors, scope, navigation, coverage and reading routes | [README](../templates/README_TEMPLATE.md) |
-| `docs/architecture.md` | Components, boundaries, communication, deployables and source map | [Architecture](../templates/ARCHITECTURE_TEMPLATE.md) |
-| `docs/domain.md` | Shared concepts, canonical terms, relationships and shared business rules | [Domain](../templates/DOMAIN_TEMPLATE.md) |
-| `docs/data-model.md` | Entities, identity, relationships, authority, derived copies and lifecycle | [Data model](../templates/DATA_MODEL_TEMPLATE.md) |
-| `docs/quality.md` | Accepted quality requirements, evidence and current limitations | [Quality](../templates/QUALITY_TEMPLATE.md) |
-| `docs/operations.md` | Runtime/configuration, release, monitoring, backup and recovery | [Operations](../templates/OPERATIONS_TEMPLATE.md) |
-| `docs/areas/<name>.md` | Responsibility, standing rules, state ownership and contracts | [Area](../templates/AREA_TEMPLATE.md) |
-| `docs/workflows/<name>.md` | Actor goal, trigger, sequence, outcomes and recovery | [Workflow](../templates/WORKFLOW_TEMPLATE.md) |
+| `docs/README.html` | Purpose, actors, scope, navigation, coverage and reading routes | [README](../templates/README_TEMPLATE.html) |
+| `docs/architecture.html` | Components, boundaries, communication, deployables and source map | [Architecture](../templates/ARCHITECTURE_TEMPLATE.html) |
+| `docs/domain.html` | Shared concepts, canonical terms, relationships and shared business rules | [Domain](../templates/DOMAIN_TEMPLATE.html) |
+| `docs/data-model.html` | Entities, identity, relationships, authority, derived copies and lifecycle | [Data model](../templates/DATA_MODEL_TEMPLATE.html) |
+| `docs/quality.html` | Accepted quality requirements, evidence and current limitations | [Quality](../templates/QUALITY_TEMPLATE.html) |
+| `docs/operations.html` | Runtime/configuration, release, monitoring, backup and recovery | [Operations](../templates/OPERATIONS_TEMPLATE.html) |
+| `docs/areas/<name>.html` | Responsibility, standing rules, state ownership and contracts | [Area](../templates/AREA_TEMPLATE.html) |
+| `docs/workflows/<name>.html` | Actor goal, trigger, sequence, outcomes and recovery | [Workflow](../templates/WORKFLOW_TEMPLATE.html) |
 
 `docs/tasks/<status>/<task>/` and `docs/reports/` retain Factory's conventions. Atlas does
 not scaffold task records during a baseline. Historical docs remain where they

@@ -26,7 +26,7 @@ Questions worth ADMIN's time:
 
 ## Feeding the documents
 
-Write answers into [docs/domain.md](../templates/DOMAIN_TEMPLATE.md) as they are
+Write answers into [docs/domain.html](../templates/DOMAIN_TEMPLATE.html) as they are
 settled, not at the end:
 
 - Add or correct the term row: meaning, aliases/translations, owning area.

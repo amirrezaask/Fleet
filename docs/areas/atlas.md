@@ -23,7 +23,8 @@ full baseline. Source: `skills/atlas/SKILL.md` and `agents/openai.yaml`.
 <a id="ATL-002"></a>
 ### ATL-002: Document ownership
 
-A full baseline creates six root Markdown documents directly under `docs/`:
+A full baseline creates six root HTML documents directly under `docs/` (Atlas
+HTML templates; existing Markdown specs stay in place unless migration is requested):
 README, architecture, domain, data-model, quality and operations. Area files own
 ground rules, state ownership and relevant contracts; workflow files own actor
 triggers, steps, outcomes and recovery. Tasks/reports keep Factory's conventions;
@@ -47,8 +48,8 @@ Sources: Atlas discovery, area, workflow and synthesis references.
 
 Factory reads affected specs before planning and reconciles them after verified
 delivery. Selected global installs include both Factory and Atlas. The global
-SPEC_TEMPLATE.md alias resolves to Atlas's AREA_TEMPLATE.md; managed former
-Factory links migrate without replacing unrelated content. Sources:
+SPEC_TEMPLATE.html alias resolves to Atlas's AREA_TEMPLATE.html; managed former
+Factory links and retired Markdown template aliases migrate without replacing unrelated content. Sources:
 `skills/factory/references/specifications.md`, `tools/install.ts` and installer tests.
 
 ## Contracts and decisions

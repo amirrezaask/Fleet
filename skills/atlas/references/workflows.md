@@ -93,7 +93,7 @@ qualified by scenario, revision and environment.
 
 ## Write the workflow
 
-Use the [workflow template](../templates/WORKFLOW_TEMPLATE.md). Include actor,
+Use the [workflow template](../templates/WORKFLOW_TEMPLATE.html). Include actor,
 goal, trigger, preconditions, participating areas, ordered steps, branches and
 completion conditions. Reference area rule anchors instead of redefining them.
 Include relevant state transitions and recovery, with evidence and unknowns.

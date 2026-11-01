@@ -6,9 +6,9 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 
 - `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `BRIEF.html`, and mutable `PLAN.html`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
 - `docs/reports/`: every benchmark, test and verification result, one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
-- `docs/README.md`, `docs/architecture.md`, `docs/domain.md`, `docs/data-model.md`, `docs/quality.md`, and `docs/operations.md`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
-- `docs/areas/<area-name>.md`: ground rules, state ownership, and relevant contracts for each software area.
-- `docs/workflows/<flow-name>.md`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
+- `docs/README.html`, `docs/architecture.html`, `docs/domain.html`, `docs/data-model.html`, `docs/quality.html`, and `docs/operations.html`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
+- `docs/areas/<area-name>.html`: ground rules, state ownership, and relevant contracts for each software area.
+- `docs/workflows/<flow-name>.html`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.

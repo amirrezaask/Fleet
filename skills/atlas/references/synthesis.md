@@ -11,7 +11,7 @@ Return to the discovery inventory and claim evidence. Use this prompt:
 > checks, inference or an unsupported assumption? Which conflicts remain?
 
 Inspect missing surfaces before claiming coverage. For a large codebase, a compact
-coverage table in `docs/README.md` records area, entry/actor families, traced flows,
+coverage table in `docs/README.html` records area, entry/actor families, traced flows,
 evidence depth and remaining gaps. Summarize families and link their registrations
 instead of copying a catalog of private functions. Label a partial baseline as
 partial and retain the next reading frontier; do not silently shrink the scope.
@@ -19,7 +19,7 @@ partial and retain the next reading frontier; do not silently shrink the scope.
 ## Give each fact one home
 
 Follow [document responsibilities](documents.md). Keep shared terminology in
-`domain.md`, cross-area data authority in `data-model.md`, area rules/contracts in
+`domain.html`, cross-area data authority in `data-model.html`, area rules/contracts in
 the owning area, and sequencing in workflows. Architecture describes observed
 components and their interactions even when the code's boundaries are untidy.
 Cross-cutting rules have one canonical owner and links from affected areas.
@@ -44,7 +44,7 @@ not permanent specification tables full of transient runtime state.
 
 For a documentation change, first run applicable existing regression checks;
 exercise tooling if installation or scripts changed. Do not claim application
-regression coverage from a Markdown link check. If application execution is
+regression coverage from a link check. If application execution is
 unavailable, record that limitation and validate source claims without inventing
 runtime results.
 Inspect actual check output and exercised scenarios. A successful command that
@@ -93,7 +93,7 @@ while intent remains unresolved. Ask for review of consequential intent gaps;
 do not declare inferred requirements accepted by virtue of saving the file.
 Do not impose an extra approval before writing docs already requested by ADMIN.
 
-Keep the durable navigation/coverage summary in `docs/README.md`, unresolved
+Keep the durable navigation/coverage summary in `docs/README.html`, unresolved
 questions with their owning document, and task verification in Factory's debrief.
 Remove scratch inventories, temporary evaluation files and stray processes.
 Read [maintenance](maintenance.md) for the change-driven update cycle.

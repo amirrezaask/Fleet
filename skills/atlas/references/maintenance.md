@@ -8,7 +8,7 @@ Only ADMIN's `/atlas` command starts existing-project initialization.
 
 ## Before planning a change
 
-Read `docs/README.md`, the relevant root documents, areas and workflows. Follow
+Read `docs/README.html`, the relevant root documents, areas and workflows. Follow
 their code/schema anchors and reconcile the actual revision and current diff.
 Existing legacy specs remain binding until an authorized migration or amendment.
 
@@ -67,7 +67,7 @@ For a large remaining gap, discover the affected area using the inventory and
 trace prompts in [discovery](discovery.md), [areas](areas.md) and
 [workflows](workflows.md). Keep this scoped to the authorized change; do not turn
 it into full initialization without `/atlas`. Update the coverage frontier in
-`docs/README.md`; do not claim
+`docs/README.html`; do not claim
 that a small diff verified the entire system. Recheck links and terminology after
 moving or splitting a document. Report unresolved accepted-rule mismatches to
 Factory; they leave the affected delivery task incomplete.

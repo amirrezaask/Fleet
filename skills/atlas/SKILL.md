@@ -35,7 +35,7 @@ Factory may read targeted maintenance references without invoking a full baselin
   for standalone documentation work.
 - **Resolve vocabulary and intent with ADMIN:** when evidence leaves consequential
   terms or rules unresolved, run the optional [interview pass](references/interview.md)
-  and record settled answers in `docs/domain.md`.
+  and record settled answers in `docs/domain.html`.
 - **Discuss a future system:** draft proposed rules with ADMIN; keep them
   distinguishable from implemented behavior. Factory owns delivery briefs.
 
@@ -67,19 +67,23 @@ For a full baseline, create the following directly under `docs/`:
 
 ```text
 docs/
-  README.md                 # Purpose, scope, reading map and discovery coverage
-  architecture.md           # Components, boundaries, communication and deployment shape
-  domain.md                 # Canonical business concepts and shared rules
-  data-model.md             # Entities, relationships, state authority and lifecycle
-  quality.md                # Accepted quality requirements and observed mechanisms
-  operations.md             # Configuration, execution, release and recovery
-  areas/<area-name>.md      # Ground rules, ownership and relevant contracts
-  workflows/<flow-name>.md  # Actor triggers, steps, outcomes and failures
+  README.html                 # Purpose, scope, reading map and discovery coverage
+  architecture.html           # Components, boundaries, communication and deployment shape
+  domain.html                 # Canonical business concepts and shared rules
+  data-model.html             # Entities, relationships, state authority and lifecycle
+  quality.html                # Accepted quality requirements and observed mechanisms
+  operations.html             # Configuration, execution, release and recovery
+  areas/<area-name>.html      # Ground rules, ownership and relevant contracts
+  workflows/<flow-name>.html  # Actor triggers, steps, outcomes and failures
   tasks/                    # Factory briefs, plans and decision reasoning
   reports/                  # Verification evidence and debriefs
 ```
 
-Use the [document guide](references/documents.md) and its linked templates.
+Every new specification is a self-contained HTML file built from its
+[template](templates/) with the shared Factory tokens; never write new Markdown
+specs. Diagrams are inline SVG following [HBS](../hbs/SKILL.md). Existing Markdown
+specs stay readable and are edited in place; convert them only when ADMIN requests
+migration. Use the [document guide](references/documents.md) and its linked templates.
 Create area and workflow files for actual in-scope capabilities. Keep a short
 explicit “not applicable” explanation in a root document when that concern does
 not apply; do not fill it with invented infrastructure. For scoped work, update
@@ -101,7 +105,7 @@ Separately distinguish **accepted requirements** from **observed baseline** and
 **proposals**. Source support alone does not turn behavior into an accepted rule.
 
 Preserve existing requirement IDs and meaning. Use document-qualified references
-such as `areas/inventory.md#INV-003`; give new requirements stable local anchors.
+such as `areas/inventory.html#INV-003`; give new requirements stable local anchors.
 Never weaken or reinterpret accepted requirements to match code. Report the
 conflict and obtain ADMIN's authorization before amending them. Write supported
 baseline observations with their status and unresolved intent visible; do not

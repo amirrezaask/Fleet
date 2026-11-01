@@ -18,7 +18,7 @@ Recover vocabulary from accepted docs and actual usage. Group concepts by
 business meaning. Preserve intentional translation boundaries; do not rename
 the source or impose one global meaning on distinct domain concepts. Record
 uncertain terms as unresolved rather than inventing rationale. Shared terms
-belong in `domain.md`; detailed area policy belongs here.
+belong in `domain.html`; detailed area policy belongs here.
 
 ## State authority and lifecycle
 
@@ -36,7 +36,7 @@ database invariant. A field called `status` does not prove a state machine.
 Document multiple authoritative writers if that is what the code supports.
 
 Keep a working entity table with identity, authority, writers, relationships,
-invariants and evidence. Publish the cross-area model in `data-model.md`; link
+invariants and evidence. Publish the cross-area model in `data-model.html`; link
 area-specific invariants rather than maintaining two independent formulations.
 
 ## Extract behavior into rules
@@ -58,7 +58,7 @@ For each candidate rule:
 6. Classify the statement's evidence and authority before writing it.
 
 Use a condition/action/outcome or EARS-style sentence where helpful. Give accepted
-rules stable IDs with explicit Markdown anchors, such as `INV-003`. Observed
+rules stable IDs with explicit element id anchors, such as `INV-003`. Observed
 baseline rules can use stable IDs too, but keep their observed status visible.
 Preserve existing IDs during updates and qualify references by document.
 

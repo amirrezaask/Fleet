@@ -208,7 +208,7 @@ function main(): void {
     { name: "BRIEF_TEMPLATE.html", path: "skills/factory/templates/BRIEF_TEMPLATE.html" },
     { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
     { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
-    { name: "SPEC_TEMPLATE.md", path: "skills/atlas/templates/AREA_TEMPLATE.md" },
+    { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
   ];
 
   for (const path of [...globalFiles.map((file) => file.path), join("tools", budgetHook)]) {
@@ -226,13 +226,13 @@ function main(): void {
         destination: join(base, name),
         previousSources: [
           join(repo, name),
-          ...(name === "SPEC_TEMPLATE.md"
-            ? [join(repo, "skills/factory/templates/SPEC_TEMPLATE.md")]
+          ...(name === "SPEC_TEMPLATE.html"
+            ? [join(repo, "skills/factory/templates/SPEC_TEMPLATE.html")]
             : []),
           join(
             repo,
             "skills",
-            name === "SPEC_TEMPLATE.md" ? "specification" : "communication",
+            name === "SPEC_TEMPLATE.html" ? "specification" : "communication",
             "templates",
             name,
           ),
@@ -297,6 +297,28 @@ function main(): void {
 
     if (!managed(target, source) && !previousSources?.includes(target))
       throw new Error(`Refusing unrelated symlink: ${destination} -> ${target}`);
+  }
+
+  // Markdown template aliases replaced by HTML ones; removed only when they point
+  // at a location this repository managed, even if the target no longer exists.
+  const retiredTemplates = ["BRIEF", "PLAN", "DEBRIEF", "SPEC"].map((kind) => `${kind}_TEMPLATE.md`);
+
+  for (const base of globals) {
+    for (const name of retiredTemplates) {
+      const alias = join(base, name);
+
+      if (!present(alias) || !lstatSync(alias).isSymbolicLink()) continue;
+      const target = resolve(base, readlinkSync(alias));
+
+      const formerTargets = [
+        join(repo, name),
+        join(repo, "skills", "factory", "templates", name),
+        join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.md"),
+        join(repo, "skills", name === "SPEC_TEMPLATE.md" ? "specification" : "communication", "templates", name),
+      ];
+
+      if (formerTargets.includes(target)) removals.push(alias);
+    }
   }
 
   for (const base of globals) {

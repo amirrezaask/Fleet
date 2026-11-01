@@ -46,7 +46,7 @@ Track coverage as **located**, **traced**, **checked**, **unresolved**, or
 **out of scope**, with a reason or next source. “Checked” states the actual check;
 it does not imply runtime execution. Keep this working table in context or
 gitignored scratch space. The durable scope/coverage summary belongs in
-`docs/README.md`, rather than a parallel discovery log.
+`docs/README.html`, rather than a parallel discovery log.
 
 ## Propose areas from responsibility
 

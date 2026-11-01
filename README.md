@@ -38,7 +38,8 @@ and its "Know your unknowns" pages.
 | `skills/hbs/references/writing.md` | First screen, ordering by what ADMIN acts on, evidence, trade-offs, honesty devices, unknowns |
 | `skills/hbs/templates/BASE_TEMPLATE.html` | Starting shell: tokens, prompt box, stat band, timeline, cards, diff, toggle, SVG classes, live reply and copy helper |
 
-Factory's HTML templates keep their own structure and reuse the same tokens.
+Factory's task/brief/plan/debrief templates and Atlas's specification templates are HTML too;
+they keep their own structure and reuse the same tokens.
 
 ## Atlas specifications
 
@@ -65,14 +66,14 @@ Contracts stay with areas; decision reasoning stays in linked task plans/debrief
 
 ```text
 docs/
-  README.md
-  architecture.md
-  domain.md
-  data-model.md
-  quality.md
-  operations.md
-  areas/<area-name>.md
-  workflows/<flow-name>.md
+  README.html
+  architecture.html
+  domain.html
+  data-model.html
+  quality.html
+  operations.html
+  areas/<area-name>.html
+  workflows/<flow-name>.html
   tasks/<task-name>/
   reports/
 ```
@@ -160,9 +161,9 @@ npm run install:agents -- performance
 
 Selected installs include Factory, Atlas and the global files. The global
 `BRIEF_TEMPLATE.html`, `PLAN_TEMPLATE.html`, `DEBRIEF_TEMPLATE.html`, and
-`SPEC_TEMPLATE.md` aliases remain available. Brief/plan/debrief aliases point into
-`skills/factory/templates/`; SPEC_TEMPLATE.md points to
-`skills/atlas/templates/AREA_TEMPLATE.md`. TASK_TEMPLATE.html is bundled with
+`SPEC_TEMPLATE.html` aliases remain available. Brief/plan/debrief aliases point into
+`skills/factory/templates/`; SPEC_TEMPLATE.html points to
+`skills/atlas/templates/AREA_TEMPLATE.html`. TASK_TEMPLATE.html is bundled with
 Factory, BASE_TEMPLATE.html with HBS; Atlas bundles root/area/workflow
 specification templates. Installing
 through `npx skills` includes bundled resources; install both Factory and Atlas

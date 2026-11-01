@@ -23,7 +23,10 @@ compliance or request an authorized amendment. Record the reason in the task's
 approval record and debrief; Git retains earlier text. Unresolved or unverified
 accepted-rule mismatches leave the delivery task incomplete.
 
-Historical `docs/specs/*.spec.md` files remain binding in their existing location
-unless ADMIN requests migration. Do not silently move them or create a competing
-canonical rule. Link existing documents while using Atlas's structure for newly
-documented areas.
+New and newly documented specifications are HTML files built from Atlas's
+templates (`docs/architecture.html`, `docs/areas/<area>.html`, ...). Historical
+Markdown specs (`docs/*.md`, `docs/areas/*.md`, `docs/specs/*.spec.md`) remain
+binding in their existing location and format unless ADMIN requests migration;
+edit them in place when a verified change touches them. Do not silently move them
+or create a competing canonical rule. Link existing documents while using Atlas's
+structure for newly documented areas.

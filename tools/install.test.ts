@@ -157,7 +157,7 @@ const templateSources = [
   { name: "BRIEF_TEMPLATE.html", path: "skills/factory/templates/BRIEF_TEMPLATE.html" },
   { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
   { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
-  { name: "SPEC_TEMPLATE.md", path: "skills/atlas/templates/AREA_TEMPLATE.md" },
+  { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
 ];
 
 const globalDirectories = [".agents", ".codex", ".claude"];
@@ -208,7 +208,7 @@ test("foreign template aliases and regular files fail preflight without partial 
     isolated((home) => {
       const base = join(home, ".claude");
       mkdirSync(base);
-      const alias = join(base, "SPEC_TEMPLATE.md");
+      const alias = join(base, "SPEC_TEMPLATE.html");
       const foreign = join(home, "foreign.md");
       writeFileSync(foreign, "saved");
 
@@ -244,7 +244,7 @@ test("missing template or required skill fails before any home mutation", () => 
       for (const { name, path } of templateSources) {
         mkdirSync(dirname(join(fixture, path)), { recursive: true });
 
-        if (missing !== "template" || name !== "SPEC_TEMPLATE.md")
+        if (missing !== "template" || name !== "SPEC_TEMPLATE.html")
           writeFileSync(join(fixture, path), "template");
       }
 
@@ -272,7 +272,7 @@ test("migrates former nested template aliases and retires old workflow skills on
         symlinkSync(join(root, "skills", name), join(base, "skills", name));
 
       for (const { name } of templateSources) {
-        const old = name === "SPEC_TEMPLATE.md" ? "specification" : "communication";
+        const old = name === "SPEC_TEMPLATE.html" ? "specification" : "communication";
         symlinkSync(join(root, "skills", old, "templates", name), join(base, name));
       }
     }
@@ -297,23 +297,32 @@ test("migrates former nested template aliases and retires old workflow skills on
     }
   }));
 
-test("migrates the former Factory spec alias to Atlas on selected installs, including dangling links", () =>
+test("retires managed Markdown template aliases on selected installs, including dangling links", () =>
   isolated((home) => {
-    const oldSource = join(root, "skills", "factory", "templates", "SPEC_TEMPLATE.md");
+    const oldSpec = join(root, "skills", "factory", "templates", "SPEC_TEMPLATE.md");
+    const oldArea = join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.md");
+    const oldBrief = join(root, "skills", "factory", "templates", "BRIEF_TEMPLATE.md");
+    const foreign = join(home, "PLAN_TEMPLATE.md");
+    writeFileSync(foreign, "mine");
 
-    for (const directory of globalDirectories) {
+    for (const [index, directory] of globalDirectories.entries()) {
       mkdirSync(join(home, directory));
-      symlinkSync(oldSource, join(home, directory, "SPEC_TEMPLATE.md"));
+      symlinkSync(index === 0 ? oldSpec : oldArea, join(home, directory, "SPEC_TEMPLATE.md"));
+      symlinkSync(oldBrief, join(home, directory, "BRIEF_TEMPLATE.md"));
+      symlinkSync(foreign, join(home, directory, "PLAN_TEMPLATE.md"));
     }
 
     assert.equal(invoke(home, "--dry-run", skill).status, 0);
-    assert.equal(readlinkSync(join(home, ".agents", "SPEC_TEMPLATE.md")), oldSource);
+    assert.equal(readlinkSync(join(home, ".agents", "SPEC_TEMPLATE.md")), oldSpec);
     assert.equal(invoke(home, skill).status, 0);
 
     for (const directory of globalDirectories) {
+      assert.throws(() => lstatSync(join(home, directory, "SPEC_TEMPLATE.md")));
+      assert.throws(() => lstatSync(join(home, directory, "BRIEF_TEMPLATE.md")));
+      assert.equal(readlinkSync(join(home, directory, "PLAN_TEMPLATE.md")), foreign, "foreign link kept");
       assert.equal(
-        readlinkSync(join(home, directory, "SPEC_TEMPLATE.md")),
-        join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.md"),
+        readlinkSync(join(home, directory, "SPEC_TEMPLATE.html")),
+        join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.html"),
       );
       assert.equal(
         readlinkSync(join(home, directory, "skills", "atlas")),
@@ -584,6 +593,16 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     assert.equal(stop("Which option do you want?"), "", "an escalated task may end");
 
     writeFileSync(join(task, "TASK.md"), "## Blocker\nNone\n");
+
+    const html = (blocker: string) =>
+      `<main><h1>Leaf</h1><h2>Blocker</h2>\n<p>${blocker}</p>\n<h2>Outcome</h2><p>None</p></main>`;
+
+    writeFileSync(join(task, "TASK.html"), html("&lt;Reason when blocked; otherwise None.&gt;"));
+    writeFileSync(transcript, `${readCall(join(task, "PLAN.html"))}\n`);
+    assert.match(stop("Which option?"), /"block"/, "TASK.html template placeholder is not a blocker");
+    writeFileSync(join(task, "TASK.html"), html("BRIEF R2 conflicts with the engine API."));
+    assert.equal(stop("Which option do you want?"), "", "an escalated TASK.html task may end");
+
     rmSync(join(home, "docs"), { recursive: true });
     assert.equal(stop("Anything else?"), "", "a finished or moved task may end");
   }));

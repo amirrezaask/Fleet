@@ -2,7 +2,7 @@
 
 Inspect the implementation before planning. Link the approved brief and affected
 area specs and workflows; use qualified references such as `BRIEF:R1` and
-`areas/identity.md#AUTH-003` (or an existing legacy spec's ID) so IDs
+`areas/identity.html#AUTH-003` (or an existing legacy spec's ID) so IDs
 in different documents are not confused. Do not redefine the brief's requirements
 in the plan. Identify preserved requirements alongside new behavior.
 
