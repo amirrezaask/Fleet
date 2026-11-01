@@ -137,6 +137,7 @@ import {
   LoaderCircle,
   Monitor,
   Moon,
+  Send,
   Sun,
   X,
 } from "lucide-react";
@@ -756,6 +757,14 @@ function crumbs(ancestors: Task[], expanded: boolean): Crumb[] {
   return [all[0], { kind: "gap", key: "gap" }, ...all.slice(-2)];
 }
 
+function sendTargets(id: string) {
+  const prompt = encodeURIComponent(`Implement factory ${id}`);
+  return [
+    { name: "Claude", href: `claude://code/new?q=${prompt}` },
+    { name: "Codex", href: `codex://new?prompt=${prompt}` },
+  ];
+}
+
 function TaskReader({
   root,
   onClose,
@@ -867,7 +876,7 @@ function TaskReader({
             ?.focus();
         }}
       >
-        <header className="shrink-0 px-8 pt-6 pr-16 pb-5">
+        <header className="shrink-0 px-8 pt-6 pr-16 pb-5 lg:pr-72">
           {parent ? (
             <div className="mb-2 flex items-center gap-1">
               <Button
@@ -943,6 +952,21 @@ function TaskReader({
               <X data-icon="inline-start" />
             </Button>
           </DialogPrimitive.Close>
+          {task ? (
+            <div
+              role="group"
+              aria-label="Send to"
+              className="absolute top-14 right-4 flex items-center gap-1 text-meta text-muted-foreground"
+            >
+              <Send className="size-3.5" aria-hidden />
+              <span className="mr-1">Send to</span>
+              {sendTargets(task.id).map((target) => (
+                <Button key={target.name} asChild variant="ghost" size="sm">
+                  <a href={target.href}>{target.name}</a>
+                </Button>
+              ))}
+            </div>
+          ) : null}
         </header>
         <DialogPrimitive.Description className="sr-only">
           Task brief, implementation plan and subtasks.
