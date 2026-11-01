@@ -11,6 +11,7 @@ and templates; Factory uses its maintenance guidance during delivery.
 | --- | --- |
 | `factory` | Features, bug fixes, software development, Factory tasks and local task board |
 | `atlas` | Explicit `/atlas` initialization and documentation of an existing project |
+| `hbs` | Any HTML document an agent makes to communicate with ADMIN: explainers, comparisons, reviews, reports, charts, questionnaires, editors |
 | `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
@@ -19,6 +20,25 @@ Factory replaces the former `communication` workflow. Its
 [entrypoint](skills/factory/SKILL.md) links clarification, planning, delivery
 templates and the optional task board. [Atlas](skills/atlas/SKILL.md) replaces
 the former specification conventions with evidence-based system discovery.
+
+## HTML communication (HBS)
+
+All agent artifacts are self-contained HTML (see `AGENTS.md`). [HBS](skills/hbs/SKILL.md)
+picks the document format for the job and the visualization for each piece of data
+or knowledge, then applies the shared Claude-style tokens in light and dark mode. Its
+ideas come from [The unreasonable effectiveness of HTML](https://thariqs.github.io/html-effectiveness/)
+and its "Know your unknowns" pages.
+
+| File | Contents |
+| --- | --- |
+| `skills/hbs/SKILL.md` | Workflow (job → visual by intent → answer first → reply loop), design and interaction rules |
+| `skills/hbs/references/formats.md` | Format catalog: explore/decide, surface unknowns, during/after implementation, review, design, report, editors |
+| `skills/hbs/references/dataviz.md` | Intent → visual tables for data and knowledge, then CSS/SVG recipes for numbers, bars, time, flows and review visuals |
+| `skills/hbs/references/interactions.md` | State → render → export, copy with fallback, reply assembly, tabs, linking, live controls, drag, interview, quiz, deck |
+| `skills/hbs/references/writing.md` | First screen, ordering by what ADMIN acts on, evidence, trade-offs, honesty devices, unknowns |
+| `skills/hbs/templates/BASE_TEMPLATE.html` | Starting shell: tokens, prompt box, stat band, timeline, cards, diff, toggle, SVG classes, live reply and copy helper |
+
+Factory's HTML templates keep their own structure and reuse the same tokens.
 
 ## Atlas specifications
 
@@ -71,11 +91,16 @@ an implementation plan. The task then lives in:
 
 ```text
 docs/tasks/<status>/<task-name>/      # status: backlog | inprogress | blocked | done
-  TASK.md       # title, dates, blocker, debrief link
-  BRIEF.md      # approved requirements
-  PLAN.md       # implementation approach and recorded revisions
+  TASK.html     # title, dates, blocker, debrief link
+  BRIEF.html    # approved requirements
+  PLAN.html     # implementation approach and recorded revisions
   subtasks/<status>/<subtask-name>/   # same files; no ADMIN approval needed
 ```
+
+New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
+`BRIEF_TEMPLATE.html`, `PLAN_TEMPLATE.html` and `DEBRIEF_TEMPLATE.html`
+(debriefs land in `docs/reports/YYYY-MM-DD-<task-name>.html`). Older `TASK.md`,
+`BRIEF.md` and `PLAN.md` files stay readable; the board renders both.
 
 A task's status is the directory it sits in; move it with `git mv` or the board.
 Subtasks are full tasks nested in their parent, and they nest recursively: a
@@ -93,7 +118,7 @@ rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 The optional board groups cards into Backlog, In progress, Blocked, and Done (one per status directory) and shows subtask progress on parent cards.
 The single-file React app in `index.html` uses adapted shadcn components and
 Tailwind. Cards open a modal with rendered Brief and Plan tabs. Drag-and-drop or keyboard moves move the task directory and update
-`TASK.md`; they never launch sessions or prove that work is complete.
+`TASK.html` (or a legacy `TASK.md`); they never launch sessions or prove that work is complete.
 One board watches all your projects: run `npx amirreza-factory [project-dir...]`
 (see the [board instructions](skills/factory/references/tasks.md)); add or remove projects from
 the header or by passing directories. Projects are remembered in `~/.factory/projects.json`. The
@@ -133,12 +158,13 @@ npm run install:agents -- --list
 npm run install:agents -- performance
 ```
 
-Selected installs include Factory, Atlas and the global files. The four existing
-`BRIEF_TEMPLATE.md`, `PLAN_TEMPLATE.md`, `DEBRIEF_TEMPLATE.md`, and
+Selected installs include Factory, Atlas and the global files. The global
+`BRIEF_TEMPLATE.html`, `PLAN_TEMPLATE.html`, `DEBRIEF_TEMPLATE.html`, and
 `SPEC_TEMPLATE.md` aliases remain available. Brief/plan/debrief aliases point into
 `skills/factory/templates/`; SPEC_TEMPLATE.md points to
-`skills/atlas/templates/AREA_TEMPLATE.md`. TASK_TEMPLATE.md is bundled with
-Factory; Atlas bundles root/area/workflow specification templates. Installing
+`skills/atlas/templates/AREA_TEMPLATE.md`. TASK_TEMPLATE.html is bundled with
+Factory, BASE_TEMPLATE.html with HBS; Atlas bundles root/area/workflow
+specification templates. Installing
 through `npx skills` includes bundled resources; install both Factory and Atlas
 when using delivery integration. Global aliases and AGENTS.md require this installer.
 
