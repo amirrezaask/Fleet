@@ -35,7 +35,7 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - It's really important when pursuing a goal we should move towards implementing all the goal specifies first and then validation and qualification. We should spend hours validating a half baked implementation which proves nothing.
 
 ### Artifacts
-**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML.
+**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML. Before creating any HTML meant to communicate with ADMIN, read [HBS](skills/hbs/SKILL.md).
 
 ### Cleanliness
 - **No leftover files.** Add no Markdown or JSON that nothing will read again (progress notes, handoffs, summaries, audit dumps, receipts). Delete your own scratch files, `.work` contents and stray processes when the request is done.
