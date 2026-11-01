@@ -34,6 +34,9 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - Validation and qualification MUST be done for all session but regression checks come first. First make sure we didn't break anything then check for validity and quality. Costly (time or token) validations should come at the end, cheap validation using unit tests or similar work can be done while implementing but heavy validation gates should be done as the final step, subagents that are implementing a part of some larger task MUST not run heavy validations and running heavy costly validations are only allowed in the main agents that are managing subagents and is only allowed by managing agents when they want to validate a whole task and call it done, before it's DENIED.
 - It's really important when pursuing a goal we should move towards implementing all the goal specifies first and then validation and qualification. We should spend hours validating a half baked implementation which proves nothing.
 
+### Artifacts
+**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown.
+
 ### Cleanliness
 - **No leftover files.** Add no Markdown or JSON that nothing will read again (progress notes, handoffs, summaries, audit dumps, receipts). Delete your own scratch files, `.work` contents and stray processes when the request is done.
 - **No leftover worktrees** All agents should cleanup worktrees they create after they have committed all changes on the target branch.
