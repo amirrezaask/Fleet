@@ -127,15 +127,14 @@ import { twMerge } from "tailwind-merge";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   ChevronDown,
   ChevronRight,
-  ChevronsUpDown,
   CircleAlert,
   FolderPlus,
   GripVertical,
   ListTree,
   LoaderCircle,
+  Menu,
   Monitor,
   Moon,
   Send,
@@ -1159,204 +1158,201 @@ function shortPath(path: string) {
   return parts.length > 4 ? [parts[0], parts[1], "…", ...parts.slice(-2)].join("/") : home;
 }
 
-function ProjectMenu({
+function ProjectSidebar({
   board,
   picking,
+  open,
+  onClose,
   onSelect,
   onRemove,
   onPick,
   onCancelPick,
   onAddPath,
 }: {
-  board: Board;
+  board: Board | null;
   picking: boolean;
+  open: boolean;
+  onClose: () => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onPick: () => void;
   onCancelPick: () => void;
   onAddPath: (path: string) => Promise<string>;
 }) {
-  const [open, setOpen] = React.useState(false);
   const [confirming, setConfirming] = React.useState("");
   const [typing, setTyping] = React.useState(false);
   const [path, setPath] = React.useState("");
   const [problem, setProblem] = React.useState("");
-  const rootRef = React.useRef<HTMLDivElement>(null);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const current = board.projects.find((project) => project.id === board.projectId);
-
-  React.useEffect(() => {
-    if (!open) return;
-
-    const away = (event: MouseEvent) => {
-      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
-    };
-
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", escape);
-
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
+  const projects = board?.projects ?? [];
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Switch project, current: ${current?.name ?? "none"}`}
-        onClick={() => setOpen(!open)}
-        className="-ml-2 flex max-w-[60vw] items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors duration-150 hover:bg-muted"
-      >
-        <span className="min-w-0">
-          <span className="block truncate font-serif text-xl leading-tight">
-            {current?.name ?? "Factory"}
-          </span>
-          {current ? (
-            <span
-              className="block truncate font-mono text-micro text-muted-foreground"
-              title={current.path}
-            >
-              {shortPath(current.path)}
-            </span>
-          ) : null}
-        </span>
-        <ChevronsUpDown className="size-4 shrink-0 text-faint" aria-hidden />
-      </button>
+    <>
       {open ? (
         <div
-          role="menu"
-          aria-label="Projects"
-          className="absolute top-full left-0 z-40 mt-2 w-[min(360px,90vw)] overflow-hidden rounded-xl border border-border bg-card shadow-dialog"
-        >
-          <ul className="max-h-72 overflow-y-auto p-1.5">
-            {board.projects.map((project) => (
-              <li key={project.id} className="group/row relative">
-                {confirming === project.id ? (
-                  <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-meta">
-                    <span className="min-w-0 flex-1">
-                      Stop watching {project.name}? Files on disk are untouched.
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setConfirming("");
-                        onRemove(project.id);
-                      }}
-                    >
-                      Remove
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setConfirming("")}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={project.id === board.projectId}
-                      onClick={() => {
-                        setOpen(false);
-                        onSelect(project.id);
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 pr-10 text-left transition-colors duration-150 hover:bg-muted"
-                    >
-                      <Check
+          className="fixed inset-0 z-40 bg-[var(--overlay)] md:hidden"
+          aria-hidden
+          onClick={onClose}
+        />
+      ) : null}
+      <aside
+        aria-label="Projects"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-border bg-sunken transition-transform duration-200 ease-[var(--ease)] md:sticky md:top-0 md:z-auto md:h-dvh md:w-64 md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <span className="font-serif text-xl leading-tight">Factory</span>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            className="md:hidden"
+            aria-label="Close sidebar"
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </div>
+        <h2 className="px-5 pb-2 text-micro font-semibold tracking-[.06em] text-muted-foreground uppercase">
+          Projects
+        </h2>
+        <nav aria-label="Projects" className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-2">
+          <ul className="flex flex-col gap-0.5">
+            {!board
+              ? [0, 1, 2].map((n) => (
+                  <li key={n} className="h-[52px] animate-pulse rounded-lg bg-muted/60" />
+                ))
+              : null}
+            {projects.map((project) => {
+              const current = project.id === board?.projectId;
+
+              return (
+                <li key={project.id} className="group/row relative">
+                  {confirming === project.id ? (
+                    <div className="rounded-lg bg-muted px-3 py-2.5 text-meta">
+                      <p>Stop watching {project.name}? Files on disk are untouched.</p>
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setConfirming("");
+                            onRemove(project.id);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirming("")}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        aria-current={current ? "page" : undefined}
+                        onClick={() => {
+                          onClose();
+                          onSelect(project.id);
+                        }}
                         className={cn(
-                          "size-4 shrink-0 text-clay",
-                          project.id !== board.projectId && "invisible",
+                          "flex w-full min-w-0 flex-col rounded-lg px-3 py-2 pr-9 text-left transition-colors duration-150",
+                          current
+                            ? "bg-card shadow-card ring-1 ring-border"
+                            : "hover:bg-muted",
                         )}
-                        aria-hidden
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate text-body">{project.name}</span>
+                      >
                         <span
-                          className="block truncate font-mono text-micro text-muted-foreground"
+                          className={cn(
+                            "flex items-center gap-2 truncate text-body leading-tight",
+                            current && "font-medium",
+                          )}
+                        >
+                          {current ? (
+                            <span className="size-1.5 shrink-0 rounded-full bg-clay" aria-hidden />
+                          ) : null}
+                          <span className="truncate">{project.name}</span>
+                        </span>
+                        <span
+                          className="truncate font-mono text-micro text-muted-foreground"
                           title={project.path}
                         >
                           {shortPath(project.path)}
                         </span>
-                      </span>
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="iconSm"
-                      aria-label={`Stop watching ${project.name}`}
-                      className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
-                      onClick={() => setConfirming(project.id)}
-                    >
-                      <X />
-                    </Button>
-                  </>
-                )}
-              </li>
-            ))}
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="iconSm"
+                        aria-label={`Stop watching ${project.name}`}
+                        className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                        onClick={() => setConfirming(project.id)}
+                      >
+                        <X />
+                      </Button>
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-          <div className="border-t border-border p-2">
-            {picking ? (
-              <div className="flex items-center gap-2 px-2 py-1.5 text-meta text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                <span className="flex-1">Waiting for folder…</span>
-                <Button size="sm" variant="ghost" onClick={onCancelPick}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button variant="ghost" className="w-full justify-start" onClick={onPick}>
-                <FolderPlus /> Add project…
+        </nav>
+        <div className="border-t border-border p-2.5">
+          {picking ? (
+            <div className="flex items-center gap-2 px-2 py-1.5 text-meta text-muted-foreground">
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
+              <span className="flex-1">Waiting for folder…</span>
+              <Button size="sm" variant="ghost" onClick={onCancelPick}>
+                Cancel
               </Button>
-            )}
-            {typing ? (
-              <form
-                className="px-2 pt-1 pb-1"
-                onSubmit={(event) => {
-                  event.preventDefault();
+            </div>
+          ) : (
+            <Button variant="ghost" className="w-full justify-start" onClick={onPick}>
+              <FolderPlus /> Add project…
+            </Button>
+          )}
+          {typing ? (
+            <form
+              className="px-1 pt-1 pb-1"
+              onSubmit={(event) => {
+                event.preventDefault();
 
-                  void onAddPath(path).then((message) => {
-                    setProblem(message);
+                void onAddPath(path).then((message) => {
+                  setProblem(message);
 
-                    if (!message) {
-                      setPath("");
-                      setTyping(false);
-                      setOpen(false);
-                    }
-                  });
-                }}
-              >
-                <input
-                  autoFocus
-                  aria-label="Project directory"
-                  placeholder="/path/to/project"
-                  value={path}
-                  onChange={(event) => setPath(event.target.value)}
-                  className="h-9 w-full rounded-lg border border-border bg-background px-2.5 font-mono text-meta"
-                />
-                {problem ? <p className="pt-1.5 text-micro text-clay-ink">{problem}</p> : null}
-              </form>
-            ) : (
-              <button
-                type="button"
-                className="px-3 py-1 text-micro text-muted-foreground underline-offset-2 hover:underline"
-                onClick={() => setTyping(true)}
-              >
-                Enter a path
-              </button>
-            )}
+                  if (!message) {
+                    setPath("");
+                    setTyping(false);
+                    onClose();
+                  }
+                });
+              }}
+            >
+              <input
+                autoFocus
+                aria-label="Project directory"
+                placeholder="/path/to/project"
+                value={path}
+                onChange={(event) => setPath(event.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-background px-2.5 font-mono text-meta"
+              />
+              {problem ? <p className="pt-1.5 text-micro text-clay-ink">{problem}</p> : null}
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="px-3 py-1 text-micro text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => setTyping(true)}
+            >
+              Enter a path
+            </button>
+          )}
+          <div className="mt-1 flex items-center justify-between px-1">
+            <span className="px-2 text-micro text-muted-foreground">Theme</span>
+            <ThemeToggle />
           </div>
         </div>
-      ) : null}
-    </div>
+      </aside>
+    </>
   );
 }
 
@@ -1406,6 +1402,7 @@ function App() {
   const [projectId, setProjectId] = React.useState(activeProject);
   const [picking, setPicking] = React.useState(false);
   const pickAbort = React.useRef<AbortController | null>(null);
+  const [navOpen, setNavOpen] = React.useState(false);
 
   function selectProject(id: string) {
     activeProject = id;
@@ -1587,30 +1584,41 @@ function App() {
   const stale = board !== null && projectId !== "" && board.projectId !== projectId;
 
   return (
-    <main className="mx-auto max-w-[1600px] px-5 pb-8 md:px-10 md:pb-10">
-      <header className="sticky top-0 z-30 -mx-5 mb-6 flex items-center gap-4 border-b border-border bg-background/90 px-5 py-3 backdrop-blur md:-mx-10 md:px-10">
-        {board ? (
-          <ProjectMenu
-            board={board}
-            picking={picking}
-            onSelect={selectProject}
-            onRemove={(id) => void removeProject(id)}
-            onPick={() => void pickFolder()}
-            onCancelPick={() => pickAbort.current?.abort()}
-            onAddPath={addPath}
-          />
-        ) : (
-          <span className="font-serif text-xl">Factory</span>
-        )}
-        <div className="ml-auto flex items-center gap-3 text-meta text-muted-foreground">
-          {board && board.projects.length > 0 ? (
-            <span className="hidden tabular-nums sm:inline">
-              {board.tasks.length} tasks ·{" "}
-              {board.tasks.filter((task) => task.status === "inprogress").length} in progress
-            </span>
-          ) : null}
-          <ThemeToggle />
+    <div className="flex min-h-dvh">
+    <ProjectSidebar
+      board={board}
+      picking={picking}
+      open={navOpen}
+      onClose={() => setNavOpen(false)}
+      onSelect={selectProject}
+      onRemove={(id) => void removeProject(id)}
+      onPick={() => void pickFolder()}
+      onCancelPick={() => pickAbort.current?.abort()}
+      onAddPath={addPath}
+    />
+    <main className="min-w-0 flex-1 px-5 pb-8 md:px-10 md:pb-10">
+      <header className="sticky top-0 z-30 -mx-5 mb-6 flex items-center gap-3 border-b border-border bg-background/90 px-5 py-3 backdrop-blur md:-mx-10 md:px-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-ml-2 md:hidden"
+          aria-label="Open projects"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen(true)}
+        >
+          <Menu />
+        </Button>
+        <div className="min-w-0">
+          <h1 className="truncate font-serif text-xl leading-tight">
+            {board?.project || "Factory"}
+          </h1>
         </div>
+        {board && board.projects.length > 0 ? (
+          <span className="ml-auto hidden text-meta text-muted-foreground tabular-nums sm:inline">
+            {board.tasks.length} tasks ·{" "}
+            {board.tasks.filter((task) => task.status === "inprogress").length} in progress
+          </span>
+        ) : null}
       </header>
       {error ? <Alert>{error}</Alert> : null}
       {board?.errors.map((message) => (
@@ -1720,6 +1728,7 @@ function App() {
         liveKey={liveKey}
       />
     </main>
+    </div>
   );
 }
 
