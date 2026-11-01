@@ -16,7 +16,7 @@ into authorization to implement software.
 Read [clarification guidance](references/clarify.md) when shaping a feature or bug
 fix. Inspect relevant code and area specifications before asking questions that
 the repository can answer. Work through consequential gaps with ADMIN and draft
-a concise brief using the [brief template](templates/BRIEF_TEMPLATE.md).
+a concise brief using the [brief template](templates/BRIEF_TEMPLATE.html).
 Keep the draft in the conversation until approval, unless ADMIN requests a file.
 
 The brief records intent, observable requirements with stable IDs, non-goals,
@@ -28,20 +28,27 @@ Do not ask whether to create a brief: it is part of Factory feature/bug work.
 ## Plan and create the task
 
 After brief approval, read [planning guidance](references/plan.md) and use the
-[plan template](templates/PLAN_TEMPLATE.md). A separate plan approval is not
+[plan template](templates/PLAN_TEMPLATE.html). A separate plan approval is not
 required unless ADMIN requests it. Approval to plan alone does not authorize
 implementation; follow the scope ADMIN actually requested.
 
 Once the approved brief and plan exist, create
 `docs/tasks/<status>/<task-name>/` with:
 
-- `TASK.md`: metadata using the [task template](templates/TASK_TEMPLATE.md).
-- `BRIEF.md`: the approved brief, including its approval record.
-- `PLAN.md`: the implementation plan, linked to `BRIEF.md`.
+- `TASK.html`: metadata using the [task template](templates/TASK_TEMPLATE.html).
+- `BRIEF.html`: the approved brief, including its approval record.
+- `PLAN.html`: the implementation plan, linked to `BRIEF.html`.
 
 `<status>` is one of `backlog`, `inprogress`, `blocked` or `done`. The directory
-a task sits in is its status; there is no `status` key in `TASK.md`. Change status
+a task sits in is its status; there is no status field in `TASK.html`. Change status
 by moving the directory (`git mv`) and updating `updated`.
+
+**All documents are HTML.** Every new brief, plan, task, debrief and report is
+written from the HTML templates, which carry the Claude-style design tokens;
+never write Markdown. Projects may keep their older Markdown files (`TASK.md`,
+`BRIEF.md`, `PLAN.md`, reports, specs) and keep reading them. Do not convert
+them unless ADMIN requests migration. Edit a legacy task in its existing format
+and create only new files as HTML.
 
 Use a descriptive lowercase hyphenated task name and never overwrite another
 task. These are the canonical task documents; do not duplicate them under
@@ -54,7 +61,7 @@ tasks or installing the board. New tasks start in `backlog/`.
 
 Split a task into subtasks when it has parts that can be planned, built and
 verified separately. A subtask is the same entity as a task, with the same
-`TASK.md`, `BRIEF.md` and `PLAN.md`, stored in the same status layout inside its
+`TASK.html`, `BRIEF.html` and `PLAN.html`, stored in the same status layout inside its
 parent: `docs/tasks/<status>/<task>/subtasks/<status>/<subtask>/`. Differences:
 
 - ADMIN does not approve a subtask brief. The agent drafts and records it with
@@ -81,7 +88,7 @@ scope in coherent increments, with focused checks where they help development.
 For bugs, reproduce the failure and investigate its cause before choosing a fix.
 
 Agents may change implementation steps, interfaces, sequencing, or technical
-approach in `PLAN.md` without seeking approval when all brief and existing area
+approach in `PLAN.html` without seeking approval when all brief and existing area
 specification requirements remain satisfied. Record the date, reason, and impact
 of each material revision in the plan. Never remove, edit, weaken, or silently
 reinterpret requirements in the approved brief or existing area specs. A conflict
@@ -102,12 +109,12 @@ Repair failures and repeat affected checks. Do not spend extended qualification
 on a partial implementation while leaving agreed requirements unimplemented.
 Record command, result, revision, and limitations; never claim an unrun check
 passed. Move the task to `blocked/` when a required decision or external dependency
-prevents progress and record the reason in `TASK.md`. Resume when the blocker is resolved.
+prevents progress and record the reason in `TASK.html`. Resume when the blocker is resolved.
 
 ## Learn and adjust
 
-Write the debrief using the [debrief template](templates/DEBRIEF_TEMPLATE.md) at
-`docs/reports/YYYY-MM-DD-<task-name>.md` and link it from `TASK.md`. It records
+Write the debrief using the [debrief template](templates/DEBRIEF_TEMPLATE.html) at
+`docs/reports/YYYY-MM-DD-<task-name>.html` and link it from `TASK.html`. It records
 outcomes, plan changes, verification, remaining work, and useful unrelated
 findings, separating evidence from assumptions. Keep raw output gitignored.
 
@@ -126,10 +133,10 @@ before claiming success. Follow project commit and worktree cleanup rules.
 
 ## Resume and scope
 
-On resume, read `TASK.md`, the approved brief, the current plan, relevant area
+On resume, read `TASK.html`, the approved brief, the current plan, relevant area
 specs, and the actual Git diff. Reconcile implementation and verification with
 those sources before choosing the next step; chat history alone is insufficient.
-Keep status and blockers in `TASK.md`, revisions in `PLAN.md`, and results in the
+Keep status and blockers in `TASK.html`, revisions in `PLAN.html`, and results in the
 debrief rather than creating parallel progress logs.
 
 For standalone specification initialization, ADMIN invokes `/atlas`. For a

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>&lt;Debrief Title&gt;</title>
+  <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
+  <meta name="author" content="<agent> <llm model>">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+  </style>
+</head>
+<body>
+<main>
+  <h1>&lt;Debrief Title&gt;</h1>
+  <p class="meta">Debrief · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+
+  <h2>Request</h2>
+  <p>&lt;What ADMIN asked for. Link the brief or plan, if available.&gt;</p>
+
+  <h2>Outcome</h2>
+  <p>&lt;What was accomplished, what remains, and the practical result.&gt;</p>
+
+  <h2>Work and Decisions</h2>
+  <ul>
+    <li>&lt;Work performed and relevant paths.&gt;</li>
+    <li>&lt;Key decisions, tradeoffs, and reasons.&gt;</li>
+  </ul>
+
+  <h2>Validation</h2>
+  <p>&lt;Revision and environment, workload or inputs, and method where relevant. Include commands or procedures and baselines needed to interpret or reproduce the results.&gt;</p>
+  <table>
+    <thead><tr><th>ID</th><th>Check or metric</th><th>Expected or baseline</th><th>Actual</th><th>Result</th></tr></thead>
+    <tbody><tr><td>V1</td><td>&lt;Gate ID, check, or metric with units&gt;</td><td>&lt;Pass condition or baseline&gt;</td><td>&lt;Observed result&gt;</td><td>&lt;Passed / Failed / Not Run / Blocked&gt;</td></tr></tbody>
+  </table>
+
+  <h2>Findings</h2>
+  <ul>
+    <li><strong>Related:</strong> &lt;Failures, limitations, risks, or discoveries relevant to the request; include evidence and impact.&gt;</li>
+    <li><strong>Other:</strong> &lt;Useful incidental findings, even if unrelated to the request; include evidence, location, and impact. Do not imply these were investigated or fixed unless they were.&gt;</li>
+    <li>&lt;Distinguish observations from assumptions and state what remains unverified. Use None where applicable.&gt;</li>
+  </ul>
+
+  <h2>Follow-up</h2>
+  <ul><li>&lt;Remaining work, recommended action, and owner if known; or None.&gt;</li></ul>
+
+  <h2>Artifacts</h2>
+  <p>&lt;Links or paths to relevant evidence, if retained. Track only the HTML summary; keep raw output gitignored.&gt;</p>
+</main>
+</body>
+</html>

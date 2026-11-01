@@ -4,8 +4,8 @@ Address the user as ADMIN. GLOBAL means `~/.agents/`.
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.md` metadata, approved `BRIEF.md`, and mutable `PLAN.md`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
-- `docs/reports/`: every benchmark, test and verification result, one dir or `.md` per run, `$date-$title`. Track only Markdown summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
+- `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `BRIEF.html`, and mutable `PLAN.html`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
+- `docs/reports/`: every benchmark, test and verification result, one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
 - `docs/README.md`, `docs/architecture.md`, `docs/domain.md`, `docs/data-model.md`, `docs/quality.md`, and `docs/operations.md`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
 - `docs/areas/<area-name>.md`: ground rules, state ownership, and relevant contracts for each software area.
 - `docs/workflows/<flow-name>.md`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
@@ -35,7 +35,7 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - It's really important when pursuing a goal we should move towards implementing all the goal specifies first and then validation and qualification. We should spend hours validating a half baked implementation which proves nothing.
 
 ### Artifacts
-**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown.
+**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML.
 
 ### Cleanliness
 - **No leftover files.** Add no Markdown or JSON that nothing will read again (progress notes, handoffs, summaries, audit dumps, receipts). Delete your own scratch files, `.work` contents and stray processes when the request is done.

@@ -31,7 +31,7 @@ subtask on all of them.
 ## Record dependencies
 
 Dependencies are edges between sibling subtasks of the same parent. List them in
-the subtask's `TASK.md` under `## Depends on` as sibling subtask names, or `None`.
+the subtask's `TASK.html` under `## Depends on` as sibling subtask names, or `None`.
 Edges describe what must be `done` first, never a preferred order. Keep them
 minimal and acyclic; split or merge subtasks to break a cycle. Dependency edges
 do not change status rules and the board ignores them.
@@ -43,7 +43,7 @@ The **frontier** is every subtask not yet `done` whose dependencies are all
 
 The managing agent owns the graph and runs this loop:
 
-1. Read the parent brief and every subtask's `TASK.md`, `BRIEF.md` and `PLAN.md`
+1. Read the parent brief and every subtask's `TASK.html`, `BRIEF.html` and `PLAN.html`
    to build the graph. Do the shared exploration once (a fresh subagent that
    saves notes outside the repo, in `.work/`, for later subagents) so implementers
    do not each rediscover the same code.

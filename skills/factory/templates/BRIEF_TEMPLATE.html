@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>&lt;Change Title&gt;</title>
+  <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
+  <meta name="author" content="<agent> <llm model>">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+  </style>
+</head>
+<body>
+<main>
+  <h1>&lt;Change Title&gt;</h1>
+  <p class="meta">Brief · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+
+  <h2>User's Request</h2>
+  <p>&lt;Original request or faithful summary.&gt;</p>
+
+  <h2>Agent's Understanding</h2>
+  <p>&lt;What the agent understood from the user's request.&gt;</p>
+
+  <h2>Requirements</h2>
+  <ul>
+    <li><strong>R1:</strong> Given &lt;context&gt;, when &lt;action&gt;, then &lt;observable outcome&gt;.</li>
+    <li><strong>R2:</strong> &lt;Verifiable constraint.&gt;</li>
+  </ul>
+
+  <h2>Scope and Constraints</h2>
+  <ul>
+    <li><strong>Non-goals:</strong> &lt;Explicitly excluded work.&gt;</li>
+    <li><strong>Preserved behavior:</strong> &lt;Links to existing area specification requirements.&gt;</li>
+    <li><strong>Constraints:</strong> &lt;Compatibility, stack, or operational constraints.&gt;</li>
+    <li><strong>Open questions:</strong> &lt;Consequential unresolved decisions; resolve before approval.&gt;</li>
+  </ul>
+
+  <h2>Validation Gates</h2>
+  <p class="hint">Gates reference requirements directly; every requirement appears in this table at least once.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Covers</th><th>Command or procedure</th><th>Pass condition</th></tr></thead>
+    <tbody><tr><td>V1</td><td>&lt;R1, K1&gt;</td><td>&lt;Exact check&gt;</td><td>&lt;Expected result&gt;</td></tr></tbody>
+  </table>
+
+  <!-- After approval, freeze all existing content, including metadata and tables.
+  Append each update after this comment as a new .entry section, with its date and reason.
+  Record approval itself as an entry, including ADMIN and the approval date.
+  Do not amend requirements through appended notes without explicit authorization.
+  Mark Complete only when requirements are satisfied and required validation passes. -->
+  <section class="entry">
+    <h3>&lt;YYYY-MM-DD HH:mm UTC offset&gt; — &lt;Reason for update&gt;</h3>
+    <ul>
+      <li>Status: <span class="pill">&lt;Draft / Approved / In Progress / Blocked / Complete&gt;</span></li>
+      <li>Changes and decisions: &lt;Affected IDs, decisions, and what they supersede; or None.&gt;</li>
+      <li>Validation: &lt;Gate ID, Passed / Failed / Not Run / Blocked, and actual evidence.&gt;</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

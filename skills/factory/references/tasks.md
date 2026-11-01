@@ -2,7 +2,7 @@
 
 ## Layout and metadata
 
-Use `docs/tasks/<status>/<task-name>/{TASK,BRIEF,PLAN}.md`. Task names are
+Use `docs/tasks/<status>/<task-name>/{TASK,BRIEF,PLAN}.html`. Task names are
 lowercase ASCII letters/numbers separated by single hyphens and are unique across
 all status directories. Reuse existing tasks; never overwrite another task to
 resolve a naming collision.
@@ -16,27 +16,27 @@ The status is the directory the task lives in:
 | `blocked/` | Blocked | A recorded decision/dependency prevents progress |
 | `done/` | Done | Requirements, verification, debrief, and area specs complete |
 
-TASK.md uses YAML frontmatter with nonempty `title` and quoted ISO
-`created`/`updated` dates as plain single-line keys. It has no `status` key: the
-directory is the single source of truth. Other metadata and Markdown body content
+TASK.html carries a nonempty `<title>` and `<meta name="created">`/`<meta name="updated">`
+ISO dates in `<head>`. Legacy `TASK.html` keeps its YAML frontmatter. It has no status field: the
+directory is the single source of truth. Other metadata and body content
 are allowed and preserved. Move a task with `git mv` (or the board) and update
 `updated`. Relative links inside a task's documents must survive the move, so link
 to `docs/reports/` from the repo root path or recompute them when moving.
 
-Record blockers and the debrief link in the Markdown body. A status change is
+Record blockers and the debrief link in the document body. A status change is
 bookkeeping: it does not approve work, execute plans, validate completion, or
 create agent sessions.
 
 ## Subtasks
 
-A task may contain `subtasks/<status>/<subtask-name>/{TASK,BRIEF,PLAN}.md`, the
+A task may contain `subtasks/<status>/<subtask-name>/{TASK,BRIEF,PLAN}.html`, the
 same structure and statuses as a top-level task. Subtask names are unique within
 their parent. A subtask brief needs no ADMIN approval but must refine, never
 contradict, its parent brief; record "Approval: not required, subtask of
 `<parent>`". The board shows a `done/total subtasks` count on the parent card and
 does not move subtasks; moving a parent moves its subtasks with it.
 
-Dependencies between sibling subtasks live in `TASK.md` under `## Depends on`;
+Dependencies between sibling subtasks live in `TASK.html` under `## Depends on`;
 see [subtask graphs](subtasks.md).
 
 Subtasks nest recursively without limit: any subtask may hold its own
