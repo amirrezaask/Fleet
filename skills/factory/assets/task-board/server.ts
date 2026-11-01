@@ -252,15 +252,61 @@ async function readDocument(root: string, id: string, name: string): Promise<str
   }
 }
 
-function decodeTask(text: string) {
+// New documents are HTML; older Markdown documents stay readable. HTML wins when both exist.
+async function documentName(root: string, id: string, base: string): Promise<string> {
+  const { directory } = await locate(root, id);
+
+  for (const extension of [".html", ".md"]) {
+    const exists = await lstat(join(directory, base + extension)).then(
+      () => true,
+      () => false,
+    );
+
+    if (exists) return base + extension;
+  }
+
+  return `${base}.html`;
+}
+
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+const htmlMeta = (name: string) =>
+  new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"\\s*/?>`, "i");
+
+function decodeTask(text: string, name = "TASK.md") {
   try {
+    if (name.endsWith(".html")) {
+      const data = Schema.decodeUnknownSync(metadata)({
+        title: decodeEntities(/<title>([\s\S]*?)<\/title>/i.exec(text)?.[1] ?? "").trim(),
+        created: htmlMeta("created").exec(text)?.[1],
+        updated: htmlMeta("updated").exec(text)?.[1],
+      });
+
+      return { data, content: text };
+    }
+
     const parsed = matter(text);
     const data = Schema.decodeUnknownSync(metadata)(parsed.data);
 
     return { data, content: parsed.content };
   } catch {
-    throw new BoardError("TASK.md requires a title and quoted created/updated dates.");
+    throw new BoardError(
+      "TASK.html requires a title and created/updated dates (TASK.md: title and quoted created/updated dates).",
+    );
   }
+}
+
+async function readTask(root: string, id: string) {
+  const name = await documentName(root, id, "TASK");
+
+  return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
 async function countSubtasks(directory: string): Promise<{ total: number; done: number }> {
@@ -301,7 +347,7 @@ async function listSubtasks(root: string, id: string) {
       const childId = `${id}/${entry.name}`;
 
       try {
-        const { data } = decodeTask(await readDocument(root, childId, "TASK.md"));
+        const { data } = await readTask(root, childId);
 
         subtasks.push({
           id: childId,
@@ -349,12 +395,12 @@ async function listTasks(root: string) {
       if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 
       try {
-        const { data } = decodeTask(await readDocument(root, entry.name, "TASK.md"));
+        const { data } = await readTask(root, entry.name);
         const subtasks = await countSubtasks(join(root, status, entry.name));
         tasks.push({ id: entry.name, status, subtasks, ...data });
       } catch {
         errors.push(
-          `${status}/${entry.name}: unable to load task; check TASK.md metadata and regular document paths.`,
+          `${status}/${entry.name}: unable to load task; check TASK metadata and regular document paths.`,
         );
       }
     }
@@ -363,19 +409,31 @@ async function listTasks(root: string) {
   return { tasks, errors };
 }
 
-async function renderDocument(root: string, id: string, name: string): Promise<string> {
+function htmlBody(text: string): string {
+  const inner =
+    /<main[^>]*>([\s\S]*)<\/main>/i.exec(text)?.[1] ??
+    /<body[^>]*>([\s\S]*)<\/body>/i.exec(text)?.[1] ??
+    text;
+
+  return inner.replace(/<h1[\s\S]*?<\/h1>/i, "");
+}
+
+async function renderDocument(root: string, id: string, base: string): Promise<string> {
+  const name = await documentName(root, id, base);
+
   try {
     const text = await readDocument(root, id, name);
-    const { content } = matter(text);
 
-    return sanitizeHtml(await marked.parse(content), {
+    const body = name.endsWith(".html") ? htmlBody(text) : await marked.parse(matter(text).content);
+
+    return sanitizeHtml(body, {
       allowedTags: sanitizeHtml.defaults.allowedTags,
       allowedAttributes: { a: ["href", "title"], code: ["class"] },
       allowedSchemes: ["http", "https", "mailto"],
       allowProtocolRelative: false,
     });
   } catch {
-    return `<p class="notice">${name} is unavailable. Check that it exists as a regular Markdown file.</p>`;
+    return `<p class="notice">${name} is unavailable. Check that it exists as a regular HTML or Markdown file.</p>`;
   }
 }
 
@@ -419,16 +477,24 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
 
   if (!statuses.includes(status)) throw new BoardError("Unknown task status.");
   const current = await locate(root, id);
-  const path = await taskFile(root, id, "TASK.md");
+  const name = await documentName(root, id, "TASK");
+  const path = await taskFile(root, id, name);
   const file = await open(path, constants.O_RDWR | constants.O_NOFOLLOW);
 
   try {
     const original = await file.readFile("utf8");
-    decodeTask(original);
+    decodeTask(original, name);
+    const html = name.endsWith(".html");
     const frontmatter = /^(---\r?\n)([\s\S]*?)(\r?\n---)(?=\r?\n|$)/.exec(original);
 
-    if (!frontmatter || !/^updated:[^\r\n]*\r?$/m.test(frontmatter[2]))
-      throw new BoardError("Use a plain updated frontmatter key.");
+    if (
+      html
+        ? !htmlMeta("updated").test(original)
+        : !frontmatter || !/^updated:[^\r\n]*\r?$/m.test(frontmatter[2])
+    )
+      throw new BoardError(
+        html ? "Use a plain updated meta tag." : "Use a plain updated frontmatter key.",
+      );
 
     const target = join(root, status, id);
 
@@ -445,13 +511,16 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
         throw new BoardError("A task with this name already exists in that status.", 409);
     }
 
-    const header = frontmatter[2].replace(
-      /^updated:[^\r\n]*/m,
-      `updated: "${new Date().toISOString().slice(0, 10)}"`,
-    );
+    const today = new Date().toISOString().slice(0, 10);
 
-    const text = frontmatter[1] + header + frontmatter[3] + original.slice(frontmatter[0].length);
-    decodeTask(text);
+    const text =
+      html || !frontmatter
+        ? original.replace(htmlMeta("updated"), `<meta name="updated" content="${today}">`)
+        : frontmatter[1] +
+          frontmatter[2].replace(/^updated:[^\r\n]*/m, `updated: "${today}"`) +
+          frontmatter[3] +
+          original.slice(frontmatter[0].length);
+    decodeTask(text, name);
     await file.write(text, 0, "utf8");
     await file.truncate(Buffer.byteLength(text));
 
@@ -459,7 +528,7 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
 
     const subtasks = await countSubtasks(join(root, status, id));
 
-    return { id, status, subtasks, ...decodeTask(text).data };
+    return { id, status, subtasks, ...decodeTask(text, name).data };
   } finally {
     await file.close();
   }
@@ -658,11 +727,11 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
       .join("/");
 
     const root = tasksOf(projectPath(url.searchParams.get("project")));
-    decodeTask(await readDocument(root, id, "TASK.md"));
+    await readTask(root, id);
 
     const [brief, plan, subtasks] = await Promise.all([
-      renderDocument(root, id, "BRIEF.md"),
-      renderDocument(root, id, "PLAN.md"),
+      renderDocument(root, id, "BRIEF"),
+      renderDocument(root, id, "PLAN"),
       listSubtasks(root, id),
     ]);
 

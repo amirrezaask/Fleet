@@ -579,3 +579,45 @@ test("folder picker needs the board token and theme script is served", async () 
     assert.match(await (await fetch(`${base}/theme.js`)).text(), /factory-theme/);
   });
 });
+
+test("HTML tasks load, render sanitized, and move alongside Markdown tasks", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "legacy-task");
+    const directory = join(tasks, "backlog/html-task");
+    await mkdir(directory, { recursive: true });
+
+    const page = (title: string, body: string, meta = "") =>
+      `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>${meta}<style>body{}</style></head><body><main><h1>${title}</h1>${body}</main></body></html>`;
+
+    const original = page(
+      "Fix &lt;login&gt; flow",
+      "<h2>Plan</h2><table><tr><td>R1</td></tr></table><script>alert('unsafe')</script>",
+      '<meta name="created" content="2026-10-28"><meta name="updated" content="2026-10-28">',
+    );
+    await writeFile(join(directory, "TASK.html"), original);
+    await writeFile(join(directory, "BRIEF.html"), page("Brief", "<p>Brief body</p>"));
+    await writeFile(join(directory, "PLAN.html"), page("Plan", "<p>Plan body</p>"));
+
+    const data = await board(base);
+    const found = data.tasks.find((entry) => entry.id === "html-task");
+    assert.equal(found?.title, "Fix <login> flow");
+    assert.ok(data.tasks.some((entry) => entry.id === "legacy-task"));
+
+    const docs = await (await fetch(`${base}/api/tasks/html-task`)).text();
+    assert.match(docs, /Brief body/);
+    assert.match(docs, /Plan body/);
+    assert.doesNotMatch(docs, /<script|<style|<h1/);
+
+    const response = await move(base, data.token, "html-task", "done");
+    assert.equal(response.status, 200);
+    const changed = await readFile(join(tasks, "done/html-task/TASK.html"), "utf8");
+    assert.match(changed, /<meta name="updated" content="\d{4}-\d{2}-\d{2}">/);
+    assert.equal(
+      changed.replace(
+        /<meta name="updated" content="[^"]*">/,
+        '<meta name="updated" content="2026-10-28">',
+      ),
+      original,
+    );
+  });
+});
