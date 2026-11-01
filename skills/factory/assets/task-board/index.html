@@ -137,6 +137,8 @@ import {
   Menu,
   Monitor,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   Send,
   Sun,
   X,
@@ -1162,7 +1164,9 @@ function ProjectSidebar({
   board,
   picking,
   open,
+  collapsed,
   onClose,
+  onToggleCollapsed,
   onSelect,
   onRemove,
   onPick,
@@ -1172,7 +1176,9 @@ function ProjectSidebar({
   board: Board | null;
   picking: boolean;
   open: boolean;
+  collapsed: boolean;
   onClose: () => void;
+  onToggleCollapsed: () => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onPick: () => void;
@@ -1183,7 +1189,13 @@ function ProjectSidebar({
   const [typing, setTyping] = React.useState(false);
   const [path, setPath] = React.useState("");
   const [problem, setProblem] = React.useState("");
+  const [hovering, setHovering] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+  const wide = useMediaQuery("(min-width:768px)");
   const projects = board?.projects ?? [];
+  // A collapsed sidebar is a rail that floats open over the board while hovered or focused.
+  const rail = wide && collapsed && !hovering && !focused && !typing && !confirming;
+  const floating = wide && collapsed && !rail;
 
   return (
     <>
@@ -1194,164 +1206,239 @@ function ProjectSidebar({
           onClick={onClose}
         />
       ) : null}
-      <aside
-        aria-label="Projects"
+      <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-border bg-sunken transition-transform duration-200 ease-[var(--ease)] md:sticky md:top-0 md:z-auto md:h-dvh md:w-64 md:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full",
+          "md:sticky md:top-0 md:z-40 md:h-dvh md:shrink-0 md:transition-[width] md:duration-200 md:ease-[var(--ease)]",
+          collapsed ? "md:w-14" : "md:w-64",
         )}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-4">
-          <span className="font-serif text-xl leading-tight">Factory</span>
-          <Button
-            variant="ghost"
-            size="iconSm"
-            className="md:hidden"
-            aria-label="Close sidebar"
-            onClick={onClose}
+        <aside
+          aria-label="Projects"
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          onFocusCapture={(event) => {
+            if (event.target.matches(":focus-visible")) setFocused(true);
+          }}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+          }}
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-border bg-sunken transition-[transform,width,box-shadow] duration-200 ease-[var(--ease)] md:absolute md:z-auto md:translate-x-0",
+            rail ? "md:w-14" : "md:w-64",
+            floating && "shadow-dialog",
+            open ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <div
+            className={cn(
+              "flex h-[61px] shrink-0 items-center gap-2",
+              rail ? "justify-center" : "justify-between pr-3 pl-5",
+            )}
           >
-            <X />
-          </Button>
-        </div>
-        <h2 className="px-5 pb-2 text-micro font-semibold tracking-[.06em] text-muted-foreground uppercase">
-          Projects
-        </h2>
-        <nav aria-label="Projects" className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-2">
-          <ul className="flex flex-col gap-0.5">
-            {!board
-              ? [0, 1, 2].map((n) => (
-                  <li key={n} className="h-[52px] animate-pulse rounded-lg bg-muted/60" />
-                ))
-              : null}
-            {projects.map((project) => {
-              const current = project.id === board?.projectId;
+            {rail ? null : <span className="font-serif text-xl leading-tight">Factory</span>}
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="md:hidden"
+              aria-label="Close sidebar"
+              onClick={onClose}
+            >
+              <X />
+            </Button>
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="max-md:hidden"
+              aria-label={collapsed ? "Pin sidebar open" : "Collapse sidebar"}
+              aria-pressed={!collapsed}
+              onClick={onToggleCollapsed}
+            >
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+          </div>
+          {rail ? null : (
+            <h2 className="px-5 pb-2 text-micro font-semibold tracking-[.06em] text-muted-foreground uppercase">
+              Projects
+            </h2>
+          )}
+          <nav aria-label="Projects" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2.5 pb-2">
+            <ul className="flex flex-col gap-0.5">
+              {!board
+                ? [0, 1, 2].map((n) => (
+                    <li key={n} className="h-[52px] animate-pulse rounded-lg bg-muted/60" />
+                  ))
+                : null}
+              {projects.map((project) => {
+                const current = project.id === board?.projectId;
 
-              return (
-                <li key={project.id} className="group/row relative">
-                  {confirming === project.id ? (
-                    <div className="rounded-lg bg-muted px-3 py-2.5 text-meta">
-                      <p>Stop watching {project.name}? Files on disk are untouched.</p>
-                      <div className="mt-2 flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setConfirming("");
-                            onRemove(project.id);
-                          }}
-                        >
-                          Remove
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirming("")}>
-                          Cancel
-                        </Button>
+                return (
+                  <li key={project.id} className="group/row relative">
+                    {confirming === project.id ? (
+                      <div className="rounded-lg bg-muted px-3 py-2.5 text-meta">
+                        <p>Stop watching {project.name}? Files on disk are untouched.</p>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setConfirming("");
+                              onRemove(project.id);
+                            }}
+                          >
+                            Remove
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirming("")}>
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        aria-current={current ? "page" : undefined}
-                        onClick={() => {
-                          onClose();
-                          onSelect(project.id);
-                        }}
-                        className={cn(
-                          "flex w-full min-w-0 flex-col rounded-lg px-3 py-2 pr-9 text-left transition-colors duration-150",
-                          current
-                            ? "bg-card shadow-card ring-1 ring-border"
-                            : "hover:bg-muted",
-                        )}
-                      >
-                        <span
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          aria-current={current ? "page" : undefined}
+                          aria-label={rail ? project.name : undefined}
+                          title={rail ? project.name : undefined}
+                          onClick={() => {
+                            onClose();
+                            onSelect(project.id);
+                          }}
                           className={cn(
-                            "flex items-center gap-2 truncate text-body leading-tight",
-                            current && "font-medium",
+                            "flex w-full min-w-0 rounded-lg text-left transition-colors duration-150",
+                            rail
+                              ? "h-9 items-center justify-center"
+                              : "flex-col px-3 py-2 pr-9",
+                            current ? "bg-card shadow-card ring-1 ring-border" : "hover:bg-muted",
                           )}
                         >
-                          {current ? (
-                            <span className="size-1.5 shrink-0 rounded-full bg-clay" aria-hidden />
-                          ) : null}
-                          <span className="truncate">{project.name}</span>
-                        </span>
-                        <span
-                          className="truncate font-mono text-micro text-muted-foreground"
-                          title={project.path}
-                        >
-                          {shortPath(project.path)}
-                        </span>
-                      </button>
-                      <Button
-                        variant="ghost"
-                        size="iconSm"
-                        aria-label={`Stop watching ${project.name}`}
-                        className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
-                        onClick={() => setConfirming(project.id)}
-                      >
-                        <X />
-                      </Button>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        <div className="border-t border-border p-2.5">
-          {picking ? (
-            <div className="flex items-center gap-2 px-2 py-1.5 text-meta text-muted-foreground">
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-              <span className="flex-1">Waiting for folder…</span>
-              <Button size="sm" variant="ghost" onClick={onCancelPick}>
-                Cancel
+                          {rail ? (
+                            <span
+                              className={cn(
+                                "font-serif text-body uppercase",
+                                current ? "text-clay-ink" : "text-muted-foreground",
+                              )}
+                              aria-hidden
+                            >
+                              {project.name.slice(0, 1)}
+                            </span>
+                          ) : (
+                            <>
+                              <span
+                                className={cn(
+                                  "flex items-center gap-2 truncate text-body leading-tight",
+                                  current && "font-medium",
+                                )}
+                              >
+                                {current ? (
+                                  <span
+                                    className="size-1.5 shrink-0 rounded-full bg-clay"
+                                    aria-hidden
+                                  />
+                                ) : null}
+                                <span className="truncate">{project.name}</span>
+                              </span>
+                              <span
+                                className="truncate font-mono text-micro text-muted-foreground"
+                                title={project.path}
+                              >
+                                {shortPath(project.path)}
+                              </span>
+                            </>
+                          )}
+                        </button>
+                        {rail ? null : (
+                          <Button
+                            variant="ghost"
+                            size="iconSm"
+                            aria-label={`Stop watching ${project.name}`}
+                            className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                            onClick={() => setConfirming(project.id)}
+                          >
+                            <X />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          <div className={cn("shrink-0 border-t border-border p-2.5", rail && "flex flex-col items-center gap-1")}>
+            {rail ? (
+              <Button
+                variant="ghost"
+                size="iconSm"
+                aria-label="Add project…"
+                title="Add project…"
+                onClick={onPick}
+              >
+                <FolderPlus />
               </Button>
+            ) : (
+              <>
+                {picking ? (
+                  <div className="flex items-center gap-2 px-2 py-1.5 text-meta text-muted-foreground">
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                    <span className="flex-1">Waiting for folder…</span>
+                    <Button size="sm" variant="ghost" onClick={onCancelPick}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="ghost" className="w-full justify-start" onClick={onPick}>
+                    <FolderPlus /> Add project…
+                  </Button>
+                )}
+                {typing ? (
+                  <form
+                    className="px-1 pt-1 pb-1"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+
+                      void onAddPath(path).then((message) => {
+                        setProblem(message);
+
+                        if (!message) {
+                          setPath("");
+                          setTyping(false);
+                          onClose();
+                        }
+                      });
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      aria-label="Project directory"
+                      placeholder="/path/to/project"
+                      value={path}
+                      onChange={(event) => setPath(event.target.value)}
+                      className="h-9 w-full rounded-lg border border-border bg-background px-2.5 font-mono text-meta"
+                    />
+                    {problem ? <p className="pt-1.5 text-micro text-clay-ink">{problem}</p> : null}
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-micro text-muted-foreground underline-offset-2 hover:underline"
+                    onClick={() => setTyping(true)}
+                  >
+                    Enter a path
+                  </button>
+                )}
+              </>
+            )}
+            <div
+              className={cn(
+                "mt-1 flex items-center",
+                rail ? "justify-center" : "justify-between px-1",
+              )}
+            >
+              {rail ? null : <span className="px-2 text-micro text-muted-foreground">Theme</span>}
+              <ThemeToggle />
             </div>
-          ) : (
-            <Button variant="ghost" className="w-full justify-start" onClick={onPick}>
-              <FolderPlus /> Add project…
-            </Button>
-          )}
-          {typing ? (
-            <form
-              className="px-1 pt-1 pb-1"
-              onSubmit={(event) => {
-                event.preventDefault();
-
-                void onAddPath(path).then((message) => {
-                  setProblem(message);
-
-                  if (!message) {
-                    setPath("");
-                    setTyping(false);
-                    onClose();
-                  }
-                });
-              }}
-            >
-              <input
-                autoFocus
-                aria-label="Project directory"
-                placeholder="/path/to/project"
-                value={path}
-                onChange={(event) => setPath(event.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-background px-2.5 font-mono text-meta"
-              />
-              {problem ? <p className="pt-1.5 text-micro text-clay-ink">{problem}</p> : null}
-            </form>
-          ) : (
-            <button
-              type="button"
-              className="px-3 py-1 text-micro text-muted-foreground underline-offset-2 hover:underline"
-              onClick={() => setTyping(true)}
-            >
-              Enter a path
-            </button>
-          )}
-          <div className="mt-1 flex items-center justify-between px-1">
-            <span className="px-2 text-micro text-muted-foreground">Theme</span>
-            <ThemeToggle />
           </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
     </>
   );
 }
@@ -1403,6 +1490,24 @@ function App() {
   const [picking, setPicking] = React.useState(false);
   const pickAbort = React.useRef<AbortController | null>(null);
   const [navOpen, setNavOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem("factory-sidebar") === "collapsed";
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleCollapsed() {
+    setCollapsed(!collapsed);
+
+    try {
+      if (collapsed) localStorage.removeItem("factory-sidebar");
+      else localStorage.setItem("factory-sidebar", "collapsed");
+    } catch {
+      // The choice still applies to this page load.
+    }
+  }
 
   function selectProject(id: string) {
     activeProject = id;
@@ -1589,6 +1694,8 @@ function App() {
       board={board}
       picking={picking}
       open={navOpen}
+      collapsed={collapsed}
+      onToggleCollapsed={toggleCollapsed}
       onClose={() => setNavOpen(false)}
       onSelect={selectProject}
       onRemove={(id) => void removeProject(id)}
