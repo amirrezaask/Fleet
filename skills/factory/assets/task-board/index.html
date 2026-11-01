@@ -953,18 +953,25 @@ function TaskReader({
             </Button>
           </DialogPrimitive.Close>
           {task ? (
-            <div
-              role="group"
-              aria-label="Send to"
-              className="absolute top-14 right-4 flex items-center gap-1 text-meta text-muted-foreground"
-            >
+            <div className="absolute top-14 right-4 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 text-meta text-muted-foreground focus-within:ring-2 focus-within:ring-ring hover:bg-muted">
               <Send className="size-3.5" aria-hidden />
-              <span className="mr-1">Send to</span>
-              {sendTargets(task.id).map((target) => (
-                <Button key={target.name} asChild variant="ghost" size="sm">
-                  <a href={target.href}>{target.name}</a>
-                </Button>
-              ))}
+              <select
+                aria-label="Send task to"
+                value=""
+                className="h-8 cursor-pointer bg-transparent pr-1 focus:outline-none"
+                onChange={(event) => {
+                  window.location.href = event.target.value;
+                }}
+              >
+                <option value="" disabled>
+                  Send to
+                </option>
+                {sendTargets(task.id).map((target) => (
+                  <option key={target.name} value={target.href}>
+                    {target.name}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : null}
         </header>
