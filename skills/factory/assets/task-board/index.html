@@ -758,13 +758,13 @@ function crumbs(ancestors: Task[], expanded: boolean): Crumb[] {
   return [all[0], { kind: "gap", key: "gap" }, ...all.slice(-2)];
 }
 
-function taskFilePath(projectPath: string, trail: Task[]) {
+function taskFilePath(trail: Task[]) {
   const segments = trail.map((task, i) => {
     const name = task.id.split("/")[i];
     return i === 0 ? `${task.status}/${name}` : `subtasks/${task.status}/${name}`;
   });
 
-  return `${projectPath}/docs/tasks/${segments.join("/")}/TASK.md`;
+  return `docs/tasks/${segments.join("/")}/TASK.md`;
 }
 
 function sendTargets(file: string) {
@@ -841,12 +841,10 @@ function SendMenu({ file, className }: { file: string; className?: string }) {
 
 function TaskReader({
   root,
-  projectPath,
   onClose,
   liveKey,
 }: {
   root: Task | null;
-  projectPath: string;
   onClose: () => void;
   liveKey: number;
 }) {
@@ -1032,7 +1030,7 @@ function TaskReader({
             </Button>
           </DialogPrimitive.Close>
           {task ? (
-            <SendMenu file={taskFilePath(projectPath, trail)} className="absolute top-14 right-4" />
+            <SendMenu file={taskFilePath(trail)} className="absolute top-14 right-4" />
           ) : null}
         </header>
         <DialogPrimitive.Description className="sr-only">
@@ -1718,7 +1716,6 @@ function App() {
       </div>
       <TaskReader
         root={selected}
-        projectPath={board?.projects.find((project) => project.id === board.projectId)?.path ?? ""}
         onClose={() => setSelected(null)}
         liveKey={liveKey}
       />
