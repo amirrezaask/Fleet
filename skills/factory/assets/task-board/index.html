@@ -263,6 +263,7 @@ const taskSchema = Schema.Struct({
   subtasks: Schema.Struct({ total: Schema.Number, done: Schema.Number }),
   created: Schema.String,
   updated: Schema.String,
+  stage: Schema.optional(Schema.Literals(["intent", "design", "plan", "build", "test", "done"])),
 });
 
 const boardSchema = Schema.Struct({
@@ -277,8 +278,10 @@ const boardSchema = Schema.Struct({
 });
 
 const documentsSchema = Schema.Struct({
-  brief: Schema.String,
+  intent: Schema.String,
+  design: Schema.String,
   plan: Schema.String,
+  debrief: Schema.String,
   subtasks: Schema.Array(taskSchema),
 });
 
@@ -646,6 +649,15 @@ function TaskCard({
       </button>
       <div className="mt-3 flex items-center gap-3 text-micro text-muted-foreground">
         <span>Updated {task.updated}</span>
+        {task.stage ? (
+          <span
+            data-stage={task.stage}
+            className="rounded-full bg-muted px-1.5 py-0.5 capitalize"
+            aria-label={`Stage: ${task.stage}`}
+          >
+            {task.stage}
+          </span>
+        ) : null}
         {task.subtasks.total ? (
           <SubtaskMeter done={task.subtasks.done} total={task.subtasks.total} className="ml-auto" />
         ) : null}
@@ -852,7 +864,7 @@ function TaskReader({
   const [trail, setTrail] = React.useState<Task[]>([]);
   const [dir, setDir] = React.useState<"in" | "out">("in");
   const [expandCrumbs, setExpandCrumbs] = React.useState(false);
-  const [tab, setTab] = React.useState("brief");
+  const [tab, setTab] = React.useState("intent");
   const [documents, setDocuments] = React.useState<Documents | null>(null);
   const [error, setError] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
@@ -872,12 +884,12 @@ function TaskReader({
     } else setTrail([]);
   }, [root?.id]);
   React.useEffect(() => {
-    if (wide && tab === "subtasks") setTab("brief");
+    if (wide && tab === "subtasks") setTab("intent");
   }, [wide]);
   React.useEffect(() => {
     if (!task) return;
     const controller = new AbortController();
-    setTab("brief");
+    setTab("intent");
     setDocuments(null);
     setError(false);
     setExpandCrumbs(false);
@@ -1035,7 +1047,7 @@ function TaskReader({
           ) : null}
         </header>
         <DialogPrimitive.Description className="sr-only">
-          Task brief, implementation plan and subtasks.
+          Task intent, design, implementation plan, debrief and subtasks.
         </DialogPrimitive.Description>
         <TabsPrimitive.Root
           value={tab}
@@ -1043,8 +1055,10 @@ function TaskReader({
           className="flex min-h-0 flex-1 flex-col"
         >
           <TabsList aria-label="Task documents">
-            <TabsTrigger value="brief">Brief</TabsTrigger>
+            <TabsTrigger value="intent">Intent</TabsTrigger>
+            <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="plan">Plan</TabsTrigger>
+            <TabsTrigger value="debrief">Debrief</TabsTrigger>
             {!wide && subs.length ? (
               <TabsTrigger value="subtasks">
                 Subtasks
@@ -1074,12 +1088,15 @@ function TaskReader({
                 </div>
               ) : (
                 <>
-                  <TabsPrimitive.Content value="brief" className="min-h-0 flex-1 overflow-auto">
-                    {document_(documents.brief)}
-                  </TabsPrimitive.Content>
-                  <TabsPrimitive.Content value="plan" className="min-h-0 flex-1 overflow-auto">
-                    {document_(documents.plan)}
-                  </TabsPrimitive.Content>
+                  {(["intent", "design", "plan", "debrief"] as const).map((name) => (
+                    <TabsPrimitive.Content
+                      key={name}
+                      value={name}
+                      className="min-h-0 flex-1 overflow-auto"
+                    >
+                      {document_(documents[name])}
+                    </TabsPrimitive.Content>
+                  ))}
                   {!wide && subs.length ? (
                     <TabsPrimitive.Content
                       value="subtasks"

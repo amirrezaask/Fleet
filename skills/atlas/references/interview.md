@@ -5,7 +5,7 @@ intended. Run this pass inside an `/atlas` invocation when evidence leaves
 consequential vocabulary or intent unresolved, or when ADMIN asks to be
 interviewed. Skip it when the code, existing specs and ADMIN's scope already
 answer the questions. It never runs outside `/atlas`; Factory clarification keeps
-using the [grilling method](../../factory/references/grilling.md) for briefs.
+using the [grilling method](../../factory/references/grilling.md) for Factory intents.
 
 ## Method
 

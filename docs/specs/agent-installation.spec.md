@@ -9,7 +9,7 @@ templates, and individually discoverable skills using symlinks.
 
 ## Requirements
 
-- **R1:** Given Node.js 24 or newer, when `npm run install:agents` runs, then root `AGENTS.md` links into `~/.agents`, `~/.codex`, and `~/.claude`. Their brief, plan and debrief aliases link directly into `skills/factory/templates/`; SPEC_TEMPLATE.md links to `skills/atlas/templates/AREA_TEMPLATE.md`. Each skill links separately into the agents' skill directories and `~/.cursor/skills-cursor`.
+- **R1:** Given Node.js 24 or newer, when `npm run install:agents` runs, then root `AGENTS.md` links into `~/.agents`, `~/.codex`, and `~/.claude`. Their intent, design, plan, debrief and test report template aliases (`*_TEMPLATE.html`) link directly into `skills/factory/templates/`; SPEC_TEMPLATE.html links to `skills/atlas/templates/AREA_TEMPLATE.html`; a retired `BRIEF_TEMPLATE.html` alias owned by this repo is removed (amended 2026-11-02 by ADMIN's factory-sdlc-pipeline request). Each skill links separately into the agents' skill directories and `~/.cursor/skills-cursor`.
 - **R2:** Given `--list` or `--dry-run`, when the installer runs, then it reports discovered skills or intended changes without writing to the home directory.
 - **R3:** Given explicit skill names, when installation runs, then it installs those skills, the global files, and the mandatory `factory` and `atlas` skills referenced by AGENTS.md. Unknown names or options fail before mutation.
 - **R4:** Given an existing regular file, directory, unrelated symlink, or symlinked destination parent, when it conflicts with installation, then preflight rejects the install before changing links. Unrelated installed skills remain intact.

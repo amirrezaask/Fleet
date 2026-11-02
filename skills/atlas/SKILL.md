@@ -37,7 +37,7 @@ Factory may read targeted maintenance references without invoking a full baselin
   terms or rules unresolved, run the optional [interview pass](references/interview.md)
   and record settled answers in `docs/domain.html`.
 - **Discuss a future system:** draft proposed rules with ADMIN; keep them
-  distinguishable from implemented behavior. Factory owns delivery briefs.
+  distinguishable from implemented behavior. Factory owns delivery intents, designs and plans.
 
 Inspect existing documentation before selecting names or moving files. Follow
 the user's scope and existing authorization. A request to explain or discuss a
@@ -75,7 +75,7 @@ docs/
   operations.html             # Configuration, execution, release and recovery
   areas/<area-name>.html      # Ground rules, ownership and relevant contracts
   workflows/<flow-name>.html  # Actor triggers, steps, outcomes and failures
-  tasks/                    # Factory briefs, plans and decision reasoning
+  tasks/                    # Factory intents, designs, plans and decision reasoning
   reports/                  # Verification evidence and debriefs
 ```
 

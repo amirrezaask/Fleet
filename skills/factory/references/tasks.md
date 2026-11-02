@@ -2,7 +2,9 @@
 
 ## Layout and metadata
 
-Use `docs/tasks/<status>/<task-name>/{TASK,BRIEF,PLAN}.html`. Task names are
+Use `docs/tasks/<status>/<task-name>/` holding `TASK.html` and the stage documents
+`INTENT.html`, `DESIGN.html` (with `design/`), `PLAN.html` and `DEBRIEF.html`. Legacy
+tasks keep `BRIEF.html`/`BRIEF.md`, which count as the intent. Task names are
 lowercase ASCII letters/numbers separated by single hyphens and are unique across
 all status directories. Reuse existing tasks; never overwrite another task to
 resolve a naming collision.
@@ -11,28 +13,30 @@ The status is the directory the task lives in:
 
 | Directory | Board column | Meaning |
 | --- | --- | --- |
-| `backlog/` | Backlog | Approved brief and implementation plan exist; not started |
-| `inprogress/` | In progress | Implementing or verifying |
+| `backlog/` | Backlog | Captured; no agent is working on it (any stage before `done`) |
+| `inprogress/` | In progress | An agent is working on it, in any stage |
 | `blocked/` | Blocked | A recorded decision/dependency prevents progress |
-| `done/` | Done | Requirements, verification, debrief, and area specs complete |
+| `done/` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
 
 TASK.html carries a nonempty `<title>` and `<meta name="created">`/`<meta name="updated">`
-ISO dates in `<head>`. Legacy `TASK.html` keeps its YAML frontmatter. It has no status field: the
+ISO dates and `<meta name="stage">` (`intent`, `design`, `plan`, `build`, `test`, `done`)
+in `<head>`. The stage is the pipeline position; the status is whether anyone is
+working on it. Legacy `TASK.md` keeps its YAML frontmatter. There is no status field: the
 directory is the single source of truth. Other metadata and body content
 are allowed and preserved. Move a task with `git mv` (or the board) and update
 `updated`. Relative links inside a task's documents must survive the move, so link
 to `docs/reports/` from the repo root path or recompute them when moving.
 
-Record blockers and the debrief link in the document body. A status change is
+Record blockers and the report link in the document body. A status change is
 bookkeeping: it does not approve work, execute plans, validate completion, or
 create agent sessions.
 
 ## Subtasks
 
-A task may contain `subtasks/<status>/<subtask-name>/{TASK,BRIEF,PLAN}.html`, the
+A task may contain `subtasks/<status>/<subtask-name>/` with the same documents, the
 same structure and statuses as a top-level task. Subtask names are unique within
-their parent. A subtask brief needs no ADMIN approval but must refine, never
-contradict, its parent brief; record "Approval: not required, subtask of
+their parent. A subtask intent needs no ADMIN approval but must refine, never
+contradict, its parent intent; record "Approval: not required, subtask of
 `<parent>`". The board shows a `done/total subtasks` count on the parent card and
 does not move subtasks; moving a parent moves its subtasks with it.
 

@@ -7,6 +7,7 @@
   <title>&lt;Task title&gt;</title>
   <meta name="created" content="<YYYY-MM-DD>">
   <meta name="updated" content="<YYYY-MM-DD>">
+  <meta name="stage" content="<intent | design | plan | build | test | done>">
   <style>
     /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
     :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
@@ -39,13 +40,13 @@
   <p class="meta">Task · created &lt;YYYY-MM-DD&gt; · updated &lt;YYYY-MM-DD&gt;</p>
 
   <h2>Context</h2>
-  <p>&lt;Optional context or links. <code>BRIEF.html</code> and <code>PLAN.html</code> in this directory are canonical. Status is this task's directory under <code>docs/tasks/</code>. For a subtask, name the parent task.&gt;</p>
+  <p>&lt;Optional context or links. <code>INTENT.html</code>, <code>DESIGN.html</code>, <code>PLAN.html</code> and <code>DEBRIEF.html</code> in this directory are canonical. The stage is in <code>&lt;meta name="stage"&gt;</code>. Status is this task's directory under <code>docs/tasks/</code>. For a subtask, name the parent task.&gt;</p>
 
   <h2>Blocker</h2>
   <p>&lt;Reason and required decision or dependency when blocked; otherwise None.&gt;</p>
 
   <h2>Outcome</h2>
-  <p>&lt;Link to <code>docs/reports/YYYY-MM-DD-task-name.html</code> after the debrief is written.&gt;</p>
+  <p>&lt;Link to the test report <code>docs/reports/YYYY-MM-DD-task-name.html</code> once Test has run.&gt;</p>
 
   <h2>Depends on</h2>
   <p>&lt;Sibling subtasks that must be done first, or None. Subtasks only.&gt;</p>

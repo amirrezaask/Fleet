@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Factory follows the AI-native SDLC pipeline</title>
+  <meta name="created" content="2026-11-02 16:40">
+  <meta name="author" content="Claude Code claude-opus-5-5">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Factory follows the AI-native SDLC pipeline</h1>
+  <p class="meta">Intent · <span class="pill">Approved</span> · created 2026-11-02 16:40 · Claude Code claude-opus-5-5</p>
+
+  <h2>Problem</h2>
+  <p>Factory runs clarify → plan → build → verify, and loads whenever an agent does software work. ADMIN wants the pipeline from Claude's AI-native SDLC playbook, started only on request, with documents sized to whoever reads them.</p>
+
+  <h2>Outcome</h2>
+  <p>Factory runs Intent → Design → Plan → Build → Test, only through <code>/factory</code> and its stage commands. Each stage produces an HTML document from a template.</p>
+
+  <h2>Requirements</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Requirement</th><th>Accepted when</th></tr></thead>
+    <tbody>
+      <tr><td>R1</td><td>The article's knowledge, tips and tricks are extracted, and ADMIN's reading of the pipeline is compared with the article's.</td><td>An HTML page in this task's <code>design/</code> covers every stage, the principles and the differences.</td></tr>
+      <tr><td>R2</td><td>Factory's stages are Intent, Design, Plan, Build and Test, with the artifacts ADMIN described: intent ≈ brief; design = AI-made artifacts; plan = agent plan with the tests decided up front; build = debrief only; test = cheap tests during build, heavy tests only in Test.</td><td>The skill and its stage guides describe these stages, artifacts and gates.</td></tr>
+      <tr><td>R3</td><td>Factory is opt-in and runs only through <code>/factory</code> or the stage commands.</td><td>Every Factory skill disables implicit invocation, and AGENTS.md no longer requires Factory for all software work.</td></tr>
+      <tr><td>R4</td><td>The templates follow the new format. They are still HTML with the Factory style, short for human readers and detailed for agent readers.</td><td>Intent, design, plan, debrief, test report and task templates exist with the shared tokens.</td></tr>
+      <tr><td>R5</td><td>Existing tooling and legacy tasks keep working.</td><td>The board and installer handle the new documents and still read legacy BRIEF files. <code>npm test</code>, the type check and the skill check pass.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Boundaries</h2>
+  <ul>
+    <li><strong>Non-goals:</strong> migrating existing tasks; deploy or production automation; hooks that enforce the policies.</li>
+    <li><strong>Constraints:</strong> HTML artifacts and the Factory tokens; TypeScript tooling; the skill entrypoint stays under 150 lines.</li>
+    <li><strong>Preserved:</strong> task status directories, subtasks, the board's safety rules (<code>docs/specs/factory-board.spec.md</code>), and Atlas ownership.</li>
+    <li><strong>Design:</strong> needed. Command names, gates and the scope of each document were open.</li>
+  </ul>
+
+  <h2>Open questions</h2>
+  <ul><li>ADMIN invited questions, but this session runs autonomously, so the agent decided them and listed each decision in DESIGN.html for review.</li></ul>
+
+  <section class="entry">
+    <h3>2026-11-02 16:40 — Approved</h3>
+    <p>ADMIN's request in chat ("I want the same pipeline … we should refactor factory skill") gave the requirements and the go-ahead in one message, and it is recorded as the approval. It also authorizes amending <code>docs/specs/documentation-workflow.spec.md</code> and the related specs.</p>
+  </section>
+</main>
+</body>
+</html>

@@ -14,8 +14,8 @@ types", "all the UI") that cannot be verified until another one lands.
 
 - Do any prefactoring first, as its own subtask: make the change easy, then make
   the easy change.
-- Phrase each subtask brief in domain vocabulary and observable behavior, with
-  acceptance checks. Avoid file paths and code snippets in briefs; they go stale.
+- Phrase each subtask intent in domain vocabulary and observable behavior, with
+  acceptance checks. Avoid file paths and code snippets in intents; they go stale and belong in the plan.
   Keep a snippet only when it encodes a decision prose cannot (state machine,
   schema, type shape).
 
@@ -43,7 +43,7 @@ The **frontier** is every subtask not yet `done` whose dependencies are all
 
 The managing agent owns the graph and runs this loop:
 
-1. Read the parent brief and every subtask's `TASK.html`, `BRIEF.html` and `PLAN.html`
+1. Read the parent intent and design, and every subtask's `TASK.html`, `INTENT.html` and `PLAN.html`
    to build the graph. Do the shared exploration once (a fresh subagent that
    saves notes outside the repo, in `.work/`, for later subagents) so implementers
    do not each rediscover the same code.
@@ -54,21 +54,21 @@ The managing agent owns the graph and runs this loop:
    Run independent subtasks concurrently; never give two concurrent writers
    overlapping files. If two frontier subtasks touch the same files, serialize
    them by adding a dependency edge.
-4. Brief each implementer with **context pointers** (parent brief, its subtask
+4. Brief each implementer with **context pointers** (parent intent and design, its subtask
    directory, exploration notes, relevant prior commits) rather than copied
    text. It confirms its worktree is based on the integration branch, builds its
-   subtask, runs only cheap checks, merges the integration tip into its branch,
+   subtask, runs only its plan's `fast` tests, merges the integration tip into its branch,
    commits, and reports. It must not run heavy validation gates and must not
-   edit the parent brief or sibling subtasks.
+   edit the parent intent or sibling subtasks, and it writes its own `DEBRIEF.html` only
+   when it found something worth recording.
 5. When an implementer reports, merge its branch into the integration branch
    (a separate merger subagent or the manager), resolve conflicts, move the
    subtask to `done/` and record results in its plan.
 6. Recompute the frontier; start newly unblocked subtasks immediately.
 7. When every subtask is `done`, the managing agent alone runs the heavy
-   verification from the Factory skill on the integration branch (regression,
-   acceptance, then quality) and fixes failures, using one fresh implementer
+   [Test stage](test.md) on the integration branch and fixes failures, using one fresh implementer
    subagent for a batch of fixes when useful.
-8. Write the debrief, update specs, move the parent to `done/`, and remove every
+8. Write the report, update specs, move the parent to `done/`, and remove every
    implementer worktree.
 
 Keep communication with subagents sparse: pointers in, a short report out. A

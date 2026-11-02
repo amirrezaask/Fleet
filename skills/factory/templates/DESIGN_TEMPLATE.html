@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>&lt;Change Title&gt;</title>
+  <title>&lt;Design title&gt;</title>
   <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
   <meta name="author" content="<agent> <llm model>">
   <style>
@@ -35,48 +35,37 @@
 </head>
 <body>
 <main>
-  <h1>&lt;Change Title&gt;</h1>
-  <p class="meta">Brief · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+  <!-- Audience: ADMIN reviews. Short page: concerns first, then decisions, then artifacts. Detail lives in design/. -->
+  <h1>&lt;Design title&gt;</h1>
+  <p class="meta">Design · <span class="pill">&lt;Draft / Accepted&gt;</span> · for <a href="INTENT.html">INTENT.html</a> · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
 
-  <h2>User's Request</h2>
-  <p>&lt;Original request or faithful summary.&gt;</p>
-
-  <h2>Agent's Understanding</h2>
-  <p>&lt;What the agent understood from the user's request.&gt;</p>
-
-  <h2>Requirements</h2>
-  <ul>
-    <li><strong>R1:</strong> Given &lt;context&gt;, when &lt;action&gt;, then &lt;observable outcome&gt;.</li>
-    <li><strong>R2:</strong> &lt;Verifiable constraint.&gt;</li>
-  </ul>
-
-  <h2>Scope and Constraints</h2>
-  <ul>
-    <li><strong>Non-goals:</strong> &lt;Explicitly excluded work.&gt;</li>
-    <li><strong>Preserved behavior:</strong> &lt;Links to existing area specification requirements.&gt;</li>
-    <li><strong>Constraints:</strong> &lt;Compatibility, stack, or operational constraints.&gt;</li>
-    <li><strong>Open questions:</strong> &lt;Consequential unresolved decisions; resolve before approval.&gt;</li>
-  </ul>
-
-  <h2>Validation Gates</h2>
-  <p class="hint">Gates reference requirements directly; every requirement appears in this table at least once.</p>
+  <h2>Flagged concerns</h2>
+  <p class="hint">Conflicts, unmet or ambiguous requirements, risks, open questions. ADMIN resolves these first.</p>
   <table>
-    <thead><tr><th>ID</th><th>Covers</th><th>Command or procedure</th><th>Pass condition</th></tr></thead>
-    <tbody><tr><td>V1</td><td>&lt;R1, K1&gt;</td><td>&lt;Exact check&gt;</td><td>&lt;Expected result&gt;</td></tr></tbody>
+    <thead><tr><th>ID</th><th>Concern</th><th>Options</th><th>Recommendation</th><th>Resolution</th></tr></thead>
+    <tbody><tr><td>C1</td><td>&lt;What and which R IDs&gt;</td><td>&lt;A / B&gt;</td><td>&lt;Pick and why&gt;</td><td>&lt;ADMIN's decision, or Open&gt;</td></tr></tbody>
   </table>
 
-  <!-- After approval, freeze all existing content, including metadata and tables.
-  Append each update after this comment as a new .entry section, with its date and reason.
-  Record approval itself as an entry, including ADMIN and the approval date.
-  Do not amend requirements through appended notes without explicit authorization.
-  Mark Complete only when requirements are satisfied and required validation passes. -->
+  <h2>Decisions</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Decision</th><th>Rejected alternatives</th><th>Serves</th></tr></thead>
+    <tbody><tr><td>D1</td><td>&lt;What the user sees or how the system is shaped&gt;</td><td>&lt;Option: why not&gt;</td><td>&lt;R IDs&gt;</td></tr></tbody>
+  </table>
+
+  <h2>Artifacts</h2>
+  <ul>
+    <li><a href="design/&lt;name&gt;.html">&lt;Mock, diagram, prototype, schema or image&gt;</a>: &lt;what to look at and which decisions it shows&gt;</li>
+  </ul>
+
+  <h2>Carried from the intent</h2>
+  <ul><li>&lt;Each intent open question: answered here (by which decision) or still open; or None.&gt;</li></ul>
+
+  <!-- After approval, freeze everything above. Append updates below as .entry sections:
+  approval (who and when), amendments ADMIN authorized (what changed and what it supersedes).
+  Never change requirements through an appended note without ADMIN's authorization. -->
   <section class="entry">
-    <h3>&lt;YYYY-MM-DD HH:mm UTC offset&gt; — &lt;Reason for update&gt;</h3>
-    <ul>
-      <li>Status: <span class="pill">&lt;Draft / Approved / In Progress / Blocked / Complete&gt;</span></li>
-      <li>Changes and decisions: &lt;Affected IDs, decisions, and what they supersede; or None.&gt;</li>
-      <li>Validation: &lt;Gate ID, Passed / Failed / Not Run / Blocked, and actual evidence.&gt;</li>
-    </ul>
+    <h3>&lt;YYYY-MM-DD HH:mm&gt; — &lt;Accepted / Revised&gt;</h3>
+    <p>&lt;Who accepted and how (command or message), or the authorized amendment and the IDs it supersedes.&gt;</p>
   </section>
 </main>
 </body>

@@ -1,25 +1,42 @@
 # Global agent instructions and skills
 
-`AGENTS.md` holds global conventions. Factory is the single software development
-workflow, from clarification and approved briefs to plans, implementation,
-verification and debriefs. Atlas owns software specification discovery, structure
-and templates; Factory uses its maintenance guidance during delivery.
+`AGENTS.md` holds global conventions. Factory is an opt-in delivery pipeline,
+Intent → Design → Plan → Build → Test, started only by `/factory` or a stage
+command. Atlas owns software specification discovery, structure and templates;
+Factory uses its maintenance guidance during delivery.
 
 ## Skills
 
 | Skill | Task trigger |
 | --- | --- |
-| `factory` | Features, bug fixes, software development, Factory tasks and local task board |
+| `factory` | Only `/factory`: route a task through the pipeline, stopping at human gates; task board |
+| `factory-intent`, `factory-design`, `factory-plan`, `factory-build`, `factory-test` | Only the matching `/factory-<stage>` command: run that one stage |
 | `atlas` | Explicit `/atlas` initialization and documentation of an existing project |
 | `hbs` | Any HTML document an agent makes to communicate with ADMIN: explainers, comparisons, reviews, reports, charts, questionnaires, editors |
 | `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
 
-Factory replaces the former `communication` workflow. Its
-[entrypoint](skills/factory/SKILL.md) links clarification, planning, delivery
-templates and the optional task board. [Atlas](skills/atlas/SKILL.md) replaces
-the former specification conventions with evidence-based system discovery.
+## Factory pipeline
+
+Adapted from the [AI-native SDLC playbook](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
+every stage commits one artifact that the next stage reads, and ADMIN's attention goes
+to the gates.
+
+| Stage | Command | Artifact | Reader | Gate |
+| --- | --- | --- | --- | --- |
+| Intent | `/factory-intent` | `INTENT.html` | ADMIN, one screen | ADMIN approves |
+| Design | `/factory-design` | `DESIGN.html` + `design/` mocks and diagrams | ADMIN reviews | ADMIN accepts (or skip recorded) |
+| Plan | `/factory-plan` | `PLAN.html` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
+| Build | `/factory-build` | Code, tests, `DEBRIEF.html` | Future agents | Fast tests green |
+| Test | `/factory-test` | `docs/reports/YYYY-MM-DD-<task>.html` | ADMIN, verdict first | Regression, acceptance, fresh review, heavy gates |
+
+Skills use `disable-model-invocation: true` (Claude Code) and
+`agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
+them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
+holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
+method. Tasks live in `docs/tasks/<status>/<task>/`; the optional board shows the
+stage and the Intent/Design/Plan/Debrief documents.
 
 ## HTML communication (HBS)
 
@@ -38,7 +55,7 @@ and its "Know your unknowns" pages.
 | `skills/hbs/references/writing.md` | First screen, ordering by what ADMIN acts on, evidence, trade-offs, honesty devices, unknowns |
 | `skills/hbs/templates/BASE_TEMPLATE.html` | Starting shell: tokens, prompt box, stat band, timeline, cards, diff, toggle, SVG classes, live reply and copy helper |
 
-Factory's task/brief/plan/debrief templates and Atlas's specification templates are HTML too;
+Factory's task/intent/design/plan/debrief/test-report templates and Atlas's specification templates are HTML too;
 they keep their own structure and reuse the same tokens.
 
 ## Atlas specifications
@@ -87,45 +104,48 @@ implicitly starting a full baseline.
 
 ## Factory tasks
 
-Discuss a feature or bug with the agent, approve its brief, and let it produce
-an implementation plan. The task then lives in:
+Run `/factory <request>` (or one stage command at a time). The task then lives in:
 
 ```text
 docs/tasks/<status>/<task-name>/      # status: backlog | inprogress | blocked | done
-  TASK.html     # title, dates, blocker, debrief link
-  BRIEF.html    # approved requirements
-  PLAN.html     # implementation approach and recorded revisions
+  TASK.html     # title, dates, stage, blocker, report link
+  INTENT.html   # approved requirements (one screen, for ADMIN)
+  DESIGN.html   # flagged concerns, decisions, links into design/
+  design/       # mocks, diagrams, prototypes, images
+  PLAN.html     # agent-facing plan, test plan, recorded revisions
+  DEBRIEF.html  # build notes for future agents and engineers
   subtasks/<status>/<subtask-name>/   # same files; no ADMIN approval needed
 ```
 
 New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
-`BRIEF_TEMPLATE.html`, `PLAN_TEMPLATE.html` and `DEBRIEF_TEMPLATE.html`
-(debriefs land in `docs/reports/YYYY-MM-DD-<task-name>.html`). Older `TASK.md`,
-`BRIEF.md` and `PLAN.md` files stay readable; the board renders both.
+`INTENT_TEMPLATE.html`, `DESIGN_TEMPLATE.html`, `PLAN_TEMPLATE.html`,
+`DEBRIEF_TEMPLATE.html` and `TEST_REPORT_TEMPLATE.html` (test reports land in
+`docs/reports/YYYY-MM-DD-<task-name>.html`). Older `BRIEF.*`, `TASK.md` and
+`PLAN.md` files stay readable; the board shows a legacy brief as the intent.
 
 A task's status is the directory it sits in; move it with `git mv` or the board.
 Subtasks are full tasks nested in their parent, and they nest recursively: a
-subtask can have subtasks, to any depth. Their briefs refine the parent
-brief and need no ADMIN approval, and the parent finishes only when all of its
+subtask can have subtasks, to any depth. Their intents refine the parent
+intent and need no ADMIN approval, and the parent finishes only when all of its
 subtasks, at every depth, are done.
 
-Agents may revise the plan while preserving the brief and existing area-spec
-requirements. Requirement changes need ADMIN's explicit authorization. Final
-verification runs regression, acceptance, then quality checks. Debriefs live in
-`docs/reports/`; system specifications live directly under `docs/`, with area
+Agents may revise the plan while preserving the intent, accepted design and
+existing area-spec requirements. Requirement changes need ADMIN's explicit
+authorization. Test runs regression, acceptance, a fresh-context review, then heavy
+gates. Test reports live in `docs/reports/`; system specifications live directly under `docs/`, with area
 rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 `docs/specs/` files remain in place until an authorized migration.
 
 The optional board groups cards into Backlog, In progress, Blocked, and Done (one per status directory) and shows subtask progress on parent cards.
 The single-file React app in `index.html` uses adapted shadcn components and
-Tailwind. Cards open a modal with rendered Brief and Plan tabs. Drag-and-drop or keyboard moves move the task directory and update
+Tailwind. Cards show the task's stage and open a modal with rendered Intent, Design, Plan and Debrief tabs. Drag-and-drop or keyboard moves move the task directory and update
 `TASK.html` (or a legacy `TASK.md`); they never launch sessions or prove that work is complete.
 One board watches all your projects: run `npx amirreza-factory [project-dir...]`
 (see the [board instructions](skills/factory/references/tasks.md)); add or remove projects from
 the header or by passing directories. Projects are remembered in `~/.factory/projects.json`. The
 server prepares local React/Tailwind assets at startup; no separate build command or database is needed.
 Card moves, modal opening, and tab changes update React state without navigation.
-Historical briefs and plans are not automatically moved.
+Historical briefs, plans and debriefs are not automatically moved.
 
 Run it from this repository with `npm run factory:board`; `PORT=4311` picks a port.
 

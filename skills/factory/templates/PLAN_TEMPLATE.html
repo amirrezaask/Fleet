@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>&lt;Plan Title&gt;</title>
+  <title>&lt;Plan title&gt;</title>
   <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
   <meta name="author" content="<agent> <llm model>">
   <style>
@@ -35,59 +35,67 @@
 </head>
 <body>
 <main>
-  <h1>&lt;Plan Title&gt;</h1>
-  <p class="meta">Plan · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+  <!-- Audience: implementing agents without this conversation. Be explicit and complete. Link requirements; never restate them. -->
+  <h1>&lt;Plan title&gt;</h1>
+  <p class="meta">Plan · for <a href="INTENT.html">INTENT.html</a> and <a href="DESIGN.html">DESIGN.html</a> · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
 
   <h2>Objective</h2>
-  <p>&lt;Requested outcome and link to <code>BRIEF.html</code> or source request, if available.&gt;</p>
+  <p>&lt;One paragraph: the outcome, and the requirement and decision IDs in scope (INTENT:R1, DESIGN:D1). Preserved specs: &lt;areas/x.html#ID&gt;.&gt;</p>
 
-  <h2>Requirements and Constraints</h2>
-  <ul>
-    <li><strong>R1:</strong> &lt;Observable outcome or behavior to preserve.&gt;</li>
-    <li><strong>R2:</strong> &lt;Verifiable constraint.&gt;</li>
-  </ul>
-
-  <h2>Current State</h2>
+  <h2>Current state</h2>
   <ul>
     <li>&lt;Relevant behavior and evidence; distinguish facts from assumptions.&gt;</li>
-    <li>&lt;Relevant paths and their responsibilities.&gt;</li>
-    <li>&lt;For a bug: reproduction, expected and actual behavior, and known or suspected cause.&gt;</li>
+    <li>&lt;Paths, responsibilities, interfaces and dependencies involved.&gt;</li>
+    <li>&lt;For a bug: reproduction, expected and actual result, known or suspected cause.&gt;</li>
   </ul>
 
   <h2>Approach</h2>
-  <p>&lt;Implementation design, key decisions and rationale. Include interfaces, data flow, and edge cases where relevant.&gt;</p>
+  <p>&lt;Code-level design: data flow, interfaces and contracts, edge cases, migration, rollback and compatibility where relevant.&gt;</p>
+
+  <h2>Files that change</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Change</th><th>Why</th></tr></thead>
+    <tbody><tr><td><code>&lt;path&gt;</code></td><td>&lt;add / edit / delete&gt;</td><td>&lt;Step and IDs&gt;</td></tr></tbody>
+  </table>
 
   <h2>Work</h2>
   <table>
-    <thead><tr><th>ID</th><th>Action</th><th>Dependencies</th><th>Done when</th></tr></thead>
-    <tbody><tr><td>M1</td><td>&lt;Specific implementation step and relevant paths&gt;</td><td>&lt;IDs or None&gt;</td><td>&lt;Observable result&gt;</td></tr></tbody>
+    <thead><tr><th>ID</th><th>Action</th><th>Depends on</th><th>Done when</th></tr></thead>
+    <tbody><tr><td>M1</td><td>&lt;Specific step, paths and interface contract&gt;</td><td>&lt;IDs or None&gt;</td><td>&lt;Observable result and the T IDs that pass&gt;</td></tr></tbody>
+  </table>
+
+  <h2>Test plan</h2>
+  <p class="hint">Decided before code. Every R and D has a test. <code>fast</code> tests run during build and must be green before Test; <code>heavy</code> tests run only in /factory-test. For a bug, T1 reproduces it and is committed failing before the fix.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Proves</th><th>Level</th><th>Tier</th><th>File or procedure</th><th>Command</th><th>Pass condition</th></tr></thead>
+    <tbody><tr><td>T1</td><td>&lt;R1&gt;</td><td>&lt;unit / integration / e2e / visual / manual&gt;</td><td>&lt;fast / heavy&gt;</td><td><code>&lt;path&gt;</code></td><td><code>&lt;exact command&gt;</code></td><td>&lt;Expected result&gt;</td></tr></tbody>
   </table>
 
   <h2>Risks</h2>
   <table>
-    <thead><tr><th>ID</th><th>Risk</th><th>Mitigation</th><th>Verification</th></tr></thead>
-    <tbody><tr><td>K1</td><td>&lt;Possible failure or regression&gt;</td><td>&lt;How to prevent or contain it&gt;</td><td>&lt;Gate ID or check&gt;</td></tr></tbody>
+    <thead><tr><th>ID</th><th>Risk</th><th>Mitigation</th><th>Caught by</th></tr></thead>
+    <tbody><tr><td>K1</td><td>&lt;Possible failure or regression&gt;</td><td>&lt;Prevention or containment&gt;</td><td>&lt;T ID&gt;</td></tr></tbody>
   </table>
 
-  <h2>Validation Gates</h2>
-  <p class="hint">Cover every requirement at least once. Include commands or procedures that another agent can run.</p>
-  <table>
-    <thead><tr><th>ID</th><th>Covers</th><th>Command or procedure</th><th>Pass condition</th></tr></thead>
-    <tbody><tr><td>V1</td><td>&lt;R1, K1&gt;</td><td>&lt;Exact check&gt;</td><td>&lt;Expected result&gt;</td></tr></tbody>
-  </table>
+  <h2>Interrogation</h2>
+  <ul>
+    <li><strong>What could this break?</strong> &lt;Callers, flows, data, performance.&gt;</li>
+    <li><strong>Riskiest step:</strong> &lt;Step ID and why.&gt;</li>
+    <li><strong>Rejected options:</strong> &lt;Option: why not.&gt;</li>
+    <li><strong>Not verifiable locally:</strong> &lt;Check and reason; or None.&gt;</li>
+  </ul>
 
   <h2>Handoff</h2>
   <ul>
-    <li><strong>Starting point:</strong> &lt;Branch or revision, workspace state, and prerequisites.&gt;</li>
-    <li><strong>Decisions and assumptions:</strong> &lt;Choices the implementing agent must preserve or verify.&gt;</li>
-    <li><strong>Open questions:</strong> &lt;Unresolved questions and how they affect execution; or None.&gt;</li>
-    <li><strong>Next action:</strong> &lt;First concrete step.&gt;</li>
+    <li><strong>Starting point:</strong> &lt;Branch or revision, workspace state, prerequisites.&gt;</li>
+    <li><strong>Must preserve:</strong> &lt;Decisions and contracts the implementer may not change.&gt;</li>
+    <li><strong>Open questions:</strong> &lt;And their effect on execution; or None.&gt;</li>
+    <li><strong>First action:</strong> &lt;Concrete first step.&gt;</li>
   </ul>
 
   <h2>Revisions</h2>
-  <ul>
-    <li>&lt;Date, reason, affected work IDs, and impact; or None. Requirements in the approved brief and existing area specs remain binding.&gt;</li>
-  </ul>
+  <p class="hint">Revise in the same commit as the code that departs from the plan. Intent requirements and accepted design decisions stay binding.</p>
+  <ul><li>&lt;YYYY-MM-DD: reason, affected IDs, impact; or None.&gt;</li></ul>
 </main>
 </body>
 </html>

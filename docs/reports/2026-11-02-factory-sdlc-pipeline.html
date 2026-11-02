@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Factory pipeline test report</title>
+  <meta name="created" content="2026-11-02 17:05">
+  <meta name="author" content="Claude Code claude-opus-5-5">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+    .verdict{font-size:17px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--clay);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground)}.tag.ok{background:#e7eddf;color:#45603a}.tag.bad{background:#f5e1dd;color:#9a3b31}@media (prefers-color-scheme:dark){.tag.ok{background:#26301f;color:#b0c99f}.tag.bad{background:#3b2421;color:#e79a8f}}details{border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin:24px 0}summary{cursor:pointer;font-weight:600}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Factory AI-native pipeline: Passed with limitations</h1>
+  <p class="meta">Test report · task <code>factory-sdlc-pipeline</code> · branch <code>feat-factory-sdlc-pipeline</code> · created 2026-11-02 17:05 · Claude Code claude-opus-5-5</p>
+
+  <p class="verdict">Every requirement has evidence, and the tests, type check and skill check pass. Lint fails on the base revision too, with no new failures. No fresh-context review was run. ADMIN should review the decisions in DESIGN.html C1–C3 and D1–D9.</p>
+
+  <h2>Requirements</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Requirement (short)</th><th>Evidence</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>R1</td><td>Article knowledge extracted</td><td>T5: <code>design/playbook-knowledge.html</code> renders with no console errors</td><td><span class="tag ok">Passed</span></td></tr>
+      <tr><td>R2</td><td>Five-stage pipeline</td><td><code>skills/factory/SKILL.md</code> and the intent, design, plan, build and test guides; T1</td><td><span class="tag ok">Passed</span></td></tr>
+      <tr><td>R3</td><td>Opt-in through commands only</td><td>T4: all 6 skills declare <code>disable-model-invocation</code> and have an openai.yaml; AGENTS.md updated</td><td><span class="tag ok">Passed</span></td></tr>
+      <tr><td>R4</td><td>HTML templates, sized to their audience</td><td>T6: six templates with the shared tokens; the test report template was rendered</td><td><span class="tag ok">Passed</span></td></tr>
+      <tr><td>R5</td><td>Tooling and legacy tasks keep working</td><td>T2 35/35, including the BRIEF fallback; T3</td><td><span class="tag ok">Passed</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Gates</h2>
+  <table>
+    <thead><tr><th>Gate</th><th>Command or procedure</th><th>Result</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Regression</td><td><code>npm test</code>, <code>npm run check:types</code>, <code>npm run check:skills</code></td><td>35/35, 0 errors, 11 skills</td><td></td></tr>
+      <tr><td>Regression</td><td><code>npm run lint</code></td><td>Failed</td><td>Already failing on base: 1 format error (session-budget-hook.ts) and 6 UI anti-slop errors. Base and branch were compared in a detached worktree.</td></tr>
+      <tr><td>Acceptance</td><td>Requirement matrix above</td><td>5/5</td><td></td></tr>
+      <tr><td>Review</td><td>Fresh-context review</td><td><span class="tag">Not run</span></td><td>The managing agent reviewed the subagent's server diff by hand.</td></tr>
+      <tr><td>Heavy</td><td>Browser render of the knowledge page and one template</td><td>Passed</td><td>Narrow pane, light mode. Dark mode was not checked.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Limitations and follow-up</h2>
+  <ul>
+    <li>Not observed here: the host actually refusing to auto-load the skills, or <code>/factory-*</code> appearing as commands. Verify after <code>npm run install:agents</code>.</li>
+    <li>Specs amended: <code>docs/specs/documentation-workflow.spec.md</code>, <code>skill-catalog.spec.md</code>, <code>factory-board.spec.md</code>, <code>agent-installation.spec.md</code>.</li>
+  </ul>
+</main>
+</body>
+</html>

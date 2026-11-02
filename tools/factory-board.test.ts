@@ -594,6 +594,7 @@ test("HTML tasks load, render sanitized, and move alongside Markdown tasks", asy
       "<h2>Plan</h2><table><tr><td>R1</td></tr></table><script>alert('unsafe')</script>",
       '<meta name="created" content="2026-10-28"><meta name="updated" content="2026-10-28">',
     );
+
     await writeFile(join(directory, "TASK.html"), original);
     await writeFile(join(directory, "BRIEF.html"), page("Brief", "<p>Brief body</p>"));
     await writeFile(join(directory, "PLAN.html"), page("Plan", "<p>Plan body</p>"));
@@ -619,5 +620,125 @@ test("HTML tasks load, render sanitized, and move alongside Markdown tasks", asy
       ),
       original,
     );
+  });
+});
+
+const documentsSchema = Schema.Struct({
+  intent: Schema.String,
+  design: Schema.String,
+  plan: Schema.String,
+  debrief: Schema.String,
+});
+
+async function documents(base: string, id: string) {
+  return Schema.decodeUnknownSync(documentsSchema)(
+    await (await fetch(`${base}/api/tasks/${id}`)).json(),
+  );
+}
+
+test("intent prefers INTENT over BRIEF, falls back to BRIEF, and optional documents never error", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "legacy-task");
+    await task(tasks, "intent-task");
+    const directory = join(tasks, "backlog/intent-task");
+    await writeFile(
+      join(directory, "INTENT.html"),
+      "<html><body><main><h1>Intent</h1><p>Intent body</p></main></body></html>",
+    );
+    await writeFile(join(directory, "DESIGN.md"), "# Design\n\nDesign body\n");
+    await writeFile(
+      join(directory, "DEBRIEF.html"),
+      "<html><body><main><p>Debrief body</p></main></body></html>",
+    );
+
+    const preferred = await documents(base, "intent-task");
+    assert.match(preferred.intent, /Intent body/);
+    assert.doesNotMatch(preferred.intent, /Recover access/);
+    assert.match(preferred.design, /Design body/);
+    assert.match(preferred.debrief, /Debrief body/);
+
+    const legacy = await documents(base, "legacy-task");
+    assert.match(legacy.intent, /<table>/);
+    assert.match(legacy.plan, /Implementation/);
+    assert.match(legacy.design, /Not written yet/);
+    assert.match(legacy.debrief, /Not written yet/);
+
+    await writeFile(
+      join(tasks, "backlog/legacy-task/INTENT.md"),
+      "# Intent\n\nMarkdown intent body\n",
+    );
+    assert.match((await documents(base, "legacy-task")).intent, /Markdown intent body/);
+
+    const outside = join(dirname(tasks), "outside.md");
+    await writeFile(outside, "secret design");
+    await symlink(outside, join(tasks, "backlog/legacy-task/DESIGN.md"));
+    const linked = await documents(base, "legacy-task");
+    assert.match(linked.design, /DESIGN.md is unavailable/);
+    assert.doesNotMatch(linked.design, /secret design/);
+  });
+});
+
+test("optional task stage is parsed from TASK.html and TASK.md and shown as a card badge", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const markdownTask = join(tasks, "backlog/markdown-stage");
+    await mkdir(markdownTask, { recursive: true });
+    await writeFile(
+      join(markdownTask, "TASK.md"),
+      `---\ntitle: "Markdown stage"\ncreated: "2026-10-28"\nupdated: "2026-10-28"\nstage: design\n---\n`,
+    );
+    const html = join(tasks, "backlog/html-stage");
+    await mkdir(html, { recursive: true });
+    await writeFile(
+      join(html, "TASK.html"),
+      '<!doctype html><html><head><title>HTML stage</title><meta name="created" content="2026-10-28"><meta name="updated" content="2026-10-28"><meta name="stage" content="build"></head><body></body></html>',
+    );
+    const unknown = join(tasks, "backlog/unknown-stage");
+    await mkdir(unknown, { recursive: true });
+    await writeFile(
+      join(unknown, "TASK.md"),
+      `---\ntitle: "Unknown stage"\ncreated: "2026-10-28"\nupdated: "2026-10-28"\nstage: shipping\n---\n`,
+    );
+
+    const listed = Schema.decodeUnknownSync(
+      Schema.Struct({
+        tasks: Schema.Array(
+          Schema.Struct({ id: Schema.String, stage: Schema.optional(Schema.String) }),
+        ),
+      }),
+    )(await (await fetch(`${base}/api/board`)).json());
+
+    assert.deepEqual(Object.fromEntries(listed.tasks.map((item) => [item.id, item.stage])), {
+      "html-stage": "build",
+      "markdown-stage": "design",
+      "move-task": undefined,
+      "unknown-stage": undefined,
+    });
+
+    const { window } = await mount(base);
+    const document = window.document;
+
+    try {
+      const badge = (id: string) =>
+        document.querySelector(`[data-task="${id}"] [data-stage]`)?.textContent ?? null;
+
+      assert.equal(badge("html-stage"), "build");
+      assert.equal(badge("markdown-stage"), "design");
+      assert.equal(badge("move-task"), null);
+      assert.equal(badge("unknown-stage"), null);
+
+      document.querySelector<HTMLButtonElement>('[data-open-task="move-task"]')?.click();
+      await eventually(() => document.querySelector('[role="dialog"] .reader table') !== null);
+      assert.deepEqual(
+        Array.from(document.querySelectorAll('[role="tab"]')).map((item) => item.textContent),
+        ["Intent", "Design", "Plan", "Debrief"],
+      );
+      assert.equal(
+        document.querySelector('[role="tab"][data-state="active"]')?.textContent,
+        "Intent",
+      );
+    } finally {
+      window.close();
+    }
   });
 });

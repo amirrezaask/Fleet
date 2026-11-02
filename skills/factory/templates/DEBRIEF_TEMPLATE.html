@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>&lt;Debrief Title&gt;</title>
+  <title>&lt;Debrief title&gt;</title>
   <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
   <meta name="author" content="<agent> <llm model>">
   <style>
@@ -35,40 +35,36 @@
 </head>
 <body>
 <main>
-  <h1>&lt;Debrief Title&gt;</h1>
-  <p class="meta">Debrief · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+  <!-- Audience: future agents and engineers. Record what the diff cannot tell them. Factual; evidence over adjectives. -->
+  <h1>&lt;Debrief title&gt;</h1>
+  <p class="meta">Debrief · build of <a href="PLAN.html">PLAN.html</a> · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
 
-  <h2>Request</h2>
-  <p>&lt;What ADMIN asked for. Link the brief or plan, if available.&gt;</p>
+  <h2>Summary</h2>
+  <p>&lt;What was built, at which revision, and whether the full plan landed.&gt;</p>
 
-  <h2>Outcome</h2>
-  <p>&lt;What was accomplished, what remains, and the practical result.&gt;</p>
-
-  <h2>Work and Decisions</h2>
-  <ul>
-    <li>&lt;Work performed and relevant paths.&gt;</li>
-    <li>&lt;Key decisions, tradeoffs, and reasons.&gt;</li>
-  </ul>
-
-  <h2>Validation</h2>
-  <p>&lt;Revision and environment, workload or inputs, and method where relevant. Include commands or procedures and baselines needed to interpret or reproduce the results.&gt;</p>
+  <h2>Against the plan</h2>
   <table>
-    <thead><tr><th>ID</th><th>Check or metric</th><th>Expected or baseline</th><th>Actual</th><th>Result</th></tr></thead>
-    <tbody><tr><td>V1</td><td>&lt;Gate ID, check, or metric with units&gt;</td><td>&lt;Pass condition or baseline&gt;</td><td>&lt;Observed result&gt;</td><td>&lt;Passed / Failed / Not Run / Blocked&gt;</td></tr></tbody>
+    <thead><tr><th>Step</th><th>Result</th><th>Deviation and reason</th></tr></thead>
+    <tbody><tr><td>M1</td><td>&lt;Done / Partial / Dropped&gt;</td><td>&lt;None, or what changed and the plan revision that records it&gt;</td></tr></tbody>
   </table>
 
-  <h2>Findings</h2>
-  <ul>
-    <li><strong>Related:</strong> &lt;Failures, limitations, risks, or discoveries relevant to the request; include evidence and impact.&gt;</li>
-    <li><strong>Other:</strong> &lt;Useful incidental findings, even if unrelated to the request; include evidence, location, and impact. Do not imply these were investigated or fixed unless they were.&gt;</li>
-    <li>&lt;Distinguish observations from assumptions and state what remains unverified. Use None where applicable.&gt;</li>
-  </ul>
+  <h2>Abnormalities</h2>
+  <ul><li>&lt;Surprising behavior, flaky or slow tests, environment or tool quirks, and the workaround; with evidence. Or None.&gt;</li></ul>
 
-  <h2>Follow-up</h2>
-  <ul><li>&lt;Remaining work, recommended action, and owner if known; or None.&gt;</li></ul>
+  <h2>Traps and lessons</h2>
+  <ul><li>&lt;What cost time, what a newcomer would get wrong, what to check first next time.&gt;</li></ul>
 
-  <h2>Artifacts</h2>
-  <p>&lt;Links or paths to relevant evidence, if retained. Track only the HTML summary; keep raw output gitignored.&gt;</p>
+  <h2>Memory candidates</h2>
+  <ul><li>&lt;Repeated mistake or missed convention → the exact line to add to AGENTS.md/CLAUDE.md or a skill; applied or proposed. Or None.&gt;</li></ul>
+
+  <h2>Fast tests</h2>
+  <table>
+    <thead><tr><th>Test IDs</th><th>Command</th><th>Revision</th><th>Result</th></tr></thead>
+    <tbody><tr><td>&lt;T1-T4&gt;</td><td><code>&lt;command&gt;</code></td><td>&lt;sha&gt;</td><td>&lt;Passed / Failed, with counts&gt;</td></tr></tbody>
+  </table>
+
+  <h2>Out-of-scope findings</h2>
+  <ul><li>&lt;Finding, evidence, location, impact, and the draft-intent task created for it; or None. Do not imply it was fixed.&gt;</li></ul>
 </main>
 </body>
 </html>
