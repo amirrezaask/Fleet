@@ -38,11 +38,12 @@ revise `PLAN.html` in the same commit and add the incident to `DEBRIEF.html`.
 
 Record command, revision, environment and the literal result for each gate. Never
 claim an unrun check passed; mark it Not run or Blocked with the reason. Keep raw
-output (json, logs, traces, png) gitignored under `docs/reports/`; track only the HTML.
+output (json, logs, traces, png) in the task's gitignored `evidence/` folder; track
+only the HTML.
 
 ## Report
 
-Write `docs/reports/YYYY-MM-DD-<task-name>.html` from the
+Write `REPORT.html` in the task directory, next to the debrief, from the
 [test report template](../templates/TEST_REPORT_TEMPLATE.html). First screen: the
 verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
 decide. Below that: gate results, review findings and their resolution, limitations

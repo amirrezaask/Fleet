@@ -1,7 +1,7 @@
 import type { AddressInfo } from "node:net";
 import { execFile, type ChildProcess } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { constants, watch, type FSWatcher } from "node:fs";
+import { constants, existsSync, watch, type FSWatcher } from "node:fs";
 import { lstat, mkdir, open, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -46,7 +46,14 @@ const registered: string[] = await readFile(registryFile, "utf8").then(
 );
 
 const projectId = (path: string) => createHash("sha1").update(path).digest("hex").slice(0, 10);
-const tasksOf = (project: string) => join(project, "docs", "tasks");
+
+// Tasks live in <project>/.factory/; projects not yet migrated keep docs/tasks/.
+const legacyRoot = join("docs", "tasks");
+
+const tasksOf = (project: string) =>
+  existsSync(join(project, legacyRoot)) && !existsSync(join(project, ".factory"))
+    ? join(project, legacyRoot)
+    : join(project, ".factory");
 
 async function saveRegistry(): Promise<void> {
   await mkdir(dirname(registryFile), { recursive: true });
@@ -193,7 +200,7 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-// Tasks live at docs/tasks/<name>-<status>/; subtasks are child directories named the same way.
+// Tasks live at .factory/<name>-<status>/; subtasks are child directories named the same way.
 // The status is always the last hyphen segment, so a task name may itself contain status words.
 const named = new RegExp(`^([a-z0-9]+(?:-[a-z0-9]+)*)-(${statuses.join("|")})$`);
 
@@ -203,7 +210,7 @@ function parseEntry(entry: string): { name: string; status: string } | undefined
   return match?.[1] && match[2] ? { name: match[1], status: match[2] } : undefined;
 }
 
-// Legacy tasks live at docs/tasks/<status>/<name>/ with subtasks at <task>/subtasks/<status>/<name>/.
+// Legacy tasks live at <root>/<status>/<name>/ with subtasks at <task>/subtasks/<status>/<name>/.
 type Location = { status: string; directory: string; legacy: boolean };
 
 async function find(parent: string, legacyParent: string, name: string): Promise<Location> {
@@ -365,9 +372,9 @@ async function readTask(root: string, id: string) {
   return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
-// The task document path relative to the project, e.g. docs/tasks/<name>-<status>/TASK.html.
+// The task document path relative to the project, e.g. .factory/<name>-<status>/TASK.html.
 const projectFile = (root: string, directory: string, name: string) =>
-  join("docs", "tasks", relative(root, join(directory, name)));
+  join(root.endsWith(legacyRoot) ? legacyRoot : ".factory", relative(root, join(directory, name)));
 
 async function countSubtasks(directory: string): Promise<{ total: number; done: number }> {
   const count = { total: 0, done: 0 };
@@ -424,7 +431,7 @@ async function listTasks(root: string) {
   const errors: string[] = [];
 
   if (!(await realDirectory(root)))
-    return { tasks, errors: ["No docs/tasks directory in this project yet."] };
+    return { tasks, errors: ["No .factory directory in this project yet."] };
 
   for (const entry of (await readdir(root, { withFileTypes: true })).sort((left, right) =>
     left.name.localeCompare(right.name),
@@ -449,7 +456,7 @@ async function listTasks(root: string) {
     }
   }
 
-  // Legacy layout: docs/tasks/<status>/<task>/ stays readable until the task is moved.
+  // Legacy layout: <root>/<status>/<task>/ stays readable until the task is moved.
   for (const status of statuses) {
     if (!(await realDirectory(join(root, status)))) continue;
     const entries = await readdir(join(root, status), { withFileTypes: true });
@@ -542,7 +549,7 @@ async function formFields(request: IncomingMessage, address: string): Promise<UR
 }
 
 // Moving renames the task directory to <name>-<status> in place; subtasks move with it.
-// A legacy docs/tasks/<status>/<name>/ task migrates to docs/tasks/<name>-<status>/.
+// A legacy <root>/<status>/<name>/ task migrates to <root>/<name>-<status>/.
 async function move(fields: URLSearchParams): Promise<TaskSummary> {
   const root = tasksOf(projectPath(fields.get("project")));
   const id = fields.get("task") ?? "";

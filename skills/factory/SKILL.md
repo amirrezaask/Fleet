@@ -35,7 +35,7 @@ unless the user said to skip it.
 | Design | [design](references/design.md) | `DESIGN.html`, `design/` | The user reviews | **The user accepts the design**, or the intent says it is skipped |
 | Plan | [plan](references/plan.md) | `PLAN.html` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
 | Build | [build](references/build.md) | Code, tests, `DEBRIEF.html` | Future agents and engineers | Every fast test in the plan passes |
-| Test | [test](references/test.md) | `docs/reports/YYYY-MM-DD-<task>.html` | The user: verdict first | All gates pass and specs match the verified behavior |
+| Test | [test](references/test.md) | `REPORT.html` | The user: verdict first | All gates pass and specs match the verified behavior |
 
 **Every stage ends with a commit** of its artifact, and the next stage starts by
 reading it. The commit chain is the audit trail: what was asked, what was decided,
@@ -75,14 +75,15 @@ documents for agents are complete.
 
 All documents are HTML from the [templates](templates/), which carry the Claude-style
 tokens; never write Markdown. Legacy tasks keep their files: `BRIEF.html`/`BRIEF.md`
-count as the intent, and a debrief in `docs/reports/` counts as the debrief.
+count as the intent, and a `DEBRIEF.md` counts as the debrief.
 
 ## Tasks
 
-A task is one flat directory, `docs/tasks/<task-name>-<status>/`, holding
-`TASK.html`, its stage documents, its `design/` folder and its subtask
-directories. `<status>` is `backlog`, `inprogress`, `blocked` or `done`: the last
-segment of the name is the status. `TASK.html` records `<meta name="stage">`:
+A task is one flat directory, `.factory/<task-name>-<status>/`, holding
+`TASK.html`, its stage documents and test `REPORT.html`, its `design/` folder and
+its subtask directories. `.factory/` at the project root lists every task.
+`<status>` is `backlog`, `inprogress`, `blocked` or `done`: the last segment of
+the name is the status. `TASK.html` records `<meta name="stage">`:
 `intent`, `design`, `plan`, `build`, `test` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 

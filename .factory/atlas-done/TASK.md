@@ -14,4 +14,4 @@ None.
 
 ## Outcome
 
-[Implementation and verification debrief](../../../reports/2026-10-28-atlas.md).
+[Implementation and verification debrief](DEBRIEF.md).

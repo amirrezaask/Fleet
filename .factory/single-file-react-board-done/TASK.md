@@ -8,4 +8,4 @@ updated: "2026-10-28"
 None.
 
 ## Outcome
-[Verified implementation](../../../reports/2026-10-28-react-board.md).
+[Verified implementation](DEBRIEF.md).

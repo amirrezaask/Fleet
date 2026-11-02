@@ -774,7 +774,7 @@ function crumbs(ancestors: Task[], expanded: boolean): Crumb[] {
 
 // The server reports each task document path relative to the project.
 function taskFilePath(trail: Task[]) {
-  return trail.at(-1)?.file ?? "docs/tasks/";
+  return trail.at(-1)?.file ?? ".factory/";
 }
 
 function sendTargets(file: string) {
@@ -1470,7 +1470,7 @@ function EmptyProjects({
     <section className="mx-auto mt-16 max-w-md rounded-2xl bg-sunken p-10 text-center">
       <h2 className="font-serif text-title font-normal">Watch a project</h2>
       <p className="mt-3 text-muted-foreground">
-        Factory reads <code className="font-mono text-meta">docs/tasks/</code> from any folder you
+        Factory reads <code className="font-mono text-meta">.factory/</code> from any folder you
         add.
       </p>
       <div className="mt-6 flex justify-center">

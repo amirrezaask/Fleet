@@ -56,4 +56,4 @@ was cherry-picked while preserving concurrent application edits.
 
 ## Artifacts
 
-[Catalog](../../README.md), [catalog specification](../specs/skill-catalog.spec.md).
+[Catalog](../../README.md), [catalog specification](../../docs/specs/skill-catalog.spec.md).

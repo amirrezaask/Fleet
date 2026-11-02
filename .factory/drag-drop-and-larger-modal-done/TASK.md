@@ -8,4 +8,4 @@ updated: "2026-10-28"
 None.
 
 ## Outcome
-[Verified results](../../../reports/2026-10-28-drag-drop.md).
+[Verified results](DEBRIEF.md).

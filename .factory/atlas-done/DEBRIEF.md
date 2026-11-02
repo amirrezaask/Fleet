@@ -6,8 +6,8 @@ author: "Codex"
 
 ## Request and outcome
 
-Implemented [the approved Atlas brief](../tasks/done/atlas/BRIEF.md) and
-[plan](../tasks/done/atlas/PLAN.md): a separate specification skill with explicit
+Implemented [the approved Atlas brief](BRIEF.md) and
+[plan](PLAN.md): a separate specification skill with explicit
 `/atlas` initialization, discovery prompts for existing codebases, eight
 templates, Factory integration and matching AGENTS/install conventions.
 
@@ -33,7 +33,7 @@ implicitly initiating a full project baseline.
 - Moved the canonical area template from Factory to Atlas. Selected installs
   include both skills; the installer migrates the former Factory alias safely.
 - Updated affected historical specification requirements under ADMIN's approved
-  ownership/layout change. Added the new [Atlas area](../areas/atlas.md) without
+  ownership/layout change. Added the new [Atlas area](../../docs/areas/atlas.md) without
   migrating unrelated historical documents.
 
 ## Validation

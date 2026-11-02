@@ -230,7 +230,9 @@ function inProgress(task: string): boolean {
 // A moved task (renamed to another status) no longer exists at the recorded path.
 function openTasks(text: string, cwd: string): string[] {
   const tasks = new Set<string>();
-  const documents = /docs\/tasks\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
+
+  const documents =
+    /(?:\.factory|docs\/tasks)\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
 
   for (const match of text.matchAll(documents)) {
     // The root is the session's cwd, or an absolute prefix (which may contain
@@ -273,6 +275,15 @@ function inProgressChildren(parent: string, legacy: string): string[] {
   ];
 }
 
+// Tasks live in .factory/; projects not yet migrated keep docs/tasks/.
+function tasksDirectory(root: string): string {
+  const legacy = join(root, "docs", "tasks");
+
+  return existsSync(legacy) && !existsSync(join(root, ".factory"))
+    ? legacy
+    : join(root, ".factory");
+}
+
 // In-progress leaf tasks: in-progress tasks with no in-progress subtask.
 function inProgressTasks(root: string): string[] {
   const found: string[] = [];
@@ -286,7 +297,7 @@ function inProgressTasks(root: string): string[] {
     }
   };
 
-  const tasksRoot = join(root, "docs", "tasks");
+  const tasksRoot = tasksDirectory(root);
   walk(inProgressChildren(tasksRoot, join(tasksRoot, "inprogress")));
 
   return found;
@@ -295,7 +306,7 @@ function inProgressTasks(root: string): string[] {
 function sessionStart(input: HookInput): void {
   const cwd = input.cwd ?? process.cwd();
 
-  if (input.agent_id || !autonomous || !existsSync(join(cwd, "docs", "tasks"))) return;
+  if (input.agent_id || !autonomous || !existsSync(tasksDirectory(cwd))) return;
   const tasks = inProgressTasks(cwd).map((task) => relative(cwd, task));
 
   const resumed =

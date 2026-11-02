@@ -29,13 +29,13 @@ goes to the gates.
 | Design | `/factory-design` | `DESIGN.html` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
 | Plan | `/factory-plan` | `PLAN.html` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
 | Build | `/factory-build` | Code, tests, `DEBRIEF.html` | Future agents | Fast tests green |
-| Test | `/factory-test` | `docs/reports/YYYY-MM-DD-<task>.html` | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
+| Test | `/factory-test` | `REPORT.html` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
 them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
-method. Tasks live in `docs/tasks/<task>-<status>/`; the optional board shows the
+method. Tasks live in `.factory/<task>-<status>/`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
 
 ## HTML communication (HBS)
@@ -107,25 +107,28 @@ implicitly starting a full baseline.
 Run `/factory <request>` (or one stage command at a time). The task then lives in:
 
 ```text
-docs/tasks/<task-name>-<status>/    # status: backlog | inprogress | blocked | done
+.factory/<task-name>-<status>/      # status: backlog | inprogress | blocked | done
   TASK.html         # title, dates, stage, blocker, report link
   INTENT.html       # approved requirements (one screen, for the user)
   DESIGN.html       # flagged concerns, decisions, links into design/
   design/           # design artifacts: mocks, diagrams, prototypes, images
   PLAN.html         # agent-facing plan, test plan, recorded revisions
   DEBRIEF.html      # build notes for future agents and engineers
+  REPORT.html       # test report, verdict first
+  evidence/         # raw test output (gitignored)
   <subtask-name>-<status>/   # same files; no approval from the user needed
 ```
 
 New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
 `INTENT_TEMPLATE.html`, `DESIGN_TEMPLATE.html`, `PLAN_TEMPLATE.html`,
-`DEBRIEF_TEMPLATE.html` and `TEST_REPORT_TEMPLATE.html` (test reports land in
-`docs/reports/YYYY-MM-DD-<task-name>.html`). Older `BRIEF.*`, `TASK.md` and
+`DEBRIEF_TEMPLATE.html` and `TEST_REPORT_TEMPLATE.html` (the test report is the
+task's `REPORT.html`). Older `BRIEF.*`, `TASK.md` and
 `PLAN.md` files stay readable; the board shows a legacy brief as the intent.
 
 A task's status is the last segment of its directory name; change it by renaming
-the directory with `git mv` or the board. Older `docs/tasks/<status>/<task>/` tasks
-stay readable and migrate when moved. Subtasks are full tasks nested in their parent, and they nest recursively: a
+the directory with `git mv` or the board. Projects still on `docs/tasks/` stay
+readable until moved to `.factory/`, and older `<status>/<task>/` tasks migrate when
+moved. Subtasks are full tasks nested in their parent, and they nest recursively: a
 subtask can have subtasks, to any depth. Their intents refine the parent
 intent and need no approval from the user, and the parent finishes only when all of its
 subtasks, at every depth, are done.
@@ -133,7 +136,7 @@ subtasks, at every depth, are done.
 Agents may revise the plan while preserving the intent, accepted design and
 existing area-spec requirements. Requirement changes need the user's explicit
 authorization. Test runs regression, acceptance, a fresh-context review, then heavy
-gates. Test reports live in `docs/reports/`; system specifications live directly under `docs/`, with area
+gates. Test reports live in their task directory; system specifications live directly under `docs/`, with area
 rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 `docs/specs/` files remain in place until an authorized migration.
 

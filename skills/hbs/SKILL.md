@@ -57,9 +57,9 @@ artifacts.
    live reply preview and a **Copy as text** control that produces a prompt, list, diff or
    config ADMIN pastes back. Unanswered items stay visible as blanks. See
    [interactions.md](references/interactions.md).
-8. **Save and point.** Write the file where the project's rules say (`docs/reports/` for
-   results, the task directory for task documents, `.work/` for scratch) and give ADMIN the
-   full path. Use an Artifact or SendUserFile when ADMIN is away from the machine.
+8. **Save and point.** Write the file where the project's rules say (the task directory
+   for task documents and reports, `docs/reports/` for other results, `.work/` for scratch)
+   and give ADMIN the full path. Use an Artifact or SendUserFile when ADMIN is away from the machine.
 
 ## Design rules (Claude style)
 

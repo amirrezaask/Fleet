@@ -2,14 +2,16 @@
 
 ## Layout
 
-Every task is one flat directory named `<task-name>-<status>`:
+`.factory/` at the project root lists every task. Each task is one flat directory
+named `<task-name>-<status>`:
 
 ```text
-docs/tasks/
+.factory/
   account-recovery-inprogress/
-    TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html
+    TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html  REPORT.html
     design/                                                   # design artifacts
       flow.html  mock.html  states.png
+    evidence/                                                 # raw test output, gitignored
     email-token-done/                                         # subtask, same layout
     rate-limit-backlog/
   export-csv-backlog/
@@ -27,14 +29,15 @@ docs/tasks/
 The name before the suffix is lowercase ASCII letters and numbers separated by single
 hyphens, unique among its siblings. Reuse existing tasks; never overwrite another
 task to resolve a collision. Change status by renaming the directory
-(`git mv docs/tasks/export-csv-backlog docs/tasks/export-csv-inprogress`) and updating
+(`git mv .factory/export-csv-backlog .factory/export-csv-inprogress`) and updating
 `updated`. The name is the status record; `TASK.html` has no status field.
 
 Everything that belongs to a task sits directly in its directory: the stage
-documents, a `design/` folder with the design artifacts, and its subtasks. Nothing else
-goes there; `design` never ends in a status suffix, so it is never mistaken for a
-subtask. Link between a task's own files with relative paths (`design/mock.html`,
-`../DESIGN.html`) so links survive renames, and link to `docs/reports/` by a path from the repo root.
+documents, the test `REPORT.html`, a `design/` folder with the design artifacts, an
+`evidence/` folder with raw test output (gitignored), and its subtasks. Nothing else
+goes there; `design` and `evidence` never end in a status suffix, so they are never
+mistaken for subtasks. Link between a task's own files with relative paths
+(`design/mock.html`, `REPORT.html`, `../DESIGN.html`) so links survive renames.
 
 ## Metadata
 
@@ -57,9 +60,12 @@ subtasks by itself. Dependencies between siblings live in `TASK.html` under
 
 ## Legacy layout
 
-Older projects use `docs/tasks/<status>/<task-name>/` with `subtasks/<status>/`
-nesting, a `BRIEF` as the intent and a `design/` folder. They stay readable; do not
-migrate them unless the user asks. A legacy task that an agent works on may be moved
+Older projects keep tasks in `docs/tasks/` instead of `.factory/`; the board and
+hook read `docs/tasks/` only while `.factory/` does not exist. Migrate with
+`git mv docs/tasks .factory`, moving each task's report or debrief from
+`docs/reports/` into its directory at the same time. Even older projects use
+`<status>/<task-name>/` with `subtasks/<status>/` nesting, a `BRIEF` as the intent
+and a `design/` folder. They stay readable; do not migrate them unless the user asks. A legacy task that an agent works on may be moved
 to the flat layout in its first status change.
 
 ## One shared board
@@ -69,7 +75,7 @@ A single board serves every project; projects do not carry a copy. Run it with
 `skills/factory/assets/task-board/` after `npm install` there, then run
 `amirreza-factory`). Node.js 24+ is required. Listed directories are registered;
 with none given and an empty registry the current directory is adopted if it has
-`docs/tasks/`. Registered projects persist in `~/.factory/projects.json`
+`.factory/` (or legacy `docs/tasks/`). Registered projects persist in `~/.factory/projects.json`
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
 reports the URL. Leave a preview running only when the user asks to use it. Never

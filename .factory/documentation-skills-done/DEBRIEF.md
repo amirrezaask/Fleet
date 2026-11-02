@@ -60,4 +60,4 @@ installation has been refreshed and verified.
 
 [Communication](../../skills/communication/SKILL.md),
 [specification](../../skills/specification/SKILL.md),
-[installation requirements](../specs/agent-installation.spec.md).
+[installation requirements](../../docs/specs/agent-installation.spec.md).

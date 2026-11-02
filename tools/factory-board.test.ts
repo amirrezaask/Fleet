@@ -31,7 +31,7 @@ async function freePort(): Promise<number> {
 
 async function fixture(run: (base: string, tasks: string) => Promise<void>): Promise<void> {
   const directory = await mkdtemp(join(tmpdir(), "factory board "));
-  const tasks = join(directory, "docs/tasks");
+  const tasks = join(directory, ".factory");
   await mkdir(tasks, { recursive: true });
 
   await writeFile(
@@ -484,8 +484,8 @@ test("flat tasks are listed, misnamed directories are reported, and nested subta
     assert.deepEqual(
       listed.tasks.map((item) => [item.id, item.status, item.file]),
       [
-        ["done-backlog", "blocked", "docs/tasks/done-backlog-blocked/TASK.md"],
-        ["parent-task", "inprogress", "docs/tasks/parent-task-inprogress/TASK.md"],
+        ["done-backlog", "blocked", ".factory/done-backlog-blocked/TASK.md"],
+        ["parent-task", "inprogress", ".factory/parent-task-inprogress/TASK.md"],
       ],
     );
     assert.deepEqual(listed.tasks[1]?.subtasks, { total: 3, done: 2 });
@@ -508,7 +508,7 @@ test("moving renames the task directory in place, carries subtasks, and refuses 
     assert.equal(response.status, 200);
     assert.equal(
       Schema.decodeUnknownSync(Schema.Struct({ file: Schema.String }))(await response.json()).file,
-      "docs/tasks/parent-task-done/TASK.md",
+      ".factory/parent-task-done/TASK.md",
     );
     await assert.rejects(readFile(join(parent, "TASK.md")));
     assert.match(await readFile(join(tasks, "parent-task-done/TASK.md"), "utf8"), /^title:/m);
@@ -542,7 +542,7 @@ test("task detail lists nested subtasks and serves their documents by path", asy
         [
           "parent-task/first-step",
           "done",
-          "docs/tasks/parent-task-inprogress/first-step-done/TASK.md",
+          ".factory/parent-task-inprogress/first-step-done/TASK.md",
         ],
       ],
     );
@@ -573,8 +573,8 @@ test("legacy status-directory tasks list, count and read; moving one migrates it
     assert.deepEqual(
       listed.tasks.map((item) => [item.id, item.status, item.file]),
       [
-        ["flat-task", "backlog", "docs/tasks/flat-task-backlog/TASK.md"],
-        ["legacy-parent", "inprogress", "docs/tasks/inprogress/legacy-parent/TASK.md"],
+        ["flat-task", "backlog", ".factory/flat-task-backlog/TASK.md"],
+        ["legacy-parent", "inprogress", ".factory/inprogress/legacy-parent/TASK.md"],
       ],
     );
     assert.deepEqual(listed.tasks[1]?.subtasks, { total: 4, done: 2 });
@@ -616,8 +616,8 @@ test("legacy status-directory tasks list, count and read; moving one migrates it
     assert.deepEqual(
       moved.tasks.map((item) => [item.id, item.status, item.file, item.subtasks]),
       [
-        ["flat-task", "backlog", "docs/tasks/flat-task-backlog/TASK.md", { total: 0, done: 0 }],
-        ["legacy-parent", "done", "docs/tasks/legacy-parent-done/TASK.md", { total: 4, done: 2 }],
+        ["flat-task", "backlog", ".factory/flat-task-backlog/TASK.md", { total: 0, done: 0 }],
+        ["legacy-parent", "done", ".factory/legacy-parent-done/TASK.md", { total: 4, done: 2 }],
       ],
     );
   });
@@ -647,7 +647,7 @@ test("projects can be added, scoped by id, and removed at runtime", async () => 
     const other = await mkdtemp(join(tmpdir(), "factory other "));
 
     try {
-      await task(join(other, "docs/tasks"), "second-task");
+      await task(join(other, ".factory"), "second-task");
       const first = await board(base);
       const form = { "Content-Type": "application/x-www-form-urlencoded", Origin: base };
 
@@ -689,6 +689,25 @@ test("projects can be added, scoped by id, and removed at runtime", async () => 
       assert.equal(removed.status, 200);
 
       assert.equal((await fetch(`${base}/api/board?project=${id}`)).status, 404);
+
+      // A project not yet migrated to .factory/ keeps reading docs/tasks/.
+      await rm(join(other, ".factory"), { recursive: true });
+      await task(join(other, "docs/tasks"), "legacy-root");
+
+      const readded = await fetch(`${base}/api/projects/add`, {
+        method: "POST",
+        headers: form,
+        body: new URLSearchParams({ token: first.token, path: other }),
+      });
+
+      const legacy = Schema.decodeUnknownSync(countsSchema)(
+        await (await fetch(`${base}/api/board?project=${(await readded.json()).id}`)).json(),
+      );
+
+      assert.deepEqual(
+        legacy.tasks.map((item) => [item.id, item.file]),
+        [["legacy-root", "docs/tasks/legacy-root-backlog/TASK.md"]],
+      );
     } finally {
       await rm(other, { recursive: true, force: true });
     }

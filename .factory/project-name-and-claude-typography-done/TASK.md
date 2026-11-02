@@ -8,4 +8,4 @@ updated: "2026-10-28"
 None.
 
 ## Outcome
-[Verified outcome](../../../reports/2026-10-28-project-heading.md).
+[Verified outcome](DEBRIEF.md).

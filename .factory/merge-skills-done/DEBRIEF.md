@@ -60,5 +60,5 @@ Use the catalog in new chats and refine a trigger if an observed request misrout
 ## Artifacts
 
 [Catalog and installation](../../README.md),
-[installation specification](../specs/agent-installation.spec.md),
-[skill specification](../specs/skill-catalog.spec.md).
+[installation specification](../../docs/specs/agent-installation.spec.md),
+[skill specification](../../docs/specs/skill-catalog.spec.md).
