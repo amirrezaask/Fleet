@@ -192,7 +192,9 @@ function blockerSection(markdown: string): string {
 
 // Text between <h2>Blocker</h2> and the next <h2>, with tags and entities removed.
 function htmlBlockerSection(html: string): string {
-  const section = /<h2[^>]*>\s*Blocker\s*<\/h2>([\s\S]*?)(?=<h2[\s>]|<\/main>|<\/body>|$)/i.exec(html);
+  const section = /<h2[^>]*>\s*Blocker\s*<\/h2>([\s\S]*?)(?=<h2[\s>]|<\/main>|<\/body>|$)/i.exec(
+    html,
+  );
 
   return (section?.[1] ?? "")
     .replace(/<!--[\s\S]*?-->/g, "")
@@ -218,11 +220,17 @@ function escalated(task: string): boolean {
   return blocker !== "" && !/^(none\.?|<[^>]*>)$/i.test(blocker);
 }
 
+// A Factory task directory is in progress when named <task>-inprogress, or, in the
+// legacy layout, when it sits in an inprogress/ status directory.
+function inProgress(task: string): boolean {
+  return basename(task).endsWith("-inprogress") || basename(dirname(task)) === "inprogress";
+}
+
 // In-progress, unescalated Factory tasks whose documents this session touched.
-// A task moved to done/ or blocked/ no longer exists at the recorded path.
+// A moved task (renamed to another status) no longer exists at the recorded path.
 function openTasks(text: string, cwd: string): string[] {
   const tasks = new Set<string>();
-  const documents = /docs\/tasks\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF)\.(?:html|md)/g;
+  const documents = /docs\/tasks\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
 
   for (const match of text.matchAll(documents)) {
     // The root is the session's cwd, or an absolute prefix (which may contain
@@ -242,30 +250,44 @@ function openTasks(text: string, cwd: string): string[] {
     for (const root of roots) {
       const task = dirname(resolve(root, match[0]));
 
-      if (basename(dirname(task)) === "inprogress") tasks.add(task);
+      if (inProgress(task)) tasks.add(task);
     }
   }
 
   return [...tasks].filter((task) => existsSync(task) && !escalated(task));
 }
 
+// In-progress task directories directly under `parent`: flat <task>-inprogress/
+// children plus legacy children of `legacy` (an inprogress/ status directory).
+function inProgressChildren(parent: string, legacy: string): string[] {
+  const children = (directory: string, keep: (name: string) => boolean) =>
+    existsSync(directory)
+      ? readdirSync(directory, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory() && keep(entry.name))
+          .map((entry) => join(directory, entry.name))
+      : [];
+
+  return [
+    ...children(parent, (name) => /^[a-z0-9-]+-inprogress$/.test(name)),
+    ...children(legacy, () => true),
+  ];
+}
+
+// In-progress leaf tasks: in-progress tasks with no in-progress subtask.
 function inProgressTasks(root: string): string[] {
   const found: string[] = [];
 
-  const walk = (statusDir: string) => {
-    if (!existsSync(statusDir)) return;
-
-    for (const entry of readdirSync(statusDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const task = join(statusDir, entry.name);
+  const walk = (tasks: string[]) => {
+    for (const task of tasks) {
       const before = found.length;
-      walk(join(task, "subtasks", "inprogress"));
+      walk(inProgressChildren(task, join(task, "subtasks", "inprogress")));
 
       if (found.length === before) found.push(task);
     }
   };
 
-  walk(join(root, "docs", "tasks", "inprogress"));
+  const tasksRoot = join(root, "docs", "tasks");
+  walk(inProgressChildren(tasksRoot, join(tasksRoot, "inprogress")));
 
   return found;
 }

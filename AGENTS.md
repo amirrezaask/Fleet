@@ -4,7 +4,7 @@ Address the user as ADMIN. GLOBAL means `~/.agents/`.
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `INTENT.html`, accepted `DESIGN.html` (+ `design/`), mutable `PLAN.html`, and `DEBRIEF.html`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
+- `docs/tasks/<task-name>-<status>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `INTENT.html`, accepted `DESIGN.html` with its `design-*` artifacts beside it, mutable `PLAN.html`, and `DEBRIEF.html`. The directory name's last segment is the task's status; changing status renames the directory. Subtasks are child directories `<subtask-name>-<status>/` with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
 - `docs/reports/`: every benchmark, test and verification result, one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
 - `docs/README.html`, `docs/architecture.html`, `docs/domain.html`, `docs/data-model.html`, `docs/quality.html`, and `docs/operations.html`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
 - `docs/areas/<area-name>.html`: ground rules, state ownership, and relevant contracts for each software area.
@@ -54,9 +54,9 @@ stage command (`/factory-intent`, `/factory-design`, `/factory-plan`, `/factory-
 software requests directly under these rules. [Atlas](skills/atlas/SKILL.md) owns
 specification discovery methods, the structure above, and specification templates.
 Only ADMIN's explicit `/atlas` command starts initialization/documentation of an
-existing project. Factory reads affected specs before intent and plan, and uses
-Atlas's targeted maintenance guidance to reconcile them with verified behavior in
-Test. Research discussions do not authorize implementation.
+existing project. Factory reads affected specs before intent and plan, and
+reconciles them with verified behavior in Test using its own specification guide;
+it does not depend on Atlas. Research discussions do not authorize implementation.
 
 GLOBAL template filenames remain available through installer-managed symlinks;
 intent, design, plan, debrief, test report and task templates live inside Factory;

@@ -40,7 +40,7 @@
   <p class="meta">Task · created &lt;YYYY-MM-DD&gt; · updated &lt;YYYY-MM-DD&gt;</p>
 
   <h2>Context</h2>
-  <p>&lt;Optional context or links. <code>INTENT.html</code>, <code>DESIGN.html</code>, <code>PLAN.html</code> and <code>DEBRIEF.html</code> in this directory are canonical. The stage is in <code>&lt;meta name="stage"&gt;</code>. Status is this task's directory under <code>docs/tasks/</code>. For a subtask, name the parent task.&gt;</p>
+  <p>&lt;Optional context or links. <code>INTENT.html</code>, <code>DESIGN.html</code>, <code>PLAN.html</code> and <code>DEBRIEF.html</code> in this directory are canonical. The stage is in <code>&lt;meta name="stage"&gt;</code>. Status is the last segment of this directory's name, <code>&lt;name&gt;-&lt;status&gt;</code>. For a subtask, name the parent task.&gt;</p>
 
   <h2>Blocker</h2>
   <p>&lt;Reason and required decision or dependency when blocked; otherwise None.&gt;</p>
@@ -52,7 +52,7 @@
   <p>&lt;Sibling subtasks that must be done first, or None. Subtasks only.&gt;</p>
 
   <h2>Subtasks</h2>
-  <p>&lt;Names of subtasks under <code>subtasks/&lt;status&gt;/</code>, or None.&gt;</p>
+  <p>&lt;Names of subtask directories <code>&lt;subtask&gt;-&lt;status&gt;/</code> inside this one, or None.&gt;</p>
 </main>
 </body>
 </html>

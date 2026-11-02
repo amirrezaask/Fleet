@@ -1,51 +1,64 @@
 # Task documents and local board
 
-## Layout and metadata
+## Layout
 
-Use `docs/tasks/<status>/<task-name>/` holding `TASK.html` and the stage documents
-`INTENT.html`, `DESIGN.html` (with `design/`), `PLAN.html` and `DEBRIEF.html`. Legacy
-tasks keep `BRIEF.html`/`BRIEF.md`, which count as the intent. Task names are
-lowercase ASCII letters/numbers separated by single hyphens and are unique across
-all status directories. Reuse existing tasks; never overwrite another task to
-resolve a naming collision.
+Every task is one flat directory named `<task-name>-<status>`:
 
-The status is the directory the task lives in:
+```text
+docs/tasks/
+  account-recovery-inprogress/
+    TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html
+    design-flow.html  design-mock.html  design-states.png     # design artifacts
+    email-token-done/                                         # subtask, same layout
+    rate-limit-backlog/
+  export-csv-backlog/
+```
 
-| Directory | Board column | Meaning |
+`<status>` is the **last** hyphen segment of the directory name and is one of:
+
+| Suffix | Board column | Meaning |
 | --- | --- | --- |
-| `backlog/` | Backlog | Captured; no agent is working on it (any stage before `done`) |
-| `inprogress/` | In progress | An agent is working on it, in any stage |
-| `blocked/` | Blocked | A recorded decision/dependency prevents progress |
-| `done/` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
+| `-backlog` | Backlog | Captured; nobody is working on it (any stage before `done`) |
+| `-inprogress` | In progress | An agent is working on it, in any stage |
+| `-blocked` | Blocked | A recorded decision or dependency prevents progress |
+| `-done` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
 
-TASK.html carries a nonempty `<title>` and `<meta name="created">`/`<meta name="updated">`
-ISO dates and `<meta name="stage">` (`intent`, `design`, `plan`, `build`, `test`, `done`)
-in `<head>`. The stage is the pipeline position; the status is whether anyone is
-working on it. Legacy `TASK.md` keeps its YAML frontmatter. There is no status field: the
-directory is the single source of truth. Other metadata and body content
-are allowed and preserved. Move a task with `git mv` (or the board) and update
-`updated`. Relative links inside a task's documents must survive the move, so link
-to `docs/reports/` from the repo root path or recompute them when moving.
+The name before the suffix is lowercase ASCII letters and numbers separated by single
+hyphens, unique among its siblings. Reuse existing tasks; never overwrite another
+task to resolve a collision. Change status by renaming the directory
+(`git mv docs/tasks/export-csv-backlog docs/tasks/export-csv-inprogress`) and updating
+`updated`. The name is the status record; `TASK.html` has no status field.
 
-Record blockers and the report link in the document body. A status change is
-bookkeeping: it does not approve work, execute plans, validate completion, or
-create agent sessions.
+Everything that belongs to a task sits directly in its directory: the stage
+documents, design artifacts named `design-<what>.<ext>`, and its subtasks. Nothing
+else goes there. Link between a task's own files with bare names (`design-mock.html`)
+so links survive renames, and link to `docs/reports/` by a path from the repo root.
+
+## Metadata
+
+`TASK.html` carries a nonempty `<title>`, `<meta name="created">` and
+`<meta name="updated">` ISO dates, and `<meta name="stage">` (`intent`, `design`,
+`plan`, `build`, `test`, `done`). The stage is the pipeline position; the status is
+whether anyone is working on it. Record blockers and the report link in the body.
+A status change is bookkeeping: it does not approve work, run plans, prove
+completion or start sessions.
 
 ## Subtasks
 
-A task may contain `subtasks/<status>/<subtask-name>/` with the same documents, the
-same structure and statuses as a top-level task. Subtask names are unique within
-their parent. A subtask intent needs no ADMIN approval but must refine, never
-contradict, its parent intent; record "Approval: not required, subtask of
-`<parent>`". The board shows a `done/total subtasks` count on the parent card and
-does not move subtasks; moving a parent moves its subtasks with it.
+A subtask is a child directory of its task with the same naming and files,
+`<subtask-name>-<status>/`. A subtask intent needs no approval from the user but
+refines, never contradicts, its parent's; record "Approval: not required, subtask
+of `<parent>`". Subtasks nest without limit. Renaming a parent carries its subtasks
+with it. The board shows a done/total count over all descendants and never moves
+subtasks by itself. Dependencies between siblings live in `TASK.html` under
+`## Depends on`; see [subtask graphs](subtasks.md).
 
-Dependencies between sibling subtasks live in `TASK.html` under `## Depends on`;
-see [subtask graphs](subtasks.md).
+## Legacy layout
 
-Subtasks nest recursively without limit: any subtask may hold its own
-`subtasks/<status>/…` tree with the same structure and rules. The parent card's
-count covers every descendant at all depths.
+Older projects use `docs/tasks/<status>/<task-name>/` with `subtasks/<status>/`
+nesting, a `BRIEF` as the intent and a `design/` folder. They stay readable; do not
+migrate them unless the user asks. A legacy task that an agent works on may be moved
+to the flat layout in its first status change.
 
 ## One shared board
 
@@ -57,7 +70,7 @@ with none given and an empty registry the current directory is adopted if it has
 `docs/tasks/`. Registered projects persist in `~/.factory/projects.json`
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
-reports the URL. Leave a preview running only when ADMIN asks to use it. Never
+reports the URL. Leave a preview running only when the user asks to use it. Never
 add `server.ts`, `index.html`, fonts or a `factory:board` script to a project.
 
 The header shows the selected project name and a project switcher; the name is read from package.json

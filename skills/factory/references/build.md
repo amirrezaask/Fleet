@@ -6,7 +6,7 @@ Build has no specification of its own; `PLAN.html` is the specification.
 
 ## Start
 
-Move the task to `inprogress/` and set the stage to `build`. Work in the project's
+Rename the task to `-inprogress` and set the stage to `build`. Work in the project's
 worktree flow. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
 memory (`AGENTS.md`/`CLAUDE.md`).
 
@@ -22,7 +22,7 @@ Give yourself a check for every change, and use it continuously:
    all of them. When a test fails, fix the code, not the test. Never skip, delete or
    loosen a test to pass, and never weaken an assertion the plan defined.
 4. UI work closes the loop visually: implement, screenshot, compare with the
-   `design/` mock, adjust. Two or three rounds is normal.
+   `design-*` mock, adjust. Two or three rounds is normal.
 5. Keep checks fast and scoped while iterating. Heavy suites wait for Test.
 
 Implement the whole plan before any extended qualification. A half-built scope proves
@@ -32,15 +32,15 @@ nothing.
 
 Follow the plan's order and contracts. When reality departs from it, update
 `PLAN.html` **in the same commit** as the departing code (date, reason, affected IDs,
-impact). Requirement or design conflicts stop for ADMIN; record the blocker in
-`TASK.html` and move the task to `blocked/`.
+impact). Requirement or design conflicts stop for the user; record the blocker in
+`TASK.html` and rename the task to `-blocked`.
 
 Commit in coherent increments. Each message names the task and the plan steps
 (`factory(<task>): build M2-M3`).
 
 ## Parallel build
 
-With subtasks or independent plan steps, build in parallel only when ADMIN authorized
+With subtasks or independent plan steps, build in parallel only when the user authorized
 subagents or sessions. Follow [subtask graphs](subtasks.md): one worktree per writer,
 no two writers on the same files, pointers in and a short report out. Implementers
 run only their fast tests and never heavy gates.
@@ -57,7 +57,7 @@ for future agents and engineers; include what they could not learn from the diff
 - Traps and lessons: what cost time, what a newcomer would get wrong, what to check first.
 - **Memory candidates:** a mistake made twice, or a convention the agent kept missing.
   Propose the exact line for `AGENTS.md`/`CLAUDE.md` or the relevant skill; apply it
-  only within this task's scope or when ADMIN asks.
+  only within this task's scope or when the user asks.
 - Out-of-scope findings with evidence and location (see the loop in the Factory skill).
 - Fast test results: command, revision, outcome.
 

@@ -1,12 +1,12 @@
 # Design: decide how it should look and work
 
 Goal: turn the approved intent into the product and architecture decisions an
-engineer can plan against, with every concern flagged up front. ADMIN reviews the
+engineer can plan against, with every concern flagged up front. The user reviews the
 design but does not write it. Requirements and design happen in one session.
 
 ## Inputs
 
-Read `INTENT.html`, the affected Atlas specs and workflows, and the code paths
+Read `INTENT.html`, the affected specs and workflows under `docs/`, and the code paths
 involved. Load the skills that encode the policies the change touches (UI craft,
 accessibility, security, performance, the project's Effect or React patterns) and
 apply them **while** designing, not in a later review.
@@ -15,15 +15,17 @@ apply them **while** designing, not in a later review.
 
 1. **Flagged concerns.** Every place where the intent cannot be met as written, where
    two requirements or policies conflict, where a risk or cost is unclear, or where
-   an open question needs ADMIN. Each concern names the options and a recommendation.
-   These come first; ADMIN resolves them before anything else.
+   an open question needs the user. Each concern names the options and a recommendation.
+   These come first; the user resolves them before anything else.
 2. **Decisions.** For each consequential choice: what was chosen, the alternatives
    rejected and why, and the requirement IDs it serves. Cover only choices that change
    what the user sees, the system's shape, data ownership or contracts.
-3. **Artifacts in `design/`.** Make the decision visible, not described:
+3. **Artifacts beside `DESIGN.html`,** in the task directory, named
+   `design-<what>.<ext>` (`design-mock.html`, `design-flow.html`, `design-states.png`).
+   Make the decision visible, not described:
    - UI: a clickable HTML mock using the project's real tokens, components and copy,
      with states (empty, loading, error, long content) and phone width. Iterate on the
-     mock with ADMIN before planning.
+     mock with the user before planning.
    - Flows and architecture: an HTML page with an SVG diagram of the actual mechanism
      (see [HBS](../../hbs/SKILL.md)).
    - Data and contracts: schemas, type shapes, API examples.
@@ -33,16 +35,16 @@ apply them **while** designing, not in a later review.
 Use the [design template](../templates/DESIGN_TEMPLATE.html). Keep `DESIGN.html` to a
 short page: concerns, decisions, artifact links. The artifacts hold the detail.
 
-## Review with ADMIN
+## Review with the user
 
 Self-check before presenting: does the design solve the stated problem, does every
 requirement map to a decision or need none, is every intent question answered or
-carried forward? Present the concerns first, then the artifacts. Revise until ADMIN
+carried forward? Present the concerns first, then the artifacts. Revise until the user
 accepts. `/factory-plan` on the task counts as acceptance. Record it, commit
-`DESIGN.html` and `design/` together with the intent, and move the stage to `plan`.
+`DESIGN.html` and its `design-*` files, and move the stage to `plan`.
 
 A design never changes a requirement. When a concern can only be solved by changing
-one, ask ADMIN for an intent amendment.
+one, ask the user for an intent amendment.
 
 ## Skipping design
 

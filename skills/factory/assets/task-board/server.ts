@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { constants, watch, type FSWatcher } from "node:fs";
 import { lstat, mkdir, open, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 import { Effect, Option, Schema } from "effect";
@@ -193,50 +193,88 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-// An id is a slash-separated path: a top-level task name followed by nested subtask names.
-async function locate(root: string, id: string): Promise<{ status: string; directory: string }> {
-  const [top, ...nested] = id.split("/");
+// Tasks live at docs/tasks/<name>-<status>/; subtasks are child directories named the same way.
+// The status is always the last hyphen segment, so a task name may itself contain status words.
+const named = new RegExp(`^([a-z0-9]+(?:-[a-z0-9]+)*)-(${statuses.join("|")})$`);
 
-  if (!top || !slug.test(top) || !nested.every((name) => slug.test(name)))
-    throw new BoardError("Invalid task name.");
-  const found = [];
+function parseEntry(entry: string): { name: string; status: string } | undefined {
+  const match = named.exec(entry);
+
+  return match?.[1] && match[2] ? { name: match[1], status: match[2] } : undefined;
+}
+
+// Legacy tasks live at docs/tasks/<status>/<name>/ with subtasks at <task>/subtasks/<status>/<name>/.
+type Location = { status: string; directory: string; legacy: boolean };
+
+async function find(parent: string, legacyParent: string, name: string): Promise<Location> {
+  const found: Location[] = [];
 
   for (const status of statuses) {
-    const directory = join(root, status, top);
+    if (await exists(join(parent, `${name}-${status}`)))
+      found.push({ status, directory: join(parent, `${name}-${status}`), legacy: false });
 
-    if (await exists(directory)) found.push({ status, directory });
+    if (await exists(join(legacyParent, status, name)))
+      found.push({ status, directory: join(legacyParent, status, name), legacy: true });
   }
 
-  if (found.length > 1) throw new BoardError("Task exists in more than one status directory.");
+  if (found.length > 1) throw new BoardError("Task exists in more than one status.");
   const [only] = found;
 
-  if (!only || !(await realDirectory(join(root, only.status))))
+  if (!only) throw new BoardError("Task not found.", 404);
+
+  if (
+    only.legacy &&
+    !((await realDirectory(dirname(only.directory))) && (await realDirectory(legacyParent)))
+  )
     throw new BoardError("Task not found.", 404);
 
   if (!(await realDirectory(only.directory)))
     throw new BoardError("Task directory must be a real directory.");
 
-  let current = only;
+  return only;
+}
 
-  for (const name of nested) {
-    const matches = [];
+// An id is a slash-separated path of task names without status suffixes, so it survives moves.
+async function locate(root: string, id: string): Promise<Location> {
+  const [top, ...nested] = id.split("/");
 
-    for (const status of statuses) {
-      const directory = join(current.directory, "subtasks", status, name);
+  if (!top || !slug.test(top) || !nested.every((name) => slug.test(name)))
+    throw new BoardError("Invalid task name.");
 
-      if (await exists(directory)) matches.push({ status, directory });
-    }
+  if (!(await realDirectory(root))) throw new BoardError("Task not found.", 404);
+  let current = await find(root, root, top);
 
-    if (matches.length > 1)
-      throw new BoardError("Subtask exists in more than one status directory.");
-    const [next] = matches;
-
-    if (!next || !(await realDirectory(next.directory)))
-      throw new BoardError("Task not found.", 404);
-    current = next;
-  }
+  for (const name of nested)
+    current = await find(current.directory, join(current.directory, "subtasks"), name);
 
   return current;
+}
+
+// Direct subtasks of a task directory, in the flat layout and the legacy subtasks/<status>/ one.
+async function childTasks(
+  directory: string,
+): Promise<Array<{ name: string; status: string; directory: string }>> {
+  const children = [];
+
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const parsed = parseEntry(entry.name);
+
+    if (parsed && entry.isDirectory() && !entry.isSymbolicLink())
+      children.push({ ...parsed, directory: join(directory, entry.name) });
+  }
+
+  if (await realDirectory(join(directory, "subtasks")))
+    for (const status of statuses) {
+      const parent = join(directory, "subtasks", status);
+
+      if (!(await realDirectory(parent))) continue;
+
+      for (const entry of await readdir(parent, { withFileTypes: true }))
+        if (entry.isDirectory() && !entry.isSymbolicLink())
+          children.push({ name: entry.name, status, directory: join(parent, entry.name) });
+    }
+
+  return children.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 async function taskFile(root: string, id: string, name: string): Promise<string> {
@@ -327,62 +365,54 @@ async function readTask(root: string, id: string) {
   return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
+// The task document path relative to the project, e.g. docs/tasks/<name>-<status>/TASK.html.
+const projectFile = (root: string, directory: string, name: string) =>
+  join("docs", "tasks", relative(root, join(directory, name)));
+
 async function countSubtasks(directory: string): Promise<{ total: number; done: number }> {
   const count = { total: 0, done: 0 };
 
-  for (const status of statuses) {
-    const parent = join(directory, "subtasks", status);
-
-    if (!(await realDirectory(parent))) continue;
-
-    for (const entry of await readdir(parent, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
-      count.total += 1;
-      const nested = await countSubtasks(join(parent, entry.name));
-      count.total += nested.total;
-      count.done += nested.done;
-
-      if (status === "done") count.done += 1;
-    }
+  for (const child of await childTasks(directory)) {
+    const nested = await countSubtasks(child.directory);
+    count.total += 1 + nested.total;
+    count.done += nested.done + (child.status === "done" ? 1 : 0);
   }
 
   return count;
 }
 
+async function summary(root: string, id: string): Promise<TaskSummary> {
+  const { status, directory } = await locate(root, id);
+  const { name, data } = await readTask(root, id);
+
+  return {
+    id,
+    status,
+    file: projectFile(root, directory, name),
+    subtasks: await countSubtasks(directory),
+    ...data,
+  };
+}
+
 async function listSubtasks(root: string, id: string) {
   const { directory } = await locate(root, id);
-  const subtasks = [];
+  const subtasks: TaskSummary[] = [];
 
-  for (const status of statuses) {
-    const parent = join(directory, "subtasks", status);
+  for (const child of await childTasks(directory)) {
+    const childId = `${id}/${child.name}`;
 
-    if (!(await realDirectory(parent))) continue;
-
-    for (const entry of (await readdir(parent, { withFileTypes: true })).sort((left, right) =>
-      left.name.localeCompare(right.name),
-    )) {
-      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
-      const childId = `${id}/${entry.name}`;
-
-      try {
-        const { data } = await readTask(root, childId);
-
-        subtasks.push({
-          id: childId,
-          status,
-          subtasks: await countSubtasks(join(parent, entry.name)),
-          ...data,
-        });
-      } catch {
-        subtasks.push({
-          id: childId,
-          status,
-          subtasks: { total: 0, done: 0 },
-          title: entry.name,
-          created: "",
-          updated: "",
-        });
-      }
+    try {
+      subtasks.push(await summary(root, childId));
+    } catch {
+      subtasks.push({
+        id: childId,
+        status: child.status,
+        file: projectFile(root, child.directory, "TASK.html"),
+        subtasks: { total: 0, done: 0 },
+        title: child.name,
+        created: "",
+        updated: "",
+      });
     }
   }
 
@@ -399,12 +429,27 @@ async function listTasks(root: string) {
   for (const entry of (await readdir(root, { withFileTypes: true })).sort((left, right) =>
     left.name.localeCompare(right.name),
   )) {
-    if (entry.isDirectory() && !statuses.includes(entry.name))
+    if (statuses.includes(entry.name) || (!entry.isDirectory() && !entry.isSymbolicLink()))
+      continue;
+    const parsed = parseEntry(entry.name);
+
+    if (!parsed) {
       errors.push(
-        `${entry.name}: tasks must live in a status directory (${statuses.join(", ")}); move it to backlog/, inprogress/, blocked/ or done/.`,
+        `${entry.name}: task directories must be named <task>-<status> (${statuses.join(", ")}), for example ${entry.name}-backlog.`,
       );
+      continue;
+    }
+
+    try {
+      tasks.push(await summary(root, parsed.name));
+    } catch {
+      errors.push(
+        `${entry.name}: unable to load task; check TASK metadata and regular document paths.`,
+      );
+    }
   }
 
+  // Legacy layout: docs/tasks/<status>/<task>/ stays readable until the task is moved.
   for (const status of statuses) {
     if (!(await realDirectory(join(root, status)))) continue;
     const entries = await readdir(join(root, status), { withFileTypes: true });
@@ -413,9 +458,7 @@ async function listTasks(root: string) {
       if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 
       try {
-        const { data } = await readTask(root, entry.name);
-        const subtasks = await countSubtasks(join(root, status, entry.name));
-        tasks.push({ id: entry.name, status, subtasks, ...data });
+        tasks.push(await summary(root, entry.name));
       } catch {
         errors.push(
           `${status}/${entry.name}: unable to load task; check TASK metadata and regular document paths.`,
@@ -468,6 +511,7 @@ async function renderDocument(
 type TaskSummary = {
   id: string;
   status: string;
+  file: string;
   subtasks: { total: number; done: number };
   title: string;
   created: string;
@@ -497,6 +541,8 @@ async function formFields(request: IncomingMessage, address: string): Promise<UR
   return fields;
 }
 
+// Moving renames the task directory to <name>-<status> in place; subtasks move with it.
+// A legacy docs/tasks/<status>/<name>/ task migrates to docs/tasks/<name>-<status>/.
 async function move(fields: URLSearchParams): Promise<TaskSummary> {
   const root = tasksOf(projectPath(fields.get("project")));
   const id = fields.get("task") ?? "";
@@ -525,20 +571,11 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
         html ? "Use a plain updated meta tag." : "Use a plain updated frontmatter key.",
       );
 
-    const target = join(root, status, id);
+    const target = join(current.legacy ? root : dirname(current.directory), `${id}-${status}`);
+    const renaming = target !== current.directory;
 
-    if (current.status !== status) {
-      if (!(await realDirectory(join(root, status))))
-        await mkdir(join(root, status), { recursive: true });
-
-      if (
-        await lstat(target).then(
-          () => true,
-          () => false,
-        )
-      )
-        throw new BoardError("A task with this name already exists in that status.", 409);
-    }
+    if (renaming && (await exists(target)))
+      throw new BoardError("A task with this name already exists in that status.", 409);
 
     const today = new Date().toISOString().slice(0, 10);
 
@@ -554,11 +591,15 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
     await file.write(text, 0, "utf8");
     await file.truncate(Buffer.byteLength(text));
 
-    if (current.status !== status) await rename(current.directory, target);
+    if (renaming) await rename(current.directory, target);
 
-    const subtasks = await countSubtasks(join(root, status, id));
-
-    return { id, status, subtasks, ...decodeTask(text, name).data };
+    return {
+      id,
+      status,
+      file: projectFile(root, target, name),
+      subtasks: await countSubtasks(target),
+      ...decodeTask(text, name).data,
+    };
   } finally {
     await file.close();
   }

@@ -39,7 +39,7 @@
   <p class="meta">Intent · <span class="pill">Approved</span> · created 2026-11-02 16:40 · Claude Code claude-opus-5-5</p>
 
   <h2>Problem</h2>
-  <p>Factory runs clarify → plan → build → verify, and loads whenever an agent does software work. ADMIN wants the pipeline from Claude's AI-native SDLC playbook, started only on request, with documents sized to whoever reads them.</p>
+  <p>Factory runs clarify → plan → build → verify, and loads whenever an agent does software work. The user wants the pipeline from Claude's AI-native SDLC playbook, started only on request, with documents sized to whoever reads them.</p>
 
   <h2>Outcome</h2>
   <p>Factory runs Intent → Design → Plan → Build → Test, only through <code>/factory</code> and its stage commands. Each stage produces an HTML document from a template.</p>
@@ -48,8 +48,8 @@
   <table>
     <thead><tr><th>ID</th><th>Requirement</th><th>Accepted when</th></tr></thead>
     <tbody>
-      <tr><td>R1</td><td>The article's knowledge, tips and tricks are extracted, and ADMIN's reading of the pipeline is compared with the article's.</td><td>An HTML page in this task's <code>design/</code> covers every stage, the principles and the differences.</td></tr>
-      <tr><td>R2</td><td>Factory's stages are Intent, Design, Plan, Build and Test, with the artifacts ADMIN described: intent ≈ brief; design = AI-made artifacts; plan = agent plan with the tests decided up front; build = debrief only; test = cheap tests during build, heavy tests only in Test.</td><td>The skill and its stage guides describe these stages, artifacts and gates.</td></tr>
+      <tr><td>R1</td><td>The article's knowledge, tips and tricks are extracted, and the user's reading of the pipeline is compared with the article's.</td><td>An HTML page in this task's <code>design-*</code> files covers every stage, the principles and the differences.</td></tr>
+      <tr><td>R2</td><td>Factory's stages are Intent, Design, Plan, Build and Test, with the artifacts the user described: intent ≈ brief; design = AI-made artifacts; plan = agent plan with the tests decided up front; build = debrief only; test = cheap tests during build, heavy tests only in Test.</td><td>The skill and its stage guides describe these stages, artifacts and gates.</td></tr>
       <tr><td>R3</td><td>Factory is opt-in and runs only through <code>/factory</code> or the stage commands.</td><td>Every Factory skill disables implicit invocation, and AGENTS.md no longer requires Factory for all software work.</td></tr>
       <tr><td>R4</td><td>The templates follow the new format. They are still HTML with the Factory style, short for human readers and detailed for agent readers.</td><td>Intent, design, plan, debrief, test report and task templates exist with the shared tokens.</td></tr>
       <tr><td>R5</td><td>Existing tooling and legacy tasks keep working.</td><td>The board and installer handle the new documents and still read legacy BRIEF files. <code>npm test</code>, the type check and the skill check pass.</td></tr>
@@ -65,11 +65,16 @@
   </ul>
 
   <h2>Open questions</h2>
-  <ul><li>ADMIN invited questions, but this session runs autonomously, so the agent decided them and listed each decision in DESIGN.html for review.</li></ul>
+  <ul><li>The user invited questions, but this session runs autonomously, so the agent decided them and listed each decision in DESIGN.html for review.</li></ul>
 
   <section class="entry">
     <h3>2026-11-02 16:40 — Approved</h3>
-    <p>ADMIN's request in chat ("I want the same pipeline … we should refactor factory skill") gave the requirements and the go-ahead in one message, and it is recorded as the approval. It also authorizes amending <code>docs/specs/documentation-workflow.spec.md</code> and the related specs.</p>
+    <p>The user's request in chat ("I want the same pipeline … we should refactor factory skill") gave the requirements and the go-ahead in one message, and it is recorded as the approval. It also authorizes amending <code>docs/specs/documentation-workflow.spec.md</code> and the related specs.</p>
+  </section>
+
+  <section class="entry">
+    <h3>2026-11-02 — Amendment</h3>
+    <p>The user's follow-up in chat: Factory must not refer to the Atlas skill (copy what it needs), design artifacts live in the task itself, task and subtask directories are flat and named <code>$title-$status</code> with no status directories, and the user is called "the user", not "ADMIN". Same branch, no new one.</p>
   </section>
 </main>
 </body>

@@ -20,22 +20,22 @@ Factory uses its maintenance guidance during delivery.
 ## Factory pipeline
 
 Adapted from the [AI-native SDLC playbook](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
-every stage commits one artifact that the next stage reads, and ADMIN's attention goes
-to the gates.
+every stage commits one artifact that the next stage reads, and the user's attention
+goes to the gates.
 
 | Stage | Command | Artifact | Reader | Gate |
 | --- | --- | --- | --- | --- |
-| Intent | `/factory-intent` | `INTENT.html` | ADMIN, one screen | ADMIN approves |
-| Design | `/factory-design` | `DESIGN.html` + `design/` mocks and diagrams | ADMIN reviews | ADMIN accepts (or skip recorded) |
+| Intent | `/factory-intent` | `INTENT.html` | The user, one screen | The user approves |
+| Design | `/factory-design` | `DESIGN.html` + `design-*` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
 | Plan | `/factory-plan` | `PLAN.html` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
 | Build | `/factory-build` | Code, tests, `DEBRIEF.html` | Future agents | Fast tests green |
-| Test | `/factory-test` | `docs/reports/YYYY-MM-DD-<task>.html` | ADMIN, verdict first | Regression, acceptance, fresh review, heavy gates |
+| Test | `/factory-test` | `docs/reports/YYYY-MM-DD-<task>.html` | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
 them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
-method. Tasks live in `docs/tasks/<status>/<task>/`; the optional board shows the
+method. Tasks live in `docs/tasks/<task>-<status>/`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
 
 ## HTML communication (HBS)
@@ -107,14 +107,14 @@ implicitly starting a full baseline.
 Run `/factory <request>` (or one stage command at a time). The task then lives in:
 
 ```text
-docs/tasks/<status>/<task-name>/      # status: backlog | inprogress | blocked | done
-  TASK.html     # title, dates, stage, blocker, report link
-  INTENT.html   # approved requirements (one screen, for ADMIN)
-  DESIGN.html   # flagged concerns, decisions, links into design/
-  design/       # mocks, diagrams, prototypes, images
-  PLAN.html     # agent-facing plan, test plan, recorded revisions
-  DEBRIEF.html  # build notes for future agents and engineers
-  subtasks/<status>/<subtask-name>/   # same files; no ADMIN approval needed
+docs/tasks/<task-name>-<status>/    # status: backlog | inprogress | blocked | done
+  TASK.html         # title, dates, stage, blocker, report link
+  INTENT.html       # approved requirements (one screen, for the user)
+  DESIGN.html       # flagged concerns, decisions, links to the design-* files
+  design-mock.html  # design artifacts: mocks, diagrams, prototypes, images
+  PLAN.html         # agent-facing plan, test plan, recorded revisions
+  DEBRIEF.html      # build notes for future agents and engineers
+  <subtask-name>-<status>/   # same files; no approval from the user needed
 ```
 
 New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
@@ -123,14 +123,15 @@ New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
 `docs/reports/YYYY-MM-DD-<task-name>.html`). Older `BRIEF.*`, `TASK.md` and
 `PLAN.md` files stay readable; the board shows a legacy brief as the intent.
 
-A task's status is the directory it sits in; move it with `git mv` or the board.
-Subtasks are full tasks nested in their parent, and they nest recursively: a
+A task's status is the last segment of its directory name; change it by renaming
+the directory with `git mv` or the board. Older `docs/tasks/<status>/<task>/` tasks
+stay readable and migrate when moved. Subtasks are full tasks nested in their parent, and they nest recursively: a
 subtask can have subtasks, to any depth. Their intents refine the parent
-intent and need no ADMIN approval, and the parent finishes only when all of its
+intent and need no approval from the user, and the parent finishes only when all of its
 subtasks, at every depth, are done.
 
 Agents may revise the plan while preserving the intent, accepted design and
-existing area-spec requirements. Requirement changes need ADMIN's explicit
+existing area-spec requirements. Requirement changes need the user's explicit
 authorization. Test runs regression, acceptance, a fresh-context review, then heavy
 gates. Test reports live in `docs/reports/`; system specifications live directly under `docs/`, with area
 rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing

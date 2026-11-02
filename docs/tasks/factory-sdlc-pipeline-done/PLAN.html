@@ -65,7 +65,7 @@
   <table>
     <thead><tr><th>ID</th><th>Action</th><th>Depends on</th><th>Done when</th></tr></thead>
     <tbody>
-      <tr><td>M1</td><td>Extract the article into <code>design/playbook-knowledge.html</code></td><td>None</td><td>The page covers every stage and the comparison (T5)</td></tr>
+      <tr><td>M1</td><td>Extract the article into <code>design-playbook-knowledge.html</code></td><td>None</td><td>The page covers every stage and the comparison (T5)</td></tr>
       <tr><td>M2</td><td>Write the Factory entrypoint and the stage guides</td><td>M1</td><td>T1 passes</td></tr>
       <tr><td>M3</td><td>Add the stage command skills and the opt-in metadata</td><td>M2</td><td>T1, T4 pass</td></tr>
       <tr><td>M4</td><td>Write the templates</td><td>M2</td><td>T6</td></tr>
@@ -95,7 +95,7 @@
     <tbody>
       <tr><td>K1</td><td>Installed <code>~/.claude/BRIEF_TEMPLATE.html</code> alias dangles</td><td>Retire it in the installer</td><td>T2</td></tr>
       <tr><td>K2</td><td>Stage skills link to <code>../factory</code>, which breaks if Factory isn't installed</td><td><code>requiredSkills</code> always installs Factory</td><td>T2</td></tr>
-      <tr><td>K3</td><td>ADMIN's uncommitted master edits to AGENTS.md and SKILL.md conflict with this branch</td><td>Carry them into this branch</td><td>Merge</td></tr>
+      <tr><td>K3</td><td>The user's uncommitted master edits to AGENTS.md and SKILL.md conflict with this branch</td><td>Carry them into this branch</td><td>Merge</td></tr>
     </tbody>
   </table>
 
@@ -114,7 +114,8 @@
   </ul>
 
   <h2>Revisions</h2>
-  <ul><li>2026-11-02: the plan was written while M1–M6 were in progress, during the session that created the pipeline, not before it. That process exception is recorded in DEBRIEF.</li></ul>
+  <ul><li>2026-11-02: the plan was written while M1–M6 were in progress, during the session that created the pipeline, not before it. That process exception is recorded in DEBRIEF.</li>
+    <li>2026-11-02 (amendment): M7 makes Factory self-contained (its own <code>references/specifications.md</code> plus copied area and workflow templates, no Atlas links), moves design artifacts into the task directory as <code>design-*</code> files, flattens tasks to <code>docs/tasks/&lt;name&gt;-&lt;status&gt;/</code> with child subtask directories (board and session hook read both layouts and migrate legacy tasks on move), and replaces "ADMIN" with "the user" across Factory. Existing tasks in this repo were migrated to the flat layout. Checks: T1–T3 and T7 re-run.</li></ul>
 </main>
 </body>
 </html>

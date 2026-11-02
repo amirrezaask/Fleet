@@ -8,6 +8,7 @@ import {
   readFileSync,
   readlinkSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -517,6 +518,7 @@ interface HookPayload {
 
 interface HookEnv {
   SESSION_AUTONOMY?: string;
+  SESSION_STOP_BLOCKS?: string;
 }
 
 // Synthetic transcript records in Claude Code's JSONL shape.
@@ -633,16 +635,7 @@ test("PreToolUse denies questions to ADMIN and unchecked or forked sessions", ()
 
 test("Stop blocks questions to ADMIN while a touched task is in progress, with a loop guard", () =>
   hookSession((hook, home) => {
-    const task = join(
-      home,
-      "docs",
-      "tasks",
-      "inprogress",
-      "epic",
-      "subtasks",
-      "inprogress",
-      "leaf",
-    );
+    const task = join(home, "docs", "tasks", "epic-inprogress", "leaf-inprogress");
 
     mkdirSync(task, { recursive: true });
     writeFileSync(join(task, "TASK.md"), "## Blocker\nNone\n");
@@ -650,18 +643,22 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     const read = readCall(join(task, "PLAN.md"));
     writeFileSync(transcript, `${read}\n`);
 
+    // A raised block cap keeps every scenario below observable in one session.
     const stop = (last_assistant_message: string, extra: HookPayload = {}) =>
-      hook({
-        hook_event_name: "Stop",
-        transcript_path: transcript,
-        last_assistant_message,
-        ...extra,
-      });
+      hook(
+        {
+          hook_event_name: "Stop",
+          transcript_path: transcript,
+          last_assistant_message,
+          ...extra,
+        },
+        { SESSION_STOP_BLOCKS: "20" },
+      );
 
     assert.equal(stop("Committed M3. Next I start M4."), "");
     const blocked = JSON.parse(stop("M3 is done.\n\nStart the continuation session?"));
     assert.equal(blocked.decision, "block");
-    assert.match(blocked.reason, /docs\/tasks\/inprogress\/epic\/subtasks\/inprogress\/leaf/);
+    assert.match(blocked.reason, /docs\/tasks\/epic-inprogress\/leaf-inprogress/);
     assert.equal(
       stop("Waiting on you for the branch name.", { stop_hook_active: true }),
       "",
@@ -689,6 +686,33 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     writeFileSync(join(task, "TASK.html"), html("BRIEF R2 conflicts with the engine API."));
     assert.equal(stop("Which option do you want?"), "", "an escalated TASK.html task may end");
 
+    writeFileSync(join(task, "TASK.html"), html("None"));
+    writeFileSync(transcript, `${readCall(join(task, "INTENT.html"))}\n`);
+    assert.match(stop("Which option?"), /"block"/, "touching INTENT.html marks the task");
+
+    const legacy = join(
+      home,
+      "docs",
+      "tasks",
+      "inprogress",
+      "epic",
+      "subtasks",
+      "inprogress",
+      "old",
+    );
+
+    mkdirSync(legacy, { recursive: true });
+    writeFileSync(transcript, `${readCall(join(legacy, "PLAN.md"))}\n`);
+    assert.match(
+      stop("Which option?"),
+      /docs\/tasks\/inprogress\/epic\/subtasks\/inprogress\/old/,
+      "legacy layout tasks are still detected",
+    );
+
+    writeFileSync(transcript, `${readCall(join(task, "PLAN.html"))}\n`);
+    renameSync(task, join(home, "docs", "tasks", "epic-inprogress", "leaf-done"));
+    assert.equal(stop("Anything else?"), "", "a task moved to another status may end");
+
     rmSync(join(home, "docs"), { recursive: true });
     assert.equal(stop("Anything else?"), "", "a finished or moved task may end");
   }));
@@ -696,7 +720,12 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
 test("SessionStart lists in-progress leaf tasks and re-grounds after compaction", () =>
   hookSession((hook, home) => {
     assert.equal(hook({ hook_event_name: "SessionStart", source: "startup" }), "");
-    mkdirSync(join(home, "docs", "tasks", "inprogress", "epic", "subtasks", "inprogress", "leaf"), {
+    const tasks = join(home, "docs", "tasks");
+    mkdirSync(join(tasks, "epic-inprogress", "leaf-inprogress"), { recursive: true });
+    mkdirSync(join(tasks, "epic-inprogress", "other-step-done"), { recursive: true });
+    mkdirSync(join(tasks, "solo-inprogress", "design-notes"), { recursive: true });
+    mkdirSync(join(tasks, "idle-backlog", "child-inprogress"), { recursive: true });
+    mkdirSync(join(tasks, "inprogress", "old", "subtasks", "inprogress", "old-leaf"), {
       recursive: true,
     });
 
@@ -706,6 +735,11 @@ test("SessionStart lists in-progress leaf tasks and re-grounds after compaction"
 
     assert.equal(start.hookEventName, "SessionStart");
     assert.match(start.additionalContext, /list_sessions/);
-    assert.match(start.additionalContext, /epic\/subtasks\/inprogress\/leaf\./);
+    const listed = /In-progress leaf tasks here: (.*)\./.exec(start.additionalContext)?.[1];
+    assert.deepEqual(listed?.split(", ").sort(), [
+      "docs/tasks/epic-inprogress/leaf-inprogress",
+      "docs/tasks/inprogress/old/subtasks/inprogress/old-leaf",
+      "docs/tasks/solo-inprogress",
+    ]);
     assert.match(hook({ hook_event_name: "SessionStart", source: "compact" }), /re-read the task/);
   }));

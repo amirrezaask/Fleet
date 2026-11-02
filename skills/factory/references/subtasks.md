@@ -1,7 +1,7 @@
 # Subtask graphs and parallel execution
 
 Read when a task is split into subtasks that depend on each other or will be
-built concurrently. The layout, statuses and approval rules in the Factory skill
+built concurrently. The layout, statuses and approval rules in [tasks](tasks.md)
 still apply; this guide adds how to cut subtasks, record their dependencies and
 run the ready ones in parallel.
 
@@ -63,16 +63,16 @@ The managing agent owns the graph and runs this loop:
    when it found something worth recording.
 5. When an implementer reports, merge its branch into the integration branch
    (a separate merger subagent or the manager), resolve conflicts, move the
-   subtask to `done/` and record results in its plan.
+   subtask to `-done` (rename) and record results in its plan.
 6. Recompute the frontier; start newly unblocked subtasks immediately.
 7. When every subtask is `done`, the managing agent alone runs the heavy
    [Test stage](test.md) on the integration branch and fixes failures, using one fresh implementer
    subagent for a batch of fixes when useful.
-8. Write the report, update specs, move the parent to `done/`, and remove every
+8. Write the report, update specs, rename the parent to `-done`, and remove every
    implementer worktree.
 
 Keep communication with subagents sparse: pointers in, a short report out. A
-subtask blocked on a decision moves to `blocked/` with the reason; the rest of the
+subtask blocked on a decision is renamed to `-blocked` with the reason; the rest of the
 frontier continues.
 
 Adapted from the implement-spec and to-tickets skills in mattpocock/skills; this

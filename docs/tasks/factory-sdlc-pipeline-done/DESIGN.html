@@ -36,15 +36,15 @@
 <body>
 <main>
   <h1>Factory pipeline design</h1>
-  <p class="meta">Design · <span class="pill">Accepted by agent; awaiting ADMIN review</span> · for <a href="INTENT.html">INTENT.html</a> · created 2026-11-02 16:45 · Claude Code claude-opus-5-5</p>
+  <p class="meta">Design · <span class="pill">Accepted by agent; awaiting the user's review</span> · for <a href="INTENT.html">INTENT.html</a> · created 2026-11-02 16:45 · Claude Code claude-opus-5-5</p>
 
   <h2>Flagged concerns</h2>
   <table>
     <thead><tr><th>ID</th><th>Concern</th><th>Options</th><th>Recommendation</th><th>Resolution</th></tr></thead>
     <tbody>
-      <tr><td>C1</td><td>The playbook has stages after Test, Deploy and Maintain, that ADMIN's list leaves out.</td><td>A: add <code>/factory-review</code> and <code>/factory-ship</code>. B: fold review into Test and keep only the loop-back.</td><td>B. Factory doesn't deploy anything. A fresh-context review inside Test covers the review pass.</td><td>Agent decided B. ADMIN can revisit.</td></tr>
-      <tr><td>C2</td><td>Should a human approve the plan? The playbook says the engineer accepts it. ADMIN called the plan agent-facing.</td><td>A: human gate. B: agent self-check, then commit before any code.</td><td>B, with ADMIN able to ask for a review.</td><td>Agent decided B.</td></tr>
-      <tr><td>C3</td><td>ADMIN invited questions, but the session hook requires autonomous work.</td><td>Ask, or decide and record.</td><td>Decide and record here.</td><td>Decided. Every decision on this page can be changed.</td></tr>
+      <tr><td>C1</td><td>The playbook has stages after Test, Deploy and Maintain, that the user's list leaves out.</td><td>A: add <code>/factory-review</code> and <code>/factory-ship</code>. B: fold review into Test and keep only the loop-back.</td><td>B. Factory doesn't deploy anything. A fresh-context review inside Test covers the review pass.</td><td>Agent decided B. The user can revisit.</td></tr>
+      <tr><td>C2</td><td>Should a human approve the plan? The playbook says the engineer accepts it. The user called the plan agent-facing.</td><td>A: human gate. B: agent self-check, then commit before any code.</td><td>B, with the user able to ask for a review.</td><td>Agent decided B.</td></tr>
+      <tr><td>C3</td><td>The user invited questions, but the session hook requires autonomous work.</td><td>Ask, or decide and record.</td><td>Decide and record here.</td><td>Decided. Every decision on this page can be changed.</td></tr>
     </tbody>
   </table>
 
@@ -54,8 +54,8 @@
     <tbody>
       <tr><td>D1</td><td>Commands: <code>/factory</code> is a router that stops at human gates. <code>/factory-intent</code>, <code>-design</code>, <code>-plan</code>, <code>-build</code> and <code>-test</code> are thin skills that point into the shared Factory contract.</td><td>Arguments to one skill (<code>/factory plan</code>): hosts list only skill names as slash commands.</td><td>R2, R3</td></tr>
       <tr><td>D2</td><td>Opt-in: <code>disable-model-invocation: true</code> for Claude Code and <code>allow_implicit_invocation: false</code> for Codex, plus AGENTS.md wording.</td><td>Wording alone. Hosts would still auto-load Factory from its description.</td><td>R3</td></tr>
-      <tr><td>D3</td><td>Gates: running the next stage's command accepts the previous artifact. Intent and design need ADMIN. The plan passes an agent self-check.</td><td>A separate "approve" command, which adds a step and no extra control.</td><td>R2</td></tr>
-      <tr><td>D4</td><td>Design holds flagged concerns and decisions, plus a <code>design/</code> folder of artifacts (mocks, diagrams, schemas). It can be skipped with a reason.</td><td>Mocks only. The playbook's spec also carries decisions and concerns.</td><td>R2</td></tr>
+      <tr><td>D3</td><td>Gates: running the next stage's command accepts the previous artifact. Intent and design need the user. The plan passes an agent self-check.</td><td>A separate "approve" command, which adds a step and no extra control.</td><td>R2</td></tr>
+      <tr><td>D4</td><td>Design holds flagged concerns and decisions, plus <code>design-*</code> artifact files in the task directory (mocks, diagrams, schemas). It can be skipped with a reason.</td><td>Mocks only. The playbook's spec also carries decisions and concerns.</td><td>R2</td></tr>
       <tr><td>D5</td><td>The plan's test plan tags each test <code>fast</code> or <code>heavy</code>. Build owns fast tests. Test reruns them as regression, then runs the heavy ones. A bug fix starts with a committed failing test.</td><td>Untiered gates, where nobody knows what must pass before Test.</td><td>R2</td></tr>
       <tr><td>D6</td><td><code>DEBRIEF.html</code> lives in the task directory and is written in Build. The test report goes in <code>docs/reports/</code>, as AGENTS.md requires.</td><td>Debrief in reports, which mixes build notes with verification evidence.</td><td>R2, R4</td></tr>
       <tr><td>D7</td><td><code>TASK.html</code> carries <code>&lt;meta name="stage"&gt;</code>. Status means who is working on the task, so <code>backlog/</code> can hold a task at any stage.</td><td>A status directory per stage, which would break the board and existing tasks.</td><td>R2, R5</td></tr>
@@ -65,10 +65,10 @@
   </table>
 
   <h2>Artifacts</h2>
-  <ul><li><a href="design/playbook-knowledge.html">playbook-knowledge.html</a>: the knowledge extracted from the article, stage tips, the comparison with ADMIN's pipeline, and measures (R1).</li></ul>
+  <ul><li><a href="design-playbook-knowledge.html">design-playbook-knowledge.html</a>: the knowledge extracted from the article, stage tips, the comparison with the user's pipeline, and measures (R1).</li></ul>
 
   <h2>Carried from the intent</h2>
-  <ul><li>Questions for ADMIN: resolved by C1–C3, which ADMIN can revisit.</li></ul>
+  <ul><li>Questions for the user: resolved by C1–C3, which the user can revisit.</li></ul>
 </main>
 </body>
 </html>

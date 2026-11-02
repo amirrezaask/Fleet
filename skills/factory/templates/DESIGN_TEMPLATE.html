@@ -35,15 +35,15 @@
 </head>
 <body>
 <main>
-  <!-- Audience: ADMIN reviews. Short page: concerns first, then decisions, then artifacts. Detail lives in design/. -->
+  <!-- Audience: the user reviews. Short page: concerns first, then decisions, then artifacts. Detail lives in the design-* files beside this page. -->
   <h1>&lt;Design title&gt;</h1>
   <p class="meta">Design · <span class="pill">&lt;Draft / Accepted&gt;</span> · for <a href="INTENT.html">INTENT.html</a> · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
 
   <h2>Flagged concerns</h2>
-  <p class="hint">Conflicts, unmet or ambiguous requirements, risks, open questions. ADMIN resolves these first.</p>
+  <p class="hint">Conflicts, unmet or ambiguous requirements, risks, open questions. The user resolves these first.</p>
   <table>
     <thead><tr><th>ID</th><th>Concern</th><th>Options</th><th>Recommendation</th><th>Resolution</th></tr></thead>
-    <tbody><tr><td>C1</td><td>&lt;What and which R IDs&gt;</td><td>&lt;A / B&gt;</td><td>&lt;Pick and why&gt;</td><td>&lt;ADMIN's decision, or Open&gt;</td></tr></tbody>
+    <tbody><tr><td>C1</td><td>&lt;What and which R IDs&gt;</td><td>&lt;A / B&gt;</td><td>&lt;Pick and why&gt;</td><td>&lt;the user's decision, or Open&gt;</td></tr></tbody>
   </table>
 
   <h2>Decisions</h2>
@@ -54,15 +54,15 @@
 
   <h2>Artifacts</h2>
   <ul>
-    <li><a href="design/&lt;name&gt;.html">&lt;Mock, diagram, prototype, schema or image&gt;</a>: &lt;what to look at and which decisions it shows&gt;</li>
+    <li><a href="design-&lt;what&gt;.html">&lt;Mock, diagram, prototype, schema or image&gt;</a>: &lt;what to look at and which decisions it shows&gt;</li>
   </ul>
 
   <h2>Carried from the intent</h2>
   <ul><li>&lt;Each intent open question: answered here (by which decision) or still open; or None.&gt;</li></ul>
 
   <!-- After approval, freeze everything above. Append updates below as .entry sections:
-  approval (who and when), amendments ADMIN authorized (what changed and what it supersedes).
-  Never change requirements through an appended note without ADMIN's authorization. -->
+  approval (who and when), amendments the user authorized (what changed and what it supersedes).
+  Never change requirements through an appended note without the user's authorization. -->
   <section class="entry">
     <h3>&lt;YYYY-MM-DD HH:mm&gt; — &lt;Accepted / Revised&gt;</h3>
     <p>&lt;Who accepted and how (command or message), or the authorized amendment and the IDs it supersedes.&gt;</p>

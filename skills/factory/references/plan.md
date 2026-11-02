@@ -58,8 +58,8 @@ Before committing, confirm:
   or is marked as not runnable here with the reason.
 - No open question blocks a step.
 
-Commit `PLAN.html` and set the stage to `build`. ADMIN may ask to review the plan;
-otherwise no human approval is needed. When ADMIN authorizes subagents for the build,
+Commit `PLAN.html` and set the stage to `build`. The user may ask to review the plan;
+otherwise no human approval is needed. When the user authorizes subagents for the build,
 give each a bounded deliverable with pointers to the intent, design, plan rows,
 interfaces and the fast tests it owns.
 
@@ -68,7 +68,7 @@ interfaces and the fast tests it owns.
 The plan is mutable. When building reveals a better route, revise the plan **in the
 same commit** as the code that departs from it, recording date, reason, affected IDs
 and impact. Recheck coverage after revising. Requirement or design conflicts need
-ADMIN's authorization; implementation freedom does not cover the contract.
+the user's authorization; implementation freedom does not cover the contract.
 
 These practices draw on
 [Superpowers planning](https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md),
