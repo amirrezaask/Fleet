@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>&lt;Task&gt; test report</title>
+  <meta name="created" content="<YYYY-MM-DD> <HH:mm>">
+  <meta name="author" content="<agent> <llm model>">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+    .verdict{font-size:17px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--clay);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground)}.tag.ok{background:#e7eddf;color:#45603a}.tag.bad{background:#f5e1dd;color:#9a3b31}@media (prefers-color-scheme:dark){.tag.ok{background:#26301f;color:#b0c99f}.tag.bad{background:#3b2421;color:#e79a8f}}details{border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin:24px 0}summary{cursor:pointer;font-weight:600}
+  </style>
+</head>
+<body>
+<main>
+  <!-- Audience: ADMIN first (verdict and matrix on the first screen), auditors and agents after. -->
+  <h1>&lt;Task title&gt;: &lt;Passed / Failed / Passed with limitations&gt;</h1>
+  <p class="meta">Test report · task <code>&lt;task-name&gt;</code> · revision &lt;sha&gt; · created &lt;YYYY-MM-DD HH:mm&gt; · &lt;agent&gt; &lt;llm model&gt;</p>
+
+  <p class="verdict">&lt;One or two sentences: is it done, what was proven, and anything ADMIN must decide.&gt;</p>
+
+  <h2>Requirements</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Requirement (short)</th><th>Evidence</th><th>Result</th></tr></thead>
+    <tbody><tr><td>R1</td><td>&lt;Short name&gt;</td><td>&lt;T IDs, screenshot, output&gt;</td><td><span class="tag ok">Passed</span> / <span class="tag bad">Failed</span> / <span class="tag">Not run</span></td></tr></tbody>
+  </table>
+
+  <h2>Gates</h2>
+  <table>
+    <thead><tr><th>Gate</th><th>Command or procedure</th><th>Result</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Regression</td><td><code>&lt;command&gt;</code></td><td>&lt;counts&gt;</td><td>&lt;Pre-existing failures, reproduced on base revision&gt;</td></tr>
+      <tr><td>Acceptance</td><td>&lt;procedure&gt;</td><td>&lt;result&gt;</td><td></td></tr>
+      <tr><td>Review</td><td>Fresh-context bugs, security, compliance passes</td><td>&lt;n Important, n Nit&gt;</td><td>&lt;Resolution&gt;</td></tr>
+      <tr><td>Heavy</td><td><code>&lt;command&gt;</code></td><td>&lt;result&gt;</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Review findings</h2>
+  <ul><li>&lt;Pass · Important/Nit · finding · location · fixed in sha / accepted by ADMIN / rejected because; or None.&gt;</li></ul>
+
+  <h2>Limitations and follow-up</h2>
+  <ul>
+    <li>&lt;What remains unverified and why.&gt;</li>
+    <li>&lt;Out-of-scope findings and their draft-intent tasks; specs updated (paths); or None.&gt;</li>
+  </ul>
+
+  <details>
+    <summary>Environment and raw evidence</summary>
+    <p>&lt;Machine, versions, inputs. Raw output stays gitignored next to this report.&gt;</p>
+  </details>
+</main>
+</body>
+</html>

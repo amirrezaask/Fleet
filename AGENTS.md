@@ -4,7 +4,7 @@ Address the user as ADMIN. GLOBAL means `~/.agents/`.
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `BRIEF.html`, and mutable `PLAN.html`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
+- `docs/tasks/<status>/<task-name>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `INTENT.html`, accepted `DESIGN.html` (+ `design/`), mutable `PLAN.html`, and `DEBRIEF.html`. The status directory is the task's status. Subtasks use the same structure under `<task-name>/subtasks/<status>/<subtask-name>/` and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
 - `docs/reports/`: every benchmark, test and verification result, one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
 - `docs/README.html`, `docs/architecture.html`, `docs/domain.html`, `docs/data-model.html`, `docs/quality.html`, and `docs/operations.html`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
 - `docs/areas/<area-name>.html`: ground rules, state ownership, and relevant contracts for each software area.
@@ -18,8 +18,9 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 ### Version Control
 **Keep worktrees of each project in it's own directory in .worktrees**
 **Each new session should start from a clean git worktree from a branch (default to master/main)**
+**Never checkout the main repository to other branch than main all work happens in worktrees**
 **Each agent round should conclude with a commit.**
-**Commit messages should reference the brief and plan document of requested change(in absence of said documents, commit message should just echo user's request)**
+**Commit messages should reference the intent and plan document of requested change(in absence of said documents, commit message should just echo user's request)**
 **Branch names should not have `codex` or `claude` as prefix, they should be prefixed by `feat-` or `fix-`.**
 
 ### Language and Stack
@@ -35,26 +36,28 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - It's really important when pursuing a goal we should move towards implementing all the goal specifies first and then validation and qualification. We should spend hours validating a half baked implementation which proves nothing.
 
 ### Artifacts
-**All artifacts are HTML. No Markdown.** Specs, briefs, plans, debriefs, reports and any other document an agent produces are `.html` files (`BRIEF.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML. Before creating any HTML meant to communicate with ADMIN, read [HBS](skills/hbs/SKILL.md).
+**All artifacts are HTML. No Markdown.** Specs, intents, designs, plans, debriefs, reports and any other document an agent produces are `.html` files (`INTENT.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML. Before creating any HTML meant to communicate with ADMIN, read [HBS](skills/hbs/SKILL.md).
 
 ### Cleanliness
 - **No leftover files.** Add no Markdown or JSON that nothing will read again (progress notes, handoffs, summaries, audit dumps, receipts). Delete your own scratch files, `.work` contents and stray processes when the request is done.
 - **No leftover worktrees** All agents should cleanup worktrees they create after they have committed all changes on the target branch.
 
 ## Compact Instructions
-When the conversation is compacted, keep ADMIN's main goal: the request being worked, the approved brief and plan paths, decisions made and why, files changed, and the next action. Drop unrelated side questions ADMIN asked and their answers, and exploration that led nowhere.
+When the conversation is compacted, keep ADMIN's main goal: the request being worked, the approved intent, design and plan paths, decisions made and why, files changed, and the next action. Drop unrelated side questions ADMIN asked and their answers, and exploration that led nowhere.
 
 ## Documentation workflow
 
-For software development work, read [Factory](skills/factory/SKILL.md) and follow
-its clarification, approved brief, plan, task, verification, and debrief workflow.
-[Atlas](skills/atlas/SKILL.md) owns specification discovery methods, the structure
-above, and specification templates. Only ADMIN's explicit `/atlas` command starts
-initialization/documentation of an existing project; do not infer it from ordinary
-coding or explanation requests. Factory reads affected specs before planning and
-uses Atlas's targeted maintenance guidance to reconcile them with verified
-behavior before completion. Research discussions do not authorize implementation.
+[Factory](skills/factory/SKILL.md) is an **opt-in** delivery pipeline:
+Intent → Design → Plan → Build → Test. It runs only when ADMIN types `/factory` or a
+stage command (`/factory-intent`, `/factory-design`, `/factory-plan`, `/factory-build`,
+`/factory-test`); never start it from an inferred trigger. Without a command, handle
+software requests directly under these rules. [Atlas](skills/atlas/SKILL.md) owns
+specification discovery methods, the structure above, and specification templates.
+Only ADMIN's explicit `/atlas` command starts initialization/documentation of an
+existing project. Factory reads affected specs before intent and plan, and uses
+Atlas's targeted maintenance guidance to reconcile them with verified behavior in
+Test. Research discussions do not authorize implementation.
 
 GLOBAL template filenames remain available through installer-managed symlinks;
-brief, plan, task and debrief templates live inside Factory; specification
-templates live inside Atlas.
+intent, design, plan, debrief, test report and task templates live inside Factory;
+specification templates live inside Atlas.

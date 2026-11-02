@@ -205,9 +205,14 @@ function main(): void {
 
   const globalFiles = [
     { name: "AGENTS.md", path: "AGENTS.md" },
-    { name: "BRIEF_TEMPLATE.html", path: "skills/factory/templates/BRIEF_TEMPLATE.html" },
+    { name: "INTENT_TEMPLATE.html", path: "skills/factory/templates/INTENT_TEMPLATE.html" },
+    { name: "DESIGN_TEMPLATE.html", path: "skills/factory/templates/DESIGN_TEMPLATE.html" },
     { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
     { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
+    {
+      name: "TEST_REPORT_TEMPLATE.html",
+      path: "skills/factory/templates/TEST_REPORT_TEMPLATE.html",
+    },
     { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
   ];
 
@@ -299,9 +304,13 @@ function main(): void {
       throw new Error(`Refusing unrelated symlink: ${destination} -> ${target}`);
   }
 
-  // Markdown template aliases replaced by HTML ones; removed only when they point
-  // at a location this repository managed, even if the target no longer exists.
-  const retiredTemplates = ["BRIEF", "PLAN", "DEBRIEF", "SPEC"].map((kind) => `${kind}_TEMPLATE.md`);
+  // Markdown template aliases were replaced by HTML ones and the HTML brief by the intent;
+  // each is removed only when it points at a location this repository managed, even if
+  // the target no longer exists.
+  const retiredTemplates = [
+    ...["BRIEF", "PLAN", "DEBRIEF", "SPEC"].map((kind) => `${kind}_TEMPLATE.md`),
+    "BRIEF_TEMPLATE.html",
+  ];
 
   for (const base of globals) {
     for (const name of retiredTemplates) {
@@ -314,7 +323,13 @@ function main(): void {
         join(repo, name),
         join(repo, "skills", "factory", "templates", name),
         join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.md"),
-        join(repo, "skills", name === "SPEC_TEMPLATE.md" ? "specification" : "communication", "templates", name),
+        join(
+          repo,
+          "skills",
+          name === "SPEC_TEMPLATE.md" ? "specification" : "communication",
+          "templates",
+          name,
+        ),
       ];
 
       if (formerTargets.includes(target)) removals.push(alias);

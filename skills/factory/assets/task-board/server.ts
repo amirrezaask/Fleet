@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
-import { Effect, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { build } from "esbuild";
 import { compile } from "tailwindcss";
 import { createRequire } from "node:module";
@@ -146,11 +146,20 @@ async function pickFolder(): Promise<Picked> {
 
 const statuses = ["backlog", "inprogress", "blocked", "done"];
 
+const stages = ["intent", "design", "plan", "build", "test", "done"] as const;
+
 const metadata = Schema.Struct({
   title: NonEmptyTrimmed,
   created: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
   updated: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
 });
+
+const stageField = Schema.Struct({ stage: Schema.Literals(stages) });
+
+// The pipeline stage is optional; an absent or unknown value shows no stage on the board.
+function stageOf(fields: { stage?: string }): { stage?: (typeof stages)[number] } {
+  return Option.getOrElse(Schema.decodeUnknownOption(stageField)(fields), () => ({}));
+}
 
 // Port 0 asks the OS for any free port; the real port is known once the server is listening.
 const requestedPort = Number(process.env.PORT ?? 0);
@@ -253,19 +262,25 @@ async function readDocument(root: string, id: string, name: string): Promise<str
 }
 
 // New documents are HTML; older Markdown documents stay readable. HTML wins when both exist.
-async function documentName(root: string, id: string, base: string): Promise<string> {
+// Earlier bases are preferred, so a legacy name can follow its replacement as a fallback.
+async function existingDocument(
+  root: string,
+  id: string,
+  ...bases: string[]
+): Promise<string | undefined> {
   const { directory } = await locate(root, id);
 
-  for (const extension of [".html", ".md"]) {
-    const exists = await lstat(join(directory, base + extension)).then(
-      () => true,
-      () => false,
-    );
-
-    if (exists) return base + extension;
+  for (const base of bases) {
+    for (const extension of [".html", ".md"]) {
+      if (await exists(join(directory, base + extension))) return base + extension;
+    }
   }
 
-  return `${base}.html`;
+  return undefined;
+}
+
+async function documentName(root: string, id: string, base: string): Promise<string> {
+  return (await existingDocument(root, id, base)) ?? `${base}.html`;
 }
 
 function decodeEntities(text: string): string {
@@ -289,13 +304,16 @@ function decodeTask(text: string, name = "TASK.md") {
         updated: htmlMeta("updated").exec(text)?.[1],
       });
 
-      return { data, content: text };
+      return {
+        data: { ...data, ...stageOf({ stage: htmlMeta("stage").exec(text)?.[1] }) },
+        content: text,
+      };
     }
 
     const parsed = matter(text);
     const data = Schema.decodeUnknownSync(metadata)(parsed.data);
 
-    return { data, content: parsed.content };
+    return { data: { ...data, ...stageOf(parsed.data) }, content: parsed.content };
   } catch {
     throw new BoardError(
       "TASK.html requires a title and created/updated dates (TASK.md: title and quoted created/updated dates).",
@@ -418,8 +436,18 @@ function htmlBody(text: string): string {
   return inner.replace(/<h1[\s\S]*?<\/h1>/i, "");
 }
 
-async function renderDocument(root: string, id: string, base: string): Promise<string> {
-  const name = await documentName(root, id, base);
+// The first base names the document; later bases are legacy names read in its place.
+// Optional documents that were never written render a short note instead of an error.
+async function renderDocument(
+  root: string,
+  id: string,
+  bases: string[],
+  optional = false,
+): Promise<string> {
+  const found = await existingDocument(root, id, ...bases);
+
+  if (!found && optional) return `<p class="notice">Not written yet.</p>`;
+  const name = found ?? `${bases[0]}.html`;
 
   try {
     const text = await readDocument(root, id, name);
@@ -444,6 +472,7 @@ type TaskSummary = {
   title: string;
   created: string;
   updated: string;
+  stage?: string;
 };
 
 async function formFields(request: IncomingMessage, address: string): Promise<URLSearchParams> {
@@ -520,6 +549,7 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
           frontmatter[2].replace(/^updated:[^\r\n]*/m, `updated: "${today}"`) +
           frontmatter[3] +
           original.slice(frontmatter[0].length);
+
     decodeTask(text, name);
     await file.write(text, 0, "utf8");
     await file.truncate(Buffer.byteLength(text));
@@ -729,13 +759,15 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     const root = tasksOf(projectPath(url.searchParams.get("project")));
     await readTask(root, id);
 
-    const [brief, plan, subtasks] = await Promise.all([
-      renderDocument(root, id, "BRIEF"),
-      renderDocument(root, id, "PLAN"),
+    const [intent, design, plan, debrief, subtasks] = await Promise.all([
+      renderDocument(root, id, ["INTENT", "BRIEF"]),
+      renderDocument(root, id, ["DESIGN"], true),
+      renderDocument(root, id, ["PLAN"]),
+      renderDocument(root, id, ["DEBRIEF"], true),
       listSubtasks(root, id),
     ]);
 
-    json(response, { brief, plan, subtasks });
+    json(response, { intent, design, plan, debrief, subtasks });
   } else if (request.method === "POST" && ["/api/status", "/status"].includes(url.pathname)) {
     const updated = await move(await formFields(request, address));
 

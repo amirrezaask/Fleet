@@ -1,146 +1,139 @@
 ---
 name: factory
-description: Guide software features and bug fixes from clarification and approved briefs through implementation, verification and debriefs, integrating Atlas specifications. Use for software development work, Factory tasks, or the local task board; research discussions alone do not start implementation.
+description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Test with committed HTML task documents and the local task board. Run only when ADMIN types /factory or a /factory-<stage> command; never start it from an inferred trigger.
+disable-model-invocation: true
 ---
 
 # Factory
 
-Address the user as ADMIN. Factory owns the software development workflow:
-**Clarify → Plan → Build and verify → Learn and adjust**.
-Use existing project conventions and relevant specialist skills within this flow.
-Do not turn a research discussion, status question, or document viewing request
-into authorization to implement software.
+Address the user as ADMIN. Factory is an **opt-in** delivery pipeline. It runs only
+when ADMIN types `/factory` or a stage command. Without a command, handle coding
+requests directly under `AGENTS.md` rules and do not create Factory tasks. Research
+discussions, status questions and document viewing never authorize implementation.
 
-## Clarify
+## Commands
 
-Read [clarification guidance](references/clarify.md) when shaping a feature or bug
-fix. Inspect relevant code and area specifications before asking questions that
-the repository can answer. Work through consequential gaps with ADMIN and draft
-a concise brief using the [brief template](templates/BRIEF_TEMPLATE.html).
-Keep the draft in the conversation until approval, unless ADMIN requests a file.
+| Command | Does |
+| --- | --- |
+| `/factory [request or task]` | Router: find or create the task, report its stage, run stages forward and stop at each human gate |
+| `/factory-intent [request]` | Capture intent: clarify with ADMIN, write `INTENT.html` |
+| `/factory-design [task]` | Accept the intent, then write `DESIGN.html` and `design/` artifacts |
+| `/factory-plan [task]` | Accept the design, then write the agent-facing `PLAN.html` with its test plan |
+| `/factory-build [task]` | Implement the plan, keep its fast tests green, write `DEBRIEF.html` |
+| `/factory-test [task]` | Run the gates: regression, acceptance, review, heavy checks; write the report, close the task |
 
-The brief records intent, observable requirements with stable IDs, non-goals,
-constraints, and acceptance checks. Distinguish ADMIN's decisions from agent
-assumptions. Explicit approval of the brief is required before planning and
-implementation; respect approval already given in the conversation.
-Do not ask whether to create a brief: it is part of Factory feature/bug work.
+A stage command names the task by directory name. Without one, use the only
+`inprogress/` task, or ask. Before a stage, read [the stage guide](#pipeline). If a
+command skips an unfinished earlier stage, run that stage first (`/factory-build` on
+a task without a plan plans first), unless ADMIN said to skip it.
 
-## Plan and create the task
+## Pipeline
 
-After brief approval, read [planning guidance](references/plan.md) and use the
-[plan template](templates/PLAN_TEMPLATE.html). A separate plan approval is not
-required unless ADMIN requests it. Approval to plan alone does not authorize
-implementation; follow the scope ADMIN actually requested.
+| Stage | Guide | Artifact | Main reader | Gate to leave the stage |
+| --- | --- | --- | --- | --- |
+| Intent | [intent](references/intent.md) | `INTENT.html` | ADMIN: one screen | **ADMIN approves the intent** |
+| Design | [design](references/design.md) | `DESIGN.html`, `design/` | ADMIN reviews | **ADMIN accepts the design**, or the intent says it is skipped |
+| Plan | [plan](references/plan.md) | `PLAN.html` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
+| Build | [build](references/build.md) | Code, tests, `DEBRIEF.html` | Future agents and engineers | Every fast test in the plan passes |
+| Test | [test](references/test.md) | `docs/reports/YYYY-MM-DD-<task>.html` | ADMIN: verdict first | All gates pass and specs match the verified behavior |
 
-Once the approved brief and plan exist, create
-`docs/tasks/<status>/<task-name>/` with:
+**Every stage ends with a commit** of its artifact, and the next stage starts by
+reading it. The commit chain is the audit trail: what was asked, what was decided,
+what was built, and what was proven. Commit messages name the task and stage
+(`factory(<task>): design`) and reference `INTENT.html` and `PLAN.html` once they exist.
 
-- `TASK.html`: metadata using the [task template](templates/TASK_TEMPLATE.html).
-- `BRIEF.html`: the approved brief, including its approval record.
-- `PLAN.html`: the implementation plan, linked to `BRIEF.html`.
+**Gates.** ADMIN running the next stage's command accepts the previous artifact.
+Record that acceptance in the artifact's approval entry with the date. `/factory`
+stops at the two human gates and asks; it continues without stopping only when
+ADMIN's message explicitly says so (for example "run the whole pipeline, don't stop
+after design"). Intent approval is never assumed: when ADMIN gave a complete request
+and an explicit go-ahead in one message, record that message as the approval. The
+plan has no human gate, but ADMIN may ask to review it. Nothing is implemented
+before a committed plan.
 
-`<status>` is one of `backlog`, `inprogress`, `blocked` or `done`. The directory
-a task sits in is its status; there is no status field in `TASK.html`. Change status
-by moving the directory (`git mv`) and updating `updated`.
+**Proportionality.** Every task gets an intent and a plan. Design is skipped when
+no product or architecture decision is open (an isolated bug fix, a mechanical
+change); record "Design: skipped, &lt;reason&gt;" in `INTENT.html`. A one-line fix
+does not need Factory at all unless ADMIN invoked it.
 
-**All documents are HTML.** Every new brief, plan, task, debrief and report is
-written from the HTML templates, which carry the Claude-style design tokens;
-never write Markdown. Projects may keep their older Markdown files (`TASK.md`,
-`BRIEF.md`, `PLAN.md`, reports, specs) and keep reading them. Do not convert
-them unless ADMIN requests migration. Edit a legacy task in its existing format
-and create only new files as HTML.
+## Documents and audience
 
-Use a descriptive lowercase hyphenated task name and never overwrite another
-task. These are the canonical task documents; do not duplicate them under
-`docs/briefs/` or `docs/plans/`. Existing historical documents remain where they
-are unless ADMIN requests migration. Reuse a task when resuming its work.
-Read [task metadata and board](references/tasks.md) when creating or managing
-tasks or installing the board. New tasks start in `backlog/`.
+Write each document for the person or agent who reads it next. Human documents
+are short; agent documents are complete.
 
-### Subtasks
+- **`INTENT.html`** (ADMIN): problem, outcome, requirements with stable `R` IDs,
+  non-goals, constraints, open questions. One screen. No implementation detail.
+- **`DESIGN.html`** (ADMIN reviews): flagged concerns first, then decisions with the
+  rejected alternatives, then links to the mocks, diagrams and prototypes in `design/`.
+  Keep the page short; the artifacts carry the detail.
+- **`PLAN.html`** (agents): everything an implementer without this conversation
+  needs: current state, files, order of work, interfaces, the **test plan**, risks and
+  the interrogation. Verbosity helps here.
+- **`DEBRIEF.html`** (future agents and engineers): how the build went, deviations,
+  abnormalities, traps and lessons. Factual and complete; no marketing.
+- **Test report** (ADMIN first, auditors after): verdict and requirement matrix on the
+  first screen, evidence below.
 
-Split a task into subtasks when it has parts that can be planned, built and
-verified separately. A subtask is the same entity as a task, with the same
-`TASK.html`, `BRIEF.html` and `PLAN.html`, stored in the same status layout inside its
-parent: `docs/tasks/<status>/<task>/subtasks/<status>/<subtask>/`. Differences:
+All documents are HTML from the [templates](templates/), which carry the
+Claude-style tokens; read [HBS](../hbs/SKILL.md) for visuals inside them. Never write
+Markdown. Legacy tasks keep their files: `BRIEF.html`/`BRIEF.md` count as the intent,
+and a debrief in `docs/reports/` counts as the debrief. Edit legacy files in their
+format and create only new files as HTML; do not migrate unless ADMIN asks.
 
-- ADMIN does not approve a subtask brief. The agent drafts and records it with
-  "Approval: not required, subtask of `<parent>`" and proceeds.
-- A subtask brief refines the parent brief; it may add detail and its own
-  requirement IDs but never removes, weakens or reinterprets a parent
-  requirement. Needing that still requires ADMIN's authorization on the parent.
-- A parent moves to `done` only after every subtask is `done` and the parent's
-  own acceptance is verified. Subtasks reuse the parent's debrief unless they
-  produced findings worth their own.
-- Subtasks may depend on sibling subtasks. Read [subtask graphs](references/subtasks.md)
-  to cut vertical slices, record dependencies and run the ready subtasks in
-  parallel with subagents.
-- Nesting is recursive and unlimited: a subtask can have its own `subtasks/`,
-  and those can have theirs. Every level has the same files, statuses and rules,
-  and each brief refines its immediate parent's. A task moves to `done` only
-  after all of its subtasks, at every depth, are done.
+## Tasks
 
+A task lives in `docs/tasks/<status>/<task-name>/` with `TASK.html` and its stage
+documents. `<status>` is `backlog`, `inprogress`, `blocked` or `done`; the directory
+is the status. `TASK.html` records `<meta name="stage">`: `intent`, `design`, `plan`,
+`build`, `test` or `done`. `/factory-intent` creates the task in `backlog/` and writes
+`TASK.html` from the [task template](templates/TASK_TEMPLATE.html). **When an agent picks
+a task up, it moves it to `inprogress/`** (`git mv`) and updates `stage` and `updated`.
+It moves it back to `backlog/` when it stops between stages with no work in flight,
+to `blocked/` with the reason when a decision or dependency stops it, and to `done/`
+only when Test passes. Read [task metadata and board](references/tasks.md) for
+naming, metadata and the board.
 
-## Build and verify
+**Requirements are a contract.** Agents may change the plan's steps, interfaces,
+order or approach whenever all intent requirements, the accepted design and existing
+area specs remain satisfied, recording each material revision in `PLAN.html`. They
+never remove, weaken or reinterpret a requirement or an accepted design decision.
+A conflict needs ADMIN's explicit authorization, recorded as an amendment entry in
+the affected document, with the earlier text kept in Git.
 
-Move the task to `inprogress/` when implementation starts. Execute the full agreed
-scope in coherent increments, with focused checks where they help development.
-For bugs, reproduce the failure and investigate its cause before choosing a fix.
+**The loop.** A finding outside the task's scope (a bug, a risk, a debt) is not fixed
+silently. Record it in the debrief or report, and when it deserves work, create a
+new task in `backlog/` holding a draft `INTENT.html` marked "Draft: not approved". It
+enters the pipeline when ADMIN runs a command on it.
 
-Agents may change implementation steps, interfaces, sequencing, or technical
-approach in `PLAN.html` without seeking approval when all brief and existing area
-specification requirements remain satisfied. Record the date, reason, and impact
-of each material revision in the plan. Never remove, edit, weaken, or silently
-reinterpret requirements in the approved brief or existing area specs. A conflict
-requires ADMIN's explicit authorization to amend the affected requirements;
-record that authorization and preserve the earlier requirement in Git/history.
-An append-only note is not a loophole for changing a requirement.
+## Subtasks
 
-After implementing the scope, verify in this order:
+Split a task when parts can be planned, built and tested separately. A subtask has
+the same layout under `<task>/subtasks/<status>/<subtask>/`, nests without limit, and
+refines its parent: its intent needs no ADMIN approval ("Approval: not required,
+subtask of `<parent>`"), may add detail and `R` IDs, and never weakens a parent
+requirement. A parent moves to `done/` only after every descendant is done and its
+own Test passes. Read [subtask graphs](references/subtasks.md) to cut vertical slices,
+record dependencies and build the ready subtasks in parallel.
 
-1. **Regression:** existing checks and preserved behavior, identifying pre-existing
-   failures separately from failures introduced by this change.
-2. **Acceptance:** every brief requirement mapped to concrete observed evidence.
-3. **Quality:** relevant lint, type, security, accessibility, performance, or manual
-   checks proportional to the change. A passing test suite alone proves neither
-   requirement coverage nor product quality.
+## Validation budget
 
-Repair failures and repeat affected checks. Do not spend extended qualification
-on a partial implementation while leaving agreed requirements unimplemented.
-Record command, result, revision, and limitations; never claim an unrun check
-passed. Move the task to `blocked/` when a required decision or external dependency
-prevents progress and record the reason in `TASK.html`. Resume when the blocker is resolved.
+Cheap checks run continuously while building; heavy gates run once, in Test, on the
+whole task. Subagents that implement part of a task run only the fast tests their
+plan names. Only the managing agent runs heavy gates, and only when it intends to
+close the task. Do not spend validation time on a half-built scope: implement
+everything the plan specifies first.
 
-## Learn and adjust
+## Specifications
 
-Write the debrief using the [debrief template](templates/DEBRIEF_TEMPLATE.html) at
-`docs/reports/YYYY-MM-DD-<task-name>.html` and link it from `TASK.html`. It records
-outcomes, plan changes, verification, remaining work, and useful unrelated
-findings, separating evidence from assumptions. Keep raw output gitignored.
+Read the affected Atlas root, area and workflow documents before writing an intent
+or a plan; after Test, update them with verified behavior. Follow
+[specification integration](references/specifications.md). Only ADMIN's `/atlas`
+command starts a full baseline.
 
-Then follow [specification integration](references/specifications.md) and Atlas's
-targeted maintenance guidance to update affected root, area and workflow documents
-with verified behavior. Atlas owns their methods, structure and templates. Do
-not start a full baseline without ADMIN's `/atlas` command. Add requirements for
-new behavior; existing requirements retain their meaning unless ADMIN authorized
-a change.
+## Resume
 
-Move the task to `done/` only after all brief requirements and required checks are
-satisfied, the debrief exists, and affected specs match verified behavior.
-A task's status directory is user-editable bookkeeping, not proof of completion.
-If a task sits in `done/` but evidence is incomplete, report the discrepancy and reconcile it
-before claiming success. Follow project commit and worktree cleanup rules.
-
-## Resume and scope
-
-On resume, read `TASK.html`, the approved brief, the current plan, relevant area
-specs, and the actual Git diff. Reconcile implementation and verification with
-those sources before choosing the next step; chat history alone is insufficient.
-Keep status and blockers in `TASK.html`, revisions in `PLAN.html`, and results in the
-debrief rather than creating parallel progress logs.
-
-For standalone specification initialization, ADMIN invokes `/atlas`. For a
-standalone debrief, load its template directly; a new development task is
-unnecessary. Factory adds no workflow engine, evaluation harness, session
-dispatcher, or unrelated tooling.
-The optional local board changes task metadata only; it never starts agents.
+On resume, read `TASK.html`, the stage documents, the relevant specs and the actual
+Git diff, and continue from the recorded stage. Chat history alone is not enough.
+Keep status in the directory and `TASK.html`, decisions in the stage documents, and
+results in the debrief and report; create no parallel progress logs. The optional
+board changes task metadata only; it never starts agents.

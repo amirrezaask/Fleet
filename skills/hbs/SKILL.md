@@ -7,7 +7,7 @@ description: HTML-based communication. Use whenever an agent creates an HTML doc
 
 Address the user as ADMIN. All agent artifacts are HTML (see `AGENTS.md`). This skill
 decides **what shape** an HTML document takes so ADMIN grasps it fast and can act on it.
-Factory's structured documents (brief, plan, task, debrief) keep their own templates; use
+Factory's structured documents (intent, design, plan, debrief, test report, task) keep their own templates; use
 this skill for everything else ADMIN reads, compares, answers or edits, and for the
 visuals inside Factory documents.
 Source: [The unreasonable effectiveness of HTML](https://thariqs.github.io/html-effectiveness/)

@@ -1,7 +1,7 @@
 # Maintain specifications with Factory
 
 Atlas owns the specification structure and methods. Factory owns change delivery,
-brief approvals, plans, verification and task completion. Do not duplicate those
+intent and design approvals, plans, verification and task completion. Do not duplicate those
 procedures or create a new development task for a requested documentation update.
 Factory can use this guide directly without invoking Atlas's full baseline.
 Only ADMIN's `/atlas` command starts existing-project initialization.
@@ -19,10 +19,10 @@ Use this impact prompt:
 > remain true? Trace callers, writers and asynchronous consumers beyond the
 > edited files. Which root documents summarize those facts? Which task decisions
 > explain constraints I must preserve? Which missing spec content requires
-> targeted discovery before the brief can be precise?
+> targeted discovery before the intent can be precise?
 
-Reference preserved requirements with document-qualified IDs in the brief/plan.
-Keep proposed behavior in the Factory brief; do not present it as implemented
+Reference preserved requirements with document-qualified IDs in the intent/plan.
+Keep proposed behavior in the Factory intent and design; do not present it as implemented
 in current-system documentation. A scoped update does not require re-baselining
 unrelated areas or generating every root document.
 

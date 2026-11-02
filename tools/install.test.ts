@@ -20,10 +20,15 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const installer = join(root, "tools", "install.ts");
 
-const skill = readdirSync(join(root, "skills")).find(
-  (name) =>
-    !["factory", "atlas"].includes(name) && existsSync(join(root, "skills", name, "SKILL.md")),
-);
+// Factory stage skills (factory-*) are left out so the sample stays independent of factory.
+const skill = readdirSync(join(root, "skills"))
+  .sort()
+  .find(
+    (name) =>
+      !["factory", "atlas"].includes(name) &&
+      !name.startsWith("factory-") &&
+      existsSync(join(root, "skills", name, "SKILL.md")),
+  );
 
 assert.ok(skill);
 
@@ -154,15 +159,17 @@ test("removes any retired old-source skill link but preserves unrelated links an
   }));
 
 const templateSources = [
-  { name: "BRIEF_TEMPLATE.html", path: "skills/factory/templates/BRIEF_TEMPLATE.html" },
+  { name: "INTENT_TEMPLATE.html", path: "skills/factory/templates/INTENT_TEMPLATE.html" },
+  { name: "DESIGN_TEMPLATE.html", path: "skills/factory/templates/DESIGN_TEMPLATE.html" },
   { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
   { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
+  { name: "TEST_REPORT_TEMPLATE.html", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.html" },
   { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
 ];
 
 const globalDirectories = [".agents", ".codex", ".claude"];
 
-test("full and selected installs provide all twelve readable global template aliases", () =>
+test("full and selected installs provide every readable global template alias", () =>
   isolated((home) => {
     for (const args of [[], [skill], [skill]]) {
       assert.equal(invoke(home, ...args).status, 0);
@@ -319,7 +326,11 @@ test("retires managed Markdown template aliases on selected installs, including 
     for (const directory of globalDirectories) {
       assert.throws(() => lstatSync(join(home, directory, "SPEC_TEMPLATE.md")));
       assert.throws(() => lstatSync(join(home, directory, "BRIEF_TEMPLATE.md")));
-      assert.equal(readlinkSync(join(home, directory, "PLAN_TEMPLATE.md")), foreign, "foreign link kept");
+      assert.equal(
+        readlinkSync(join(home, directory, "PLAN_TEMPLATE.md")),
+        foreign,
+        "foreign link kept",
+      );
       assert.equal(
         readlinkSync(join(home, directory, "SPEC_TEMPLATE.html")),
         join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.html"),
@@ -329,6 +340,77 @@ test("retires managed Markdown template aliases on selected installs, including 
         join(root, "skills", "atlas"),
       );
     }
+  }));
+
+test("retires the managed BRIEF_TEMPLATE.html alias but keeps foreign ones", () =>
+  isolated((home) => {
+    const managed = join(root, "skills", "factory", "templates", "BRIEF_TEMPLATE.html");
+    const foreign = join(home, "BRIEF_TEMPLATE.html");
+    writeFileSync(foreign, "mine");
+
+    for (const [index, directory] of globalDirectories.entries()) {
+      mkdirSync(join(home, directory));
+      symlinkSync(index === 0 ? foreign : managed, join(home, directory, "BRIEF_TEMPLATE.html"));
+    }
+
+    assert.equal(invoke(home, "--dry-run", skill).status, 0);
+    assert.equal(readlinkSync(join(home, ".codex", "BRIEF_TEMPLATE.html")), managed);
+    assert.equal(invoke(home, skill).status, 0);
+    assert.equal(readlinkSync(join(home, ".agents", "BRIEF_TEMPLATE.html")), foreign);
+
+    for (const directory of globalDirectories.slice(1))
+      assert.throws(() => lstatSync(join(home, directory, "BRIEF_TEMPLATE.html")));
+
+    for (const directory of globalDirectories)
+      assert.equal(
+        readlinkSync(join(home, directory, "INTENT_TEMPLATE.html")),
+        join(root, "skills", "factory", "templates", "INTENT_TEMPLATE.html"),
+      );
+  }));
+
+test("factory stage skills are discovered and selecting one installs factory too", () =>
+  isolated((temporary) => {
+    const fixture = join(temporary, "fixture");
+    const home = join(temporary, "home");
+    mkdirSync(home);
+    mkdirSync(join(fixture, "tools"), { recursive: true });
+    writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
+    writeFileSync(join(fixture, "tools", budgetHook), "hook");
+    writeFileSync(join(fixture, "AGENTS.md"), "global");
+
+    const stages = [
+      "factory-intent",
+      "factory-design",
+      "factory-plan",
+      "factory-build",
+      "factory-test",
+    ];
+
+    for (const name of ["factory", "atlas", ...stages]) {
+      mkdirSync(join(fixture, "skills", name), { recursive: true });
+      writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
+    }
+
+    for (const { path } of templateSources) {
+      mkdirSync(dirname(join(fixture, path)), { recursive: true });
+      writeFileSync(join(fixture, path), "template");
+    }
+
+    const run = (...args: string[]) =>
+      spawnSync(process.execPath, [join(fixture, "tools", "install.ts"), ...args], {
+        env: { ...process.env, HOME: home },
+        encoding: "utf8",
+      });
+
+    const listed = run("--list");
+    assert.equal(listed.status, 0);
+    assert.deepEqual(listed.stdout.trim().split("\n"), ["atlas", "factory", ...stages.toSorted()]);
+    assert.equal(run("factory-design").status, 0);
+    assert.deepEqual(readdirSync(join(home, ".agents", "skills")).sort(), [
+      "atlas",
+      "factory",
+      "factory-design",
+    ]);
   }));
 
 const budgetHook = "session-budget-hook.ts";
@@ -599,7 +681,11 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
 
     writeFileSync(join(task, "TASK.html"), html("&lt;Reason when blocked; otherwise None.&gt;"));
     writeFileSync(transcript, `${readCall(join(task, "PLAN.html"))}\n`);
-    assert.match(stop("Which option?"), /"block"/, "TASK.html template placeholder is not a blocker");
+    assert.match(
+      stop("Which option?"),
+      /"block"/,
+      "TASK.html template placeholder is not a blocker",
+    );
     writeFileSync(join(task, "TASK.html"), html("BRIEF R2 conflicts with the engine API."));
     assert.equal(stop("Which option do you want?"), "", "an escalated TASK.html task may end");
 

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Factory pipeline build debrief</title>
+  <meta name="created" content="2026-11-02 17:05">
+  <meta name="author" content="Claude Code claude-opus-5-5">
+  <style>
+    /* Factory document tokens: Claude palette, light/dark. Keep this block unchanged. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;margin:0}
+    h1{font-size:clamp(30px,4vw,40px);margin-bottom:8px}
+    h2{font-size:22px;margin:40px 0 12px;padding-top:24px;border-top:1px solid var(--border)}
+    h3{font-size:17px;margin:0 0 8px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--muted);padding:1px 5px;border-radius:6px}
+    .meta{font-size:13px;color:var(--muted-foreground);margin:0}
+    .hint{color:var(--muted-foreground)}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    .entry{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 0 12px}
+    .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--clay-tint);color:var(--clay-ink)}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Factory pipeline build debrief</h1>
+  <p class="meta">Debrief · build of <a href="PLAN.html">PLAN.html</a> · created 2026-11-02 17:05 · Claude Code claude-opus-5-5</p>
+
+  <h2>Summary</h2>
+  <p>All of M1–M6 landed on <code>feat-factory-sdlc-pipeline</code>. Factory is now opt-in and runs Intent → Design → Plan → Build → Test through six commands. A subagent built M5 (board and installer) in parallel, on files separate from the doc work.</p>
+
+  <h2>Against the plan</h2>
+  <table>
+    <thead><tr><th>Step</th><th>Result</th><th>Deviation and reason</th></tr></thead>
+    <tbody>
+      <tr><td>M1</td><td>Done</td><td>WebFetch would only return a summary of the article, so the full text came from the page HTML (curl plus a tag strip, kept in the session scratchpad).</td></tr>
+      <tr><td>M2–M4, M6</td><td>Done</td><td>The task documents were written during the build, not before it. Bootstrapping a pipeline while it is being redefined made strict order impractical.</td></tr>
+      <tr><td>M5</td><td>Done</td><td>The board also shows a stage badge. Missing DESIGN or DEBRIEF files render "Not written yet" rather than an error.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Abnormalities</h2>
+  <ul>
+    <li>A heredoc command in the nu shell hung until it timed out, although its work had finished. The files were written correctly.</li>
+    <li>The subagent's backup copy failed because <code>.work/</code> did not exist yet. HEAD's <code>index.html</code> then overwrote its edits, and it reapplied them.</li>
+    <li><code>npm run lint</code> fails on the base revision too: <code>oxfmt</code> flags <code>tools/session-budget-hook.ts</code>, and the UI anti-slop check reports 6 errors. Both counts match on base and branch.</li>
+  </ul>
+
+  <h2>Traps and lessons</h2>
+  <ul>
+    <li>Hosts turn only skill names into slash commands, so each stage command needs its own skill directory. Keep those directories thin and point them at <code>skills/factory/</code>.</li>
+    <li>The installer links every <code>skills/*</code> directory automatically. A renamed template alias needs a retirement rule, or a dangling link is left behind in <code>~/.claude</code>.</li>
+  </ul>
+
+  <h2>Memory candidates</h2>
+  <ul><li>None applied. Proposal: ADMIN's uncommitted line on master ("When an agent picks a task, it should make the task in progress") is now part of the Factory skill's task rules.</li></ul>
+
+  <h2>Fast tests</h2>
+  <table>
+    <thead><tr><th>Test IDs</th><th>Command</th><th>Revision</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>T1</td><td><code>npm run check:skills</code></td><td>working tree</td><td>Passed, 11 skills</td></tr>
+      <tr><td>T2</td><td><code>npm test</code></td><td>working tree</td><td>Passed, 35/35</td></tr>
+      <tr><td>T3</td><td><code>npm run check:types</code></td><td>working tree</td><td>Passed</td></tr>
+      <tr><td>T8</td><td><code>npm run lint</code></td><td>working tree</td><td>Failed, with the same failures as base (no new ones)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Out-of-scope findings</h2>
+  <ul><li>The base revision already fails lint (see Abnormalities). No task was created; ADMIN can decide whether to fix it.</li></ul>
+</main>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 Use when a request is large or ambiguous enough that a single question will not
 settle it, or when ADMIN asks to be grilled or to stress-test a plan. It is the
-interview method behind [clarification](clarify.md) and Atlas's
+interview method behind [intent capture](intent.md) and Atlas's
 [interview pass](../../atlas/references/interview.md).
 
 ## Design tree and frontier
@@ -44,7 +44,7 @@ vocabulary, priorities) go to ADMIN, and you wait for the answer.
 The grilling is done when the frontier is empty: every branch visited and nothing
 left silently assumed. Report what was settled, what remains an agent assumption,
 and what stays unknown. Do not act on the result until ADMIN confirms the shared
-understanding; in Factory that confirmation is the brief approval.
+understanding; in Factory that confirmation is the intent approval.
 
 Adapted from the grilling method in mattpocock/skills; this repository has no
 dependency on it.

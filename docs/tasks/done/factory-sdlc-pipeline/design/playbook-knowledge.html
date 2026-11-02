@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>AI-native SDLC playbook notes</title>
+  <style>
+    /* HBS tokens: same palette as Factory documents, light/dark. Keep token names. */
+    :root{--background:#faf9f5;--card:#fff;--foreground:#141413;--muted:#f0eee6;--muted-foreground:#5e5d59;--border:#e8e6dc;--clay:#c15f3c;--clay-ink:#9b4a32;--clay-tint:#f6e7df;--ok:#45603a;--ok-tint:#e7eddf;--warn:#80530f;--warn-tint:#f6ecd9;--bad:#9a3b31;--bad-tint:#f5e1dd;--ring:#d97757;--selection:#ecd5c8;color-scheme:light dark}
+    @media (prefers-color-scheme:dark){:root{--background:#1f1e1d;--card:#2a2927;--foreground:#f0eee6;--muted:#302e2b;--muted-foreground:#a8a59b;--border:#363431;--clay:#d97757;--clay-ink:#e8a083;--clay-tint:#3a2a23;--ok:#b0c99f;--ok-tint:#26301f;--warn:#e6c07a;--warn-tint:#352c1c;--bad:#e79a8f;--bad-tint:#3b2421;--selection:#4a3328}}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.6 "Anthropic Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--selection)}
+    :focus-visible{outline:2px solid var(--ring);outline-offset:3px;border-radius:6px}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+    main{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+    main.wide{max-width:1080px}
+    main.wide p{max-width:720px}
+    [id]{scroll-margin-top:24px}
+    h1,h2,h3{font-family:"Anthropic Serif",Georgia,serif;font-weight:500;line-height:1.2;letter-spacing:-.01em;margin:0}
+    h1{font-size:clamp(30px,4vw,44px);margin-bottom:8px}
+    h2{font-size:24px;margin:0 0 8px}
+    h3{font-size:17px;margin:0 0 6px}
+    p,ul,ol{margin:0 0 12px}
+    ul,ol{padding-left:22px}
+    a{color:var(--clay-ink)}
+    code,pre,.mono{font:13px ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+    code{background:var(--muted);padding:1px 5px;border-radius:6px}
+    pre{background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow:auto;margin:0 0 12px;white-space:pre-wrap}
+    .eyebrow,.label{font:12px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground)}
+    .eyebrow{margin-bottom:12px}
+    .lede{font-size:18px;color:var(--muted-foreground);margin-bottom:24px}
+    .muted{color:var(--muted-foreground)}
+    /* Prompt echo: quote what ADMIN asked so the page's job is explicit. */
+    .prompt{background:var(--muted);border-radius:12px;padding:12px 16px;margin:0 0 20px}
+    .prompt p{margin:4px 0 0;font-family:"Anthropic Serif",Georgia,serif;font-style:italic}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+    .chip{font-size:13px;padding:2px 10px;border:1px solid var(--border);border-radius:999px;background:var(--card);text-decoration:none;color:var(--foreground)}
+    section{margin-top:48px;padding-top:24px;border-top:1px solid var(--border)}
+    .num{font:12px ui-monospace,Menlo,monospace;color:var(--clay-ink);margin-right:8px}
+    .callout{background:var(--clay-tint);border-radius:12px;padding:16px 20px;margin:0 0 16px}
+    .callout strong{color:var(--clay-ink)}
+    .rec{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--clay);border-radius:0 12px 12px 0;padding:14px 18px;margin:0 0 16px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 12px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+    .card.pick{border-color:var(--clay)}
+    .card.weak{border:1.5px dashed var(--clay)}
+    .tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground)}
+    .tag.ok{background:var(--ok-tint);color:var(--ok)}
+    .tag.warn{background:var(--warn-tint);color:var(--warn)}
+    .tag.bad{background:var(--bad-tint);color:var(--bad)}
+    .tag.hot{background:var(--clay-tint);color:var(--clay-ink)}
+    .good{color:var(--ok)} .poor{color:var(--bad)}
+    /* Pro/con rows with meaning dots instead of glyphs. */
+    .pc{list-style:none;padding:0} .pc li{position:relative;padding-left:16px}
+    .pc li::before{content:"";position:absolute;left:0;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--muted-foreground)}
+    .pc .pro::before{background:var(--ok)} .pc .con::before{background:var(--clay)}
+    /* Stat band: 4 tiles, 2 on phones; mark the anomaly with .alert. */
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 16px}
+    @media (max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column}
+    .stat.alert{border-left:4px solid var(--clay)}
+    .stat b{font:500 34px/1.1 "Anthropic Serif",Georgia,serif}
+    .stat span{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground)}
+    .stat em{font:normal 12px ui-monospace,Menlo,monospace;color:var(--muted-foreground)}
+    .stat em.good{color:var(--ok)} .stat em.poor{color:var(--bad)}
+    .bar{height:6px;background:var(--muted);border-radius:99px;overflow:hidden}
+    .bar i{display:block;height:100%;background:var(--clay)}
+    /* Event timeline: rail plus state dots ringed in the page color. */
+    .tl{position:relative;list-style:none;padding:0 0 0 36px;margin:0 0 16px}
+    .tl::before{content:"";position:absolute;left:16px;top:8px;bottom:8px;width:2px;background:var(--border)}
+    .tl li{position:relative;margin:0 0 12px}
+    .tl li::before{content:"";position:absolute;left:-25px;top:6px;width:12px;height:12px;border-radius:50%;border:2px solid var(--background);background:var(--muted-foreground)}
+    .tl li.bad::before{background:var(--clay)} .tl li.ok::before{background:var(--ok)}
+    .tl time{font:12px ui-monospace,Menlo,monospace;background:var(--muted);padding:1px 6px;border-radius:6px;margin-right:6px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+    th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--muted-foreground);background:var(--muted)}
+    td.n{text-align:right;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+    details{border:1px solid var(--border);border-radius:8px;background:var(--card);margin:0 0 8px}
+    summary{cursor:pointer;padding:10px 14px;font-weight:600;list-style:none;display:flex;gap:10px}
+    summary::-webkit-details-marker{display:none}
+    summary::before{content:"▸";color:var(--clay);transition:transform .12s}
+    details[open]>summary::before{transform:rotate(90deg)}
+    summary .where{margin-left:auto;font:12px ui-monospace,Menlo,monospace;color:var(--muted-foreground)}
+    details>:not(summary){margin-left:14px;margin-right:14px}
+    .diff{font:13px ui-monospace,Menlo,monospace;border:1px solid var(--border);border-radius:8px;overflow:auto;margin:0 0 12px}
+    .diff div{display:grid;grid-template-columns:40px 1fr;white-space:pre}
+    .diff div::before{content:attr(data-n);color:var(--muted-foreground);text-align:right;padding-right:10px;user-select:none}
+    .diff .add{background:var(--ok-tint);color:var(--ok)}
+    .diff .del{background:var(--bad-tint);color:var(--bad)}
+    button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--foreground);cursor:pointer}
+    button.primary{background:var(--foreground);color:var(--background);border-color:var(--foreground)}
+    button:hover{border-color:var(--clay)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    /* Accessible toggle: real checkbox over a styled track. */
+    .toggle{position:relative;display:inline-block;width:36px;height:20px;vertical-align:middle}
+    .toggle input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+    .toggle .track{position:absolute;inset:0;border-radius:99px;background:var(--border);transition:background .15s}
+    .toggle .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--card);transition:transform .15s}
+    .toggle input:checked+.track{background:var(--ok)}
+    .toggle input:checked+.track::after{transform:translateX(16px)}
+    .toggle input:focus-visible+.track{outline:2px solid var(--ring);outline-offset:2px}
+    .blank{color:var(--clay-ink);font-weight:600}
+    svg text{fill:var(--foreground);font:12px "Anthropic Sans",system-ui,sans-serif;pointer-events:none}
+    svg .sub{fill:var(--muted-foreground);font:10px ui-monospace,Menlo,monospace}
+    svg .box{fill:var(--card);stroke:var(--border);stroke-width:1.5}
+    svg .hot{fill:var(--clay-tint);stroke:var(--clay)}
+    svg .edge{stroke:var(--muted-foreground);stroke-width:1.5;fill:none}
+    svg .edge.fail{stroke:var(--clay);stroke-dasharray:4 4}
+    svg .bar{fill:var(--border)} svg .peak{fill:var(--clay)}
+    @media print{body{background:#fff}details{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Research · 2026-11-02 · design artifact of factory-sdlc-pipeline</div>
+  <h1>What the AI-native SDLC playbook teaches Factory</h1>
+  <div class="prompt"><span class="label">Prompt</span><p>Check out the AI-native SDLC playbook. I want the same pipeline: intent → design → plan → build → test. First extract knowledge and tips and tricks from this article.</p></div>
+  <p class="lede">Your reading of the pipeline matches the playbook for the stages you named. It differs in three places: Design is a written spec as well as mocks, testing runs <em>during</em> build as well as after, and the playbook continues past Test into Review/Deploy and Maintain. Maintain feeds new intents back into the start of the loop.</p>
+  <nav class="chips" aria-label="Sections">
+    <a class="chip" href="#loop">The loop</a>
+    <a class="chip" href="#principles">Principles</a>
+    <a class="chip" href="#stages">Stage by stage</a>
+    <a class="chip" href="#tips">Tips and tricks</a>
+    <a class="chip" href="#compare">Your pipeline vs the playbook</a>
+    <a class="chip" href="#measure">Measuring it</a>
+  </nav>
+  <p class="muted">Source: <a href="https://claude.com/resources/articles/the-ai-native-sdlc-playbook">The AI-native SDLC playbook</a> (Claude, 2026). The rest of this page paraphrases it. The Factory decisions that follow from it are in <a href="../DESIGN.html">DESIGN.html</a>.</p>
+
+  <section id="loop">
+    <h2><span class="num">01</span>The loop</h2>
+    <p>Each stage ends by <strong>committing an artifact</strong>, and the next stage starts by reading it. An accepted intent starts design. An approved spec starts plan mode. A merged PR starts the pipeline. A breached production metric writes a new intent. You start each stage by hand at first. Later, each accepted artifact triggers the next gate, and people review what the agent flagged at the gates.</p>
+    <svg viewBox="0 0 700 230" role="img" aria-label="Six stages in a loop: Plan writes intent, Design writes spec, Build writes plan and diff, Test produces evidence, Deploy produces the reviewed PR, Maintain writes a new intent that re-enters Plan" width="100%">
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted-foreground)"/></marker></defs>
+      <rect class="box hot" x="10" y="30" width="100" height="56" rx="8"/><text x="60" y="54" text-anchor="middle">1 Plan</text><text class="sub" x="60" y="72" text-anchor="middle">intent.md</text>
+      <rect class="box hot" x="130" y="30" width="100" height="56" rx="8"/><text x="180" y="54" text-anchor="middle">2 Design</text><text class="sub" x="180" y="72" text-anchor="middle">spec.md</text>
+      <rect class="box hot" x="250" y="30" width="100" height="56" rx="8"/><text x="300" y="54" text-anchor="middle">3 Build</text><text class="sub" x="300" y="72" text-anchor="middle">plan.md + diff</text>
+      <rect class="box hot" x="370" y="30" width="100" height="56" rx="8"/><text x="420" y="54" text-anchor="middle">4 Test</text><text class="sub" x="420" y="72" text-anchor="middle">test output</text>
+      <rect class="box" x="490" y="30" width="100" height="56" rx="8"/><text x="540" y="54" text-anchor="middle">5 Deploy</text><text class="sub" x="540" y="72" text-anchor="middle">PR + review</text>
+      <rect class="box" x="590" y="140" width="100" height="56" rx="8"/><text x="640" y="164" text-anchor="middle">6 Maintain</text><text class="sub" x="640" y="182" text-anchor="middle">incident record</text>
+      <path class="edge" d="M110 58H128" marker-end="url(#a)"/><path class="edge" d="M230 58H248" marker-end="url(#a)"/><path class="edge" d="M350 58H368" marker-end="url(#a)"/><path class="edge" d="M470 58H488" marker-end="url(#a)"/>
+      <path class="edge" d="M590 58C640 58 640 100 640 138" marker-end="url(#a)"/>
+      <path class="edge fail" d="M590 168H60V88" marker-end="url(#a)"/>
+      <text class="sub" x="320" y="160" text-anchor="middle">a finding outside the current scope becomes a new intent</text>
+    </svg>
+    <p class="muted">Clay boxes are the stages you named. Gray boxes are the stages the playbook adds. The dashed edge is the feedback loop back to Plan.</p>
+  </section>
+
+  <section id="principles">
+    <h2><span class="num">02</span>Principles</h2>
+    <div class="grid">
+      <div class="card"><h3>The bottleneck has moved</h3><p>Code is no longer the slow part. Intent capture, review and verification are. Put human attention there.</p></div>
+      <div class="card"><h3>One committed artifact per stage</h3><p>Version control holds the intent, spec, plan, diff, review findings and incident. Together they are the audit trail: who asked, what the agent produced, who approved it.</p></div>
+      <div class="card"><h3>Gates over steps</h3><p>Humans stay accountable for judgment calls. They review flagged concerns at the gates and don't have to drive every step.</p></div>
+      <div class="card"><h3>Skills advise, hooks enforce</h3><p>A skill makes violations rare. A deterministic hook or check makes them close to impossible. A policy that must always hold needs both.</p></div>
+      <div class="card"><h3>One source of truth per artifact</h3><p>Name one system as authoritative and have every other system link to it. When two systems must coexist, linking them is the minimum.</p></div>
+      <div class="card"><h3>Give the agent a feedback loop</h3><p>Tests, builds and screenshots let a session check its own work before a person sees it. Evidence comes from the toolchain, not from the agent's say-so.</p></div>
+    </div>
+  </section>
+
+  <section id="stages">
+    <h2><span class="num">03</span>Stage by stage</h2>
+    <table>
+      <thead><tr><th>Stage</th><th>Artifact</th><th>Who writes / approves</th><th>Key move</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Plan</strong></td><td><code>intent.md</code>: problem, proposed outcome, affected users and systems, constraints, open questions</td><td>The originator writes it with the agent. The product owner corrects and accepts it.</td><td>Capture the idea in the originator's own words, once. The agent asks the questions an analyst would.</td></tr>
+        <tr><td><strong>Design</strong></td><td><code>spec.md</code>: requirements and design, with concerns flagged. For UI work, a mock.</td><td>The agent writes it. The product owner reviews it and routes each concern to the owner of the policy involved.</td><td>Requirements and design are done in one session, with policies applied while the spec is written, so they aren't discovered in a later review.</td></tr>
+        <tr><td><strong>Build</strong></td><td><code>plan.md</code>, then the code and its tests</td><td>The agent writes the plan in read-only plan mode. The engineer interrogates and accepts it.</td><td>Nothing is coded before the plan is accepted. If the code departs from the plan, update the plan in the same commit.</td></tr>
+        <tr><td><strong>Test</strong></td><td>Test, build and screenshot output that the agent ran and pasted</td><td>The session verifies itself. A fresh-context verifier gives the final verdict.</td><td>Use quantifiable targets. For a bug, write the failing test first. Fix the code, never the test.</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>The PR, with review findings ranked by severity</td><td>Agent review passes run first. A code owner approves through branch protection.</td><td>The agent that wrote the code can't approve it. The agent works up to the production gate and stops there.</td></tr>
+        <tr><td><strong>Maintain</strong></td><td>The incident record and a new <code>intent.md</code></td><td>Deterministic detection invokes the agent. A human triages the result.</td><td>Findings go back through the pipeline as new intents. Every incident becomes an eval.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="tips">
+    <h2><span class="num">04</span>Tips and tricks</h2>
+    <details open><summary>Intent</summary><ul>
+      <li>Describe the problem in plain language: what you can't do today, who it affects, what better looks like, what is out of scope.</li>
+      <li>Keep brainstorming until the idea is concrete. The agent covers scope, users, constraints and success criteria, as an analyst would.</li>
+      <li>Use one agreed template, encoded as a skill. Keep it short: problem, outcome, users/systems, constraints, open questions.</li>
+      <li>The human corrects what the agent misunderstood <em>before</em> the intent is committed. The commit records the author and timestamp.</li>
+    </ul></details>
+    <details open><summary>Design</summary><ul>
+      <li>Give the agent the intent and ask for a spec that fits the existing codebase. Ask it to <strong>name areas of concern explicitly</strong>, especially where two policies contradict each other.</li>
+      <li>Load the policies (brand, security, compliance, UX) as skills while the spec is written.</li>
+      <li>The reviewer resolves flagged concerns first, then checks two things: does the spec solve the stated problem, and has every open question from the intent been answered or carried forward?</li>
+      <li>Commit the spec next to the intent. Together they record what was asked and what was decided.</li>
+      <li>For UI work, mock the design from the intent and iterate on the mock before anyone writes code.</li>
+    </ul></details>
+    <details open><summary>Plan</summary><ul>
+      <li>Plan in read-only mode. The plan names <strong>the files that change, the order of work, and the tests that prove it</strong>.</li>
+      <li>Interrogate the plan: what could this break, which step is riskiest, and which options were rejected and why?</li>
+      <li>The plan is done when an engineer who never saw the conversation could implement the change from the plan alone.</li>
+      <li>With a solid plan, implementation often takes a single pass.</li>
+      <li>Commit the plan. Review later checks the diff against it.</li>
+    </ul></details>
+    <details open><summary>Build</summary><ul>
+      <li>When the work departs from the plan, update the plan in the same commit. A hook can enforce this.</li>
+      <li>Keep project memory under a page: commands, the conventions that matter, and what the agent keeps getting wrong. <strong>A mistake made twice goes into the memory file.</strong></li>
+      <li>Write a skill for institutional knowledge that must be applied consistently. Test that it triggers by phrasing the task several ways.</li>
+      <li>Keep build hooks fast and scoped to the changed file. Run heavy checks at the commit or the PR. Approval prompts belong at deploy gates, not mid-build, where they would stall every parallel session.</li>
+      <li>Run parallel sessions in separate worktrees, and split the work by file. Start with 2–3 sessions. The real limit is how many streams one person can review properly.</li>
+      <li>Turn recurring jobs into subagents: a simplifier, a verifier, a researcher. A verifier only reports. It doesn't fix.</li>
+    </ul></details>
+    <details open><summary>Test</summary><ul>
+      <li>Make every check a single command that exits non-zero on failure. Document what healthy output looks like.</li>
+      <li>State quantifiable targets, such as "all tests in X pass", "the screenshot matches the mock" or "the endpoint returns 200 with field F".</li>
+      <li><strong>For a bug, write the failing test first.</strong> Confirm it fails for the expected reason and commit it. Then make it pass without editing the test.</li>
+      <li>For UI work: implement, screenshot, compare with the mock, adjust. Two or three rounds is normal.</li>
+      <li>Verification is part of "done": run the checks and paste their output. If a test fails, fix the code, not the test.</li>
+      <li>Do the final check in a fresh context so the verdict isn't colored by the assumptions that produced the code. The feedback loop runs throughout the task. The verifier runs once, at the end.</li>
+      <li>Evals: collect 20–50 real tasks. Rerun them whenever the agent's configuration (memory, skills, hooks) changes. Every incident adds an eval.</li>
+    </ul></details>
+    <details><summary>Review, deploy and maintain (beyond your five stages)</summary><ul>
+      <li>Keep the review policy in a file with separate passes for bugs, security, and compliance with the spec and plan. Define Important versus Nit, cap nits at about five, and skip generated files and anything CI already enforces.</li>
+      <li>When review flags the same mistake a second time, it goes into project memory.</li>
+      <li>Grade autonomy by environment. The agent can deploy freely to dev. In production it prepares the release and a human authorizes it. Rollback should be the most rehearsed path.</li>
+      <li>Keep detection deterministic. The model diagnoses only after a threshold is breached. Use tiers: log, then diagnose read-only, then propose a fix as a PR. Every result enters as a new intent.</li>
+    </ul></details>
+  </section>
+
+  <section id="compare">
+    <h2><span class="num">05</span>Your pipeline vs the playbook</h2>
+    <table>
+      <thead><tr><th>Your stage</th><th>Your understanding</th><th>Playbook</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Intent</td><td>Close to the current brief. Requirements from the human.</td><td><code>intent.md</code>: what, why, constraints, open questions, in the originator's words</td><td><span class="tag ok">same</span> It should be shorter than today's brief.</td></tr>
+        <tr><td>Design</td><td>AI-generated artifacts: mock HTML, images</td><td>A requirements-and-design spec with flagged concerns. A mock for UI work.</td><td><span class="tag warn">wider</span> Design also holds the decisions and concerns, not only mocks.</td></tr>
+        <tr><td>Plan</td><td>Agent-facing. Says up front what the tests will test.</td><td><code>plan.md</code>: files, order, tests that prove it, risks. Accepted before any code.</td><td><span class="tag ok">same</span> The playbook adds an interrogation step and "commit the plan before the code".</td></tr>
+        <tr><td>Build</td><td>No spec. A debrief of how it went, abnormalities, lessons.</td><td>Implement, update the plan when the code drifts, feed mistakes back into project memory</td><td><span class="tag ok">same</span> Add: plan drift is fixed in the same commit, and repeated mistakes become memory updates.</td></tr>
+        <tr><td>Test</td><td>Cheap tests pass during build. Heavy tests only here.</td><td>A feedback loop during build, then a fresh-context verifier, then review passes</td><td><span class="tag ok">same</span> Add a fresh-context verifier and a compliance review against intent, design and plan.</td></tr>
+        <tr><td>None</td><td>None</td><td>Deploy and Maintain</td><td><span class="tag warn">missing</span> Factory doesn't deploy. Keep only the loop-back: findings outside the scope become draft intents.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="measure">
+    <h2><span class="num">06</span>Measuring it</h2>
+    <p>The playbook measures each stage from git timestamps and PR metadata. These measures fit Factory because every stage commits a document:</p>
+    <ul>
+      <li><strong>Intent survival:</strong> the share of intents accepted rather than closed, and how often an intent changes after design starts.</li>
+      <li><strong>Spec rework:</strong> design edits made after the plan was committed.</li>
+      <li><strong>First-pass build:</strong> the share of tasks whose build passes the planned tests in one pass, and how closely the final diff matches the plan.</li>
+      <li><strong>Escape rate:</strong> defects found in Test or later that the planned tests should have caught.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
