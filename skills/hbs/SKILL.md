@@ -101,7 +101,7 @@ artifacts.
 
 ## Finish
 
-Open the file in the browser pane; check light and dark mode, a narrow width, keyboard use
+Open the file in system's default browser; check light and dark mode, a narrow width, keyboard use
 of every control, that each Copy produces sensible text, and that the console is clean
 before telling ADMIN it is ready. State what the file contains in one or two sentences
 with its path; do not repeat its content in chat.
