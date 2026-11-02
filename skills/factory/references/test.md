@@ -1,7 +1,7 @@
 # Test: prove the whole task and close it
 
 Goal: verified evidence that nothing regressed and that every requirement is met,
-recorded in a report ADMIN can judge from its first screen. Build has already run
+recorded in a report the user can judge from its first screen. Build has already run
 the plan's `fast` tests. This stage re-runs them as regression and then runs the
 expensive gates, once, on the whole task. Only the managing agent runs this stage.
 
@@ -44,7 +44,7 @@ output (json, logs, traces, png) gitignored under `docs/reports/`; track only th
 
 Write `docs/reports/YYYY-MM-DD-<task-name>.html` from the
 [test report template](../templates/TEST_REPORT_TEMPLATE.html). First screen: the
-verdict, the requirement matrix (`R`/`D` → test → result), and anything ADMIN must
+verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
 decide. Below that: gate results, review findings and their resolution, limitations
 and out-of-scope findings. Link the report from `TASK.html`.
 
@@ -52,12 +52,12 @@ and out-of-scope findings. Link the report from `TASK.html`.
 
 1. Update the affected specs from the verified behavior
    ([specification integration](specifications.md)).
-2. Out-of-scope findings worth doing become draft-intent tasks in `backlog/`.
-3. A memory candidate from the debrief that recurred here is proposed to ADMIN as a
+2. Out-of-scope findings worth doing become draft-intent tasks named `<name>-backlog`.
+3. A memory candidate from the debrief that recurred here is proposed to the user as a
    concrete `AGENTS.md`/`CLAUDE.md` or skill edit.
-4. Move the task to `done/`, set the stage to `done`, and update `updated`. Commit.
+4. Rename the task to `-done`, set the stage to `done`, and update `updated`. Commit.
 
-`done/` requires: all requirements evidenced, every gate passed or explicitly accepted
-by ADMIN as a known limitation, the debrief and report present, and specs matching
-the verified behavior. A task found in `done/` without that evidence is reported and
+`-done` requires: all requirements evidenced, every gate passed or explicitly accepted
+by the user as a known limitation, the debrief and report present, and specs matching
+the verified behavior. A task named `-done` without that evidence is reported and
 reconciled before anyone claims success. Then follow the project's worktree cleanup rules.

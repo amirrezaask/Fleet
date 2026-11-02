@@ -260,6 +260,7 @@ const taskSchema = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   status: statusSchema,
+  file: Schema.String,
   subtasks: Schema.Struct({ total: Schema.Number, done: Schema.Number }),
   created: Schema.String,
   updated: Schema.String,
@@ -771,13 +772,9 @@ function crumbs(ancestors: Task[], expanded: boolean): Crumb[] {
   return [all[0], { kind: "gap", key: "gap" }, ...all.slice(-2)];
 }
 
+// The server reports each task document path relative to the project.
 function taskFilePath(trail: Task[]) {
-  const segments = trail.map((task, i) => {
-    const name = task.id.split("/")[i];
-    return i === 0 ? `${task.status}/${name}` : `subtasks/${task.status}/${name}`;
-  });
-
-  return `docs/tasks/${segments.join("/")}/TASK.md`;
+  return trail.at(-1)?.file ?? "docs/tasks/";
 }
 
 function sendTargets(file: string) {
