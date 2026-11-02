@@ -17,7 +17,7 @@ viewing never authorize implementation.
 | --- | --- |
 | `/factory [request or task]` | Router: find or create the task, report its stage, run stages forward and stop at each human gate |
 | `/factory-intent [request]` | Capture intent: clarify with the user, write `INTENT.html` |
-| `/factory-design [task]` | Accept the intent, then write `DESIGN.html` and the `design-*` artifacts |
+| `/factory-design [task]` | Accept the intent, then write `DESIGN.html` and the `design/` artifacts |
 | `/factory-plan [task]` | Accept the design, then write the agent-facing `PLAN.html` with its test plan |
 | `/factory-build [task]` | Implement the plan, keep its fast tests green, write `DEBRIEF.html` |
 | `/factory-test [task]` | Run the gates: regression, acceptance, review, heavy checks; write the report, close the task |
@@ -32,7 +32,7 @@ unless the user said to skip it.
 | Stage | Guide | Artifact | Main reader | Gate to leave the stage |
 | --- | --- | --- | --- | --- |
 | Intent | [intent](references/intent.md) | `INTENT.html` | The user: one screen | **The user approves the intent** |
-| Design | [design](references/design.md) | `DESIGN.html`, `design-*` files | The user reviews | **The user accepts the design**, or the intent says it is skipped |
+| Design | [design](references/design.md) | `DESIGN.html`, `design/` | The user reviews | **The user accepts the design**, or the intent says it is skipped |
 | Plan | [plan](references/plan.md) | `PLAN.html` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
 | Build | [build](references/build.md) | Code, tests, `DEBRIEF.html` | Future agents and engineers | Every fast test in the plan passes |
 | Test | [test](references/test.md) | `docs/reports/YYYY-MM-DD-<task>.html` | The user: verdict first | All gates pass and specs match the verified behavior |
@@ -63,7 +63,7 @@ documents for agents are complete.
 - **`INTENT.html`** (the user): problem, outcome, requirements with stable `R` IDs,
   non-goals, constraints, open questions. One screen. No implementation detail.
 - **`DESIGN.html`** (the user reviews): flagged concerns first, then decisions with
-  the rejected alternatives, then links to the `design-*` artifacts beside it (mocks,
+  the rejected alternatives, then links into the task's `design/` folder (mocks,
   diagrams, prototypes, images). Keep the page short; the artifacts carry the detail.
 - **`PLAN.html`** (agents): everything an implementer without this conversation needs:
   current state, files, order of work, interfaces, the **test plan**, risks and the
@@ -80,7 +80,7 @@ count as the intent, and a debrief in `docs/reports/` counts as the debrief.
 ## Tasks
 
 A task is one flat directory, `docs/tasks/<task-name>-<status>/`, holding
-`TASK.html`, its stage documents, its `design-*` artifacts and its subtask
+`TASK.html`, its stage documents, its `design/` folder and its subtask
 directories. `<status>` is `backlog`, `inprogress`, `blocked` or `done`: the last
 segment of the name is the status. `TASK.html` records `<meta name="stage">`:
 `intent`, `design`, `plan`, `build`, `test` or `done`. Read

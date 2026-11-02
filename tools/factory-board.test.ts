@@ -468,8 +468,8 @@ test("flat tasks are listed, misnamed directories are reported, and nested subta
     await mkdir(join(parent, "first-step-done"));
     await mkdir(join(parent, "second-step-backlog/deep-step-done"), { recursive: true });
     await mkdir(join(parent, "second-step-backlog/deeper/not-a-task"), { recursive: true });
-    await mkdir(join(parent, "assets"));
-    await writeFile(join(parent, "design-mock.html"), "<p>mock</p>");
+    await mkdir(join(parent, "design"));
+    await writeFile(join(parent, "design", "mock.html"), "<p>mock</p>");
     await mkdir(join(tasks, "flat-task"));
 
     const data = await board(base);

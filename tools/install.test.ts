@@ -723,7 +723,7 @@ test("SessionStart lists in-progress leaf tasks and re-grounds after compaction"
     const tasks = join(home, "docs", "tasks");
     mkdirSync(join(tasks, "epic-inprogress", "leaf-inprogress"), { recursive: true });
     mkdirSync(join(tasks, "epic-inprogress", "other-step-done"), { recursive: true });
-    mkdirSync(join(tasks, "solo-inprogress", "design-notes"), { recursive: true });
+    mkdirSync(join(tasks, "solo-inprogress", "design"), { recursive: true });
     mkdirSync(join(tasks, "idle-backlog", "child-inprogress"), { recursive: true });
     mkdirSync(join(tasks, "inprogress", "old", "subtasks", "inprogress", "old-leaf"), {
       recursive: true,

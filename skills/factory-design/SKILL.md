@@ -1,6 +1,6 @@
 ---
 name: factory-design
-description: Factory design stage, run only when the user types /factory-design. Accept the task's intent, then produce DESIGN.html with flagged concerns, decisions and design-* artifacts (mocks, diagrams) in the task directory for the user's review.
+description: Factory design stage, run only when the user types /factory-design. Accept the task's intent, then produce DESIGN.html with flagged concerns, decisions and design/ artifacts (mocks, diagrams) in the task directory for the user's review.
 disable-model-invocation: true
 ---
 

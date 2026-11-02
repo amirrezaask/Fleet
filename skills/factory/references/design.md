@@ -20,9 +20,9 @@ apply them **while** designing, not in a later review.
 2. **Decisions.** For each consequential choice: what was chosen, the alternatives
    rejected and why, and the requirement IDs it serves. Cover only choices that change
    what the user sees, the system's shape, data ownership or contracts.
-3. **Artifacts beside `DESIGN.html`,** in the task directory, named
-   `design-<what>.<ext>` (`design-mock.html`, `design-flow.html`, `design-states.png`).
-   Make the decision visible, not described:
+3. **Artifacts in the task's `design/` folder,** next to its subtasks
+   (`design/mock.html`, `design/flow.html`, `design/states.png`). Make the decision
+   visible, not described:
    - UI: a clickable HTML mock using the project's real tokens, components and copy,
      with states (empty, loading, error, long content) and phone width. Iterate on the
      mock with the user before planning.
@@ -41,7 +41,7 @@ Self-check before presenting: does the design solve the stated problem, does eve
 requirement map to a decision or need none, is every intent question answered or
 carried forward? Present the concerns first, then the artifacts. Revise until the user
 accepts. `/factory-plan` on the task counts as acceptance. Record it, commit
-`DESIGN.html` and its `design-*` files, and move the stage to `plan`.
+`DESIGN.html` and `design/`, and move the stage to `plan`.
 
 A design never changes a requirement. When a concern can only be solved by changing
 one, ask the user for an intent amendment.

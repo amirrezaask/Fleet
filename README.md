@@ -26,7 +26,7 @@ goes to the gates.
 | Stage | Command | Artifact | Reader | Gate |
 | --- | --- | --- | --- | --- |
 | Intent | `/factory-intent` | `INTENT.html` | The user, one screen | The user approves |
-| Design | `/factory-design` | `DESIGN.html` + `design-*` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
+| Design | `/factory-design` | `DESIGN.html` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
 | Plan | `/factory-plan` | `PLAN.html` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
 | Build | `/factory-build` | Code, tests, `DEBRIEF.html` | Future agents | Fast tests green |
 | Test | `/factory-test` | `docs/reports/YYYY-MM-DD-<task>.html` | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
@@ -110,8 +110,8 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
 docs/tasks/<task-name>-<status>/    # status: backlog | inprogress | blocked | done
   TASK.html         # title, dates, stage, blocker, report link
   INTENT.html       # approved requirements (one screen, for the user)
-  DESIGN.html       # flagged concerns, decisions, links to the design-* files
-  design-mock.html  # design artifacts: mocks, diagrams, prototypes, images
+  DESIGN.html       # flagged concerns, decisions, links into design/
+  design/           # design artifacts: mocks, diagrams, prototypes, images
   PLAN.html         # agent-facing plan, test plan, recorded revisions
   DEBRIEF.html      # build notes for future agents and engineers
   <subtask-name>-<status>/   # same files; no approval from the user needed

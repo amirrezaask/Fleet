@@ -22,7 +22,7 @@ Give yourself a check for every change, and use it continuously:
    all of them. When a test fails, fix the code, not the test. Never skip, delete or
    loosen a test to pass, and never weaken an assertion the plan defined.
 4. UI work closes the loop visually: implement, screenshot, compare with the
-   `design-*` mock, adjust. Two or three rounds is normal.
+   `design/` mock, adjust. Two or three rounds is normal.
 5. Keep checks fast and scoped while iterating. Heavy suites wait for Test.
 
 Implement the whole plan before any extended qualification. A half-built scope proves

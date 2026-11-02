@@ -8,7 +8,8 @@ Every task is one flat directory named `<task-name>-<status>`:
 docs/tasks/
   account-recovery-inprogress/
     TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html
-    design-flow.html  design-mock.html  design-states.png     # design artifacts
+    design/                                                   # design artifacts
+      flow.html  mock.html  states.png
     email-token-done/                                         # subtask, same layout
     rate-limit-backlog/
   export-csv-backlog/
@@ -30,9 +31,10 @@ task to resolve a collision. Change status by renaming the directory
 `updated`. The name is the status record; `TASK.html` has no status field.
 
 Everything that belongs to a task sits directly in its directory: the stage
-documents, design artifacts named `design-<what>.<ext>`, and its subtasks. Nothing
-else goes there. Link between a task's own files with bare names (`design-mock.html`)
-so links survive renames, and link to `docs/reports/` by a path from the repo root.
+documents, a `design/` folder with the design artifacts, and its subtasks. Nothing else
+goes there; `design` never ends in a status suffix, so it is never mistaken for a
+subtask. Link between a task's own files with relative paths (`design/mock.html`,
+`../DESIGN.html`) so links survive renames, and link to `docs/reports/` by a path from the repo root.
 
 ## Metadata
 

@@ -48,7 +48,7 @@
   <table>
     <thead><tr><th>ID</th><th>Requirement</th><th>Accepted when</th></tr></thead>
     <tbody>
-      <tr><td>R1</td><td>The article's knowledge, tips and tricks are extracted, and the user's reading of the pipeline is compared with the article's.</td><td>An HTML page in this task's <code>design-*</code> files covers every stage, the principles and the differences.</td></tr>
+      <tr><td>R1</td><td>The article's knowledge, tips and tricks are extracted, and the user's reading of the pipeline is compared with the article's.</td><td>An HTML page in this task's <code>design/</code> folder covers every stage, the principles and the differences.</td></tr>
       <tr><td>R2</td><td>Factory's stages are Intent, Design, Plan, Build and Test, with the artifacts the user described: intent ≈ brief; design = AI-made artifacts; plan = agent plan with the tests decided up front; build = debrief only; test = cheap tests during build, heavy tests only in Test.</td><td>The skill and its stage guides describe these stages, artifacts and gates.</td></tr>
       <tr><td>R3</td><td>Factory is opt-in and runs only through <code>/factory</code> or the stage commands.</td><td>Every Factory skill disables implicit invocation, and AGENTS.md no longer requires Factory for all software work.</td></tr>
       <tr><td>R4</td><td>The templates follow the new format. They are still HTML with the Factory style, short for human readers and detailed for agent readers.</td><td>Intent, design, plan, debrief, test report and task templates exist with the shared tokens.</td></tr>
@@ -74,7 +74,7 @@
 
   <section class="entry">
     <h3>2026-11-02 — Amendment</h3>
-    <p>The user's follow-up in chat: Factory must not refer to the Atlas skill (copy what it needs), design artifacts live in the task itself, task and subtask directories are flat and named <code>$title-$status</code> with no status directories, and the user is called "the user", not "ADMIN". Same branch, no new one.</p>
+    <p>The user's follow-up in chat: Factory must not refer to the Atlas skill (copy what it needs), design artifacts live in the task itself (a <code>design/</code> folder alongside the subtasks), task and subtask directories are flat and named <code>$title-$status</code> with no status directories, and the user is called "the user", not "ADMIN". Same branch, no new one.</p>
   </section>
 </main>
 </body>

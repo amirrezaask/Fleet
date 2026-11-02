@@ -13,7 +13,7 @@ Run in this order, stop at a failing gate, fix, and repeat the affected gates:
    the project's equivalent) and every `fast` test in the plan. Separate pre-existing
    failures (reproduce them on the base revision) from failures this change introduced.
 2. **Acceptance.** Map every intent requirement and design decision to observed
-   evidence: test output, screenshots matching the `design-*` mock, command output,
+   evidence: test output, screenshots matching the `design/` mock, command output,
    or a manual procedure with its observed result. A green suite alone proves neither
    coverage nor quality.
 3. **Fresh-context verification and review.** Start a fresh subagent with pointers to

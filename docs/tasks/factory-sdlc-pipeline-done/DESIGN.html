@@ -55,7 +55,7 @@
       <tr><td>D1</td><td>Commands: <code>/factory</code> is a router that stops at human gates. <code>/factory-intent</code>, <code>-design</code>, <code>-plan</code>, <code>-build</code> and <code>-test</code> are thin skills that point into the shared Factory contract.</td><td>Arguments to one skill (<code>/factory plan</code>): hosts list only skill names as slash commands.</td><td>R2, R3</td></tr>
       <tr><td>D2</td><td>Opt-in: <code>disable-model-invocation: true</code> for Claude Code and <code>allow_implicit_invocation: false</code> for Codex, plus AGENTS.md wording.</td><td>Wording alone. Hosts would still auto-load Factory from its description.</td><td>R3</td></tr>
       <tr><td>D3</td><td>Gates: running the next stage's command accepts the previous artifact. Intent and design need the user. The plan passes an agent self-check.</td><td>A separate "approve" command, which adds a step and no extra control.</td><td>R2</td></tr>
-      <tr><td>D4</td><td>Design holds flagged concerns and decisions, plus <code>design-*</code> artifact files in the task directory (mocks, diagrams, schemas). It can be skipped with a reason.</td><td>Mocks only. The playbook's spec also carries decisions and concerns.</td><td>R2</td></tr>
+      <tr><td>D4</td><td>Design holds flagged concerns and decisions, plus a <code>design/</code> folder of artifacts in the task directory (mocks, diagrams, schemas). It can be skipped with a reason.</td><td>Mocks only. The playbook's spec also carries decisions and concerns.</td><td>R2</td></tr>
       <tr><td>D5</td><td>The plan's test plan tags each test <code>fast</code> or <code>heavy</code>. Build owns fast tests. Test reruns them as regression, then runs the heavy ones. A bug fix starts with a committed failing test.</td><td>Untiered gates, where nobody knows what must pass before Test.</td><td>R2</td></tr>
       <tr><td>D6</td><td><code>DEBRIEF.html</code> lives in the task directory and is written in Build. The test report goes in <code>docs/reports/</code>, as AGENTS.md requires.</td><td>Debrief in reports, which mixes build notes with verification evidence.</td><td>R2, R4</td></tr>
       <tr><td>D7</td><td><code>TASK.html</code> carries <code>&lt;meta name="stage"&gt;</code>. Status means who is working on the task, so <code>backlog/</code> can hold a task at any stage.</td><td>A status directory per stage, which would break the board and existing tasks.</td><td>R2, R5</td></tr>
@@ -65,7 +65,7 @@
   </table>
 
   <h2>Artifacts</h2>
-  <ul><li><a href="design-playbook-knowledge.html">design-playbook-knowledge.html</a>: the knowledge extracted from the article, stage tips, the comparison with the user's pipeline, and measures (R1).</li></ul>
+  <ul><li><a href="design/playbook-knowledge.html">design/playbook-knowledge.html</a>: the knowledge extracted from the article, stage tips, the comparison with the user's pipeline, and measures (R1).</li></ul>
 
   <h2>Carried from the intent</h2>
   <ul><li>Questions for the user: resolved by C1–C3, which the user can revisit.</li></ul>
