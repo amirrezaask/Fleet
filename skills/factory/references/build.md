@@ -49,7 +49,8 @@ run only their fast tests and never heavy gates.
 
 Before leaving Build, write `DEBRIEF.html` from the
 [debrief template](../templates/DEBRIEF_TEMPLATE.html) in the task directory. It is
-for future agents and engineers; include what they could not learn from the diff:
+HTML, never Markdown: copy the template whole, keep its style block unchanged and
+fill its sections. It is for future agents and engineers; include what they could not learn from the diff:
 
 - What was built against the plan: steps done, revisions and why.
 - Abnormalities: surprising behavior, flaky or slow tests, environment quirks, tool

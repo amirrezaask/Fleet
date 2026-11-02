@@ -75,7 +75,9 @@ documents for agents are complete.
 
 All documents are HTML from the [templates](templates/), which carry the Claude-style
 tokens; never write Markdown. Legacy tasks keep their files: `BRIEF.html`/`BRIEF.md`
-count as the intent, and a `DEBRIEF.md` counts as the debrief.
+count as the intent, and an existing `DEBRIEF.md` counts as the debrief. Every new
+debrief is `DEBRIEF.html` from the debrief template, including one for work done
+without the pipeline.
 
 ## Tasks
 

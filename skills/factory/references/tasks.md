@@ -63,7 +63,8 @@ subtasks by itself. Dependencies between siblings live in `TASK.html` under
 Older projects keep tasks in `docs/tasks/` instead of `.factory/`; the board and
 hook read `docs/tasks/` only while `.factory/` does not exist. Migrate with
 `git mv docs/tasks .factory`, moving each task's report or debrief from
-`docs/reports/` into its directory at the same time. Even older projects use
+`docs/reports/` into its directory at the same time. Moved files keep their format;
+new debriefs and reports are always HTML. Even older projects use
 `<status>/<task-name>/` with `subtasks/<status>/` nesting, a `BRIEF` as the intent
 and a `design/` folder. They stay readable; do not migrate them unless the user asks. A legacy task that an agent works on may be moved
 to the flat layout in its first status change.
