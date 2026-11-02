@@ -18,6 +18,7 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 ### Version Control
 **Keep worktrees of each project in it's own directory in .worktrees**
 **Each new session should start from a clean git worktree from a branch (default to master/main)**
+**Never checkout the main repository to other branch than main all work happens in worktrees**
 **Each agent round should conclude with a commit.**
 **Commit messages should reference the brief and plan document of requested change(in absence of said documents, commit message should just echo user's request)**
 **Branch names should not have `codex` or `claude` as prefix, they should be prefixed by `feat-` or `fix-`.**

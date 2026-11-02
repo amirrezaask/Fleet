@@ -10,6 +10,7 @@ Address the user as ADMIN. Factory owns the software development workflow:
 Use existing project conventions and relevant specialist skills within this flow.
 Do not turn a research discussion, status question, or document viewing request
 into authorization to implement software.
+When an agent picks a task, it should make the task in progress in task metadata file.
 
 ## Clarify
 
