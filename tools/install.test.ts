@@ -63,6 +63,10 @@ test("installs individual skills and globals; repeated installs preserve unrelat
     assert.equal(readlinkSync(join(base, skill)), join(root, "skills", skill));
     assert.equal(readlinkSync(join(home, ".codex", "AGENTS.md")), join(root, "AGENTS.md"));
     assert.equal(readlinkSync(join(home, ".local", "bin", "md")), join(root, "tools", "md.ts"));
+    assert.equal(
+      readlinkSync(join(home, ".local", "bin", "factory-dashboard")),
+      join(root, "skills", "factory", "assets", "dashboard", "server.ts"),
+    );
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
     assert.equal(invoke(home).status, 0);

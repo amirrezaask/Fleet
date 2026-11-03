@@ -98,6 +98,26 @@ name (`git mv .factory/export-csv-done .factory/export-csv`), add the status as
 move nested subtasks into `subtasks/`. Moved files keep their format; new documents,
 debriefs and reports are always Markdown.
 
+## Per-repository dashboard
+
+A read-only view of one repository's `.factory/`: kanban columns by `status`, the
+`.factory/backlog.md` queue, and a drawer with each task's Markdown documents. It
+changes nothing and starts no agents; the commands stay in the chat. Two ways to run the
+same `skills/factory/assets/dashboard/dashboard.html`:
+
+- **Server:** `factory-dashboard [repo] [--port N]` (linked onto PATH by the installer;
+  in this repository `npm run factory:dashboard`). Node.js 24+, built-ins only, binds to
+  `127.0.0.1` on a free port and prints the URL. It serves only `.md` files under
+  `.factory/` (no symlinks, `evidence/` or `worktree/`), checks the `Host` header, and
+  refuses everything but GET. The page polls every 2 seconds. Leave it running only
+  when the user asks.
+- **Standalone:** open `dashboard.html` straight from disk (or copy it to a repository)
+  in a Chromium browser and pick the repository or its `.factory` folder once; the
+  browser remembers the folder and asks only for read permission again. No process runs.
+
+Never copy the server or add a `factory:dashboard` script to a project: the skill keeps
+the single copy. This is separate from the shared board below.
+
 ## One shared board
 
 A single board serves every project; projects do not carry a copy. Run it with
