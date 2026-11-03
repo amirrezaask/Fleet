@@ -48,9 +48,9 @@ The managing agent owns the graph and runs this loop:
    saves notes outside the repo, in `.work/`, for later subagents) so implementers
    do not each rediscover the same code.
 2. Create one integration branch for the parent task, named per the repository
-   branch rules.
+   branch rules, with its worktree at `worktree/<branch>/` in the parent task directory.
 3. For each frontier subtask, start a fresh-context **implementer subagent** in
-   the background, in its own worktree under `.worktrees/` on its own branch.
+   the background, in its own worktree under the parent task's `worktree/` directory (`.factory/<task>-<status>/worktree/<branch>/`) on its own branch.
    Run independent subtasks concurrently; never give two concurrent writers
    overlapping files. If two frontier subtasks touch the same files, serialize
    them by adding a dependency edge.

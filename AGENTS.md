@@ -12,11 +12,12 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.
-- `.worktrees/`: All git worktrees created by different agents.
+- `.worktrees/`: git worktrees not tied to a Factory task. A Factory task's worktrees live in its own `.factory/<task-name>-<status>/worktree/<branch-name>/` (gitignored); subtasks use their own `worktree/` the same way.
 
 ## Rules
 ### Version Control
-**Keep worktrees of each project in it's own directory in .worktrees**
+**Keep worktrees of each project in it's own directory: `worktree/` inside the Factory task directory for task work, `.worktrees/` otherwise**
+**Renaming a task directory for a status change must move its worktrees with `git worktree move` (or `git worktree repair` afterwards)**
 **Each new session should start from a clean git worktree from a branch (default to master/main)**
 **Never checkout the main repository to other branch than main all work happens in worktrees**
 **Each agent round should conclude with a commit.**

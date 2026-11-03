@@ -61,4 +61,4 @@ and out-of-scope findings. Link the report from `TASK.html`.
 `-done` requires: all requirements evidenced, every gate passed or explicitly accepted
 by the user as a known limitation, the debrief and report present, and specs matching
 the verified behavior. A task named `-done` without that evidence is reported and
-reconciled before anyone claims success. Then follow the project's worktree cleanup rules.
+reconciled before anyone claims success. Then follow the project's worktree cleanup rules: remove the task's `worktree/` contents with `git worktree remove` before or while renaming to `-done`.

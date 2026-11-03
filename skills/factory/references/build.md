@@ -6,8 +6,10 @@ Build has no specification of its own; `PLAN.html` is the specification.
 
 ## Start
 
-Rename the task to `-inprogress` and set the stage to `build`. Work in the project's
-worktree flow. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
+Rename the task to `-inprogress` and set the stage to `build`. Work in a worktree
+under the task directory, `.factory/<task>-<status>/worktree/<branch>/` (gitignored).
+When a status change renames the task directory, run `git worktree move` for each
+worktree inside it (or `git worktree repair`) so git keeps tracking them. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
 memory (`AGENTS.md`/`CLAUDE.md`).
 
 ## The feedback loop
