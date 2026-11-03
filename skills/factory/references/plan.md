@@ -30,9 +30,9 @@ Use the [plan template](../templates/PLAN_TEMPLATE.md):
   (the `R`, `D` or risk ID), level (unit, integration, e2e, visual, manual), the file
   or procedure, the exact command, the pass condition, and its **tier**:
   - `fast`: runs in seconds to a minute with one command. Build writes these and
-    keeps them green; Test only re-runs them as regression.
+    keeps them green; Verify only re-runs them as regression.
   - `heavy`: e2e, browser, load, performance, cross-platform, long suites. Runs only
-    in `/factory test`.
+    last, at the end of `/factory build`.
 
   Every requirement has at least one test. Tests prove behavior and meaningful failure
   modes, not code structure. For a bug, `T1` is the reproducing test, written and

@@ -148,7 +148,7 @@ async function pickFolder(): Promise<Picked> {
 
 const statuses = ["backlog", "inprogress", "blocked", "done"] as const;
 
-const stages = ["intent", "design", "plan", "build", "test", "done"] as const;
+const stages = ["intent", "design", "plan", "build", "review", "done"] as const;
 
 const metadata = Schema.Struct({
   title: NonEmptyTrimmed,

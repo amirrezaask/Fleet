@@ -264,7 +264,7 @@ const taskSchema = Schema.Struct({
   subtasks: Schema.Struct({ total: Schema.Number, done: Schema.Number }),
   created: Schema.String,
   updated: Schema.String,
-  stage: Schema.optional(Schema.Literals(["intent", "design", "plan", "build", "test", "done"])),
+  stage: Schema.optional(Schema.Literals(["intent", "design", "plan", "build", "review", "done"])),
 });
 
 const boardSchema = Schema.Struct({
