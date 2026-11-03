@@ -10,9 +10,9 @@ This command runs one stage of Factory's opt-in pipeline. Read the
 [Factory skill](../factory/SKILL.md) first: it holds the task layout, gates, document
 audiences and requirement rules this stage relies on.
 
-Set the task status to `inprogress` in `TASK.html`, set the stage to `test`, and follow
+Set the task status to `inprogress` in `TASK.md`, set the stage to `test`, and follow
 [the test guide](../factory/references/test.md). Only the managing agent runs this
-stage. It ends with `REPORT.html` in the task directory, the specs updated, and the task
+stage. It ends with `REPORT.md` in the task directory, the specs updated, and the task
 status set to `done`, or with failures fixed and re-verified, or the status set to `blocked`.
 
 Arguments name the task directory or, for a new task, describe the request. End

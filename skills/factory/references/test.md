@@ -17,7 +17,7 @@ Run in this order, stop at a failing gate, fix, and repeat the affected gates:
    or a manual procedure with its observed result. A green suite alone proves neither
    coverage nor quality.
 3. **Fresh-context verification and review.** Start a fresh subagent with pointers to
-   `INTENT.html`, `DESIGN.html`, `PLAN.html` and the diff, not your conclusions. It runs
+   `INTENT.md`, `DESIGN.md`, `PLAN.md` and the diff, not your conclusions. It runs
    the changed behavior and its nearest neighboring flows, then reviews in three
    passes: **bugs** (logic, edge cases, regressions), **security** (input handling,
    auth, secrets, PII in logs), and **compliance** (the diff matches the intent,
@@ -32,22 +32,22 @@ Run in this order, stop at a failing gate, fix, and repeat the affected gates:
 
 Fix failures in the code. For a batch of fixes, one fresh implementer subagent may
 do the work; re-run the affected gates afterwards. When a fix changes the approach,
-revise `PLAN.html` in the same commit and add the incident to `DEBRIEF.html`.
+revise `PLAN.md` in the same commit and add the incident to `DEBRIEF.md`.
 
 ## Evidence rules
 
 Record command, revision, environment and the literal result for each gate. Never
 claim an unrun check passed; mark it Not run or Blocked with the reason. Keep raw
 output (json, logs, traces, png) in the task's gitignored `evidence/` folder; track
-only the HTML.
+only the Markdown report.
 
 ## Report
 
-Write `REPORT.html` in the task directory, next to the debrief, from the
-[test report template](../templates/TEST_REPORT_TEMPLATE.html). First screen: the
+Write `REPORT.md` in the task directory, next to the debrief, from the
+[test report template](../templates/TEST_REPORT_TEMPLATE.md). First screen: the
 verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
 decide. Below that: gate results, review findings and their resolution, limitations
-and out-of-scope findings. Link the report from `TASK.html`.
+and out-of-scope findings. Link the report from `TASK.md`.
 
 ## Close
 

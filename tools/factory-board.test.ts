@@ -712,6 +712,9 @@ test("intent prefers INTENT over BRIEF, falls back to BRIEF, and optional docume
     assert.match(preferred.design, /Design body/);
     assert.match(preferred.debrief, /Debrief body/);
 
+    await writeFile(join(directory, "INTENT.md"), "# Intent\n\nMarkdown wins\n");
+    assert.match((await documents(base, "intent-task")).intent, /Markdown wins/);
+
     const legacy = await documents(base, "legacy-task");
     assert.match(legacy.intent, /<table>/);
     assert.match(legacy.plan, /Implementation/);

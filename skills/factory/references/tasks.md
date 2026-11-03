@@ -8,9 +8,9 @@
 ```text
 .factory/
   account-recovery/
-    TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html  REPORT.html
+    TASK.md  INTENT.md  DESIGN.md  PLAN.md  DEBRIEF.md  REPORT.md
     design/                                                   # design artifacts
-      flow.html  mock.html  states.png
+      flow.md  mock.html  states.png
     evidence/                                                 # raw test output, gitignored
     worktree/                                                 # task worktrees, gitignored
     subtasks/
@@ -23,12 +23,12 @@ The name is lowercase ASCII letters and numbers separated by single hyphens, uni
 among its siblings. Reuse existing tasks; never overwrite another task to resolve a
 collision. Only directories inside `subtasks/` are subtasks, so `design/`,
 `evidence/` and `worktree/` are never mistaken for them. Link between a task's own
-files with relative paths (`design/mock.html`, `REPORT.html`, `../DESIGN.html`).
+files with relative paths (`design/mock.html`, `REPORT.md`, `../DESIGN.md`).
 
 ## Metadata and status
 
-`TASK.html` carries a nonempty `<title>`, `<meta name="created">` and
-`<meta name="updated">` ISO dates, `<meta name="stage">` and `<meta name="status">`:
+`TASK.md` frontmatter carries a nonempty `title`, quoted ISO `created` and
+`updated` dates, `stage` and `status`:
 
 | `status` | Board column | Meaning |
 | --- | --- | --- |
@@ -39,12 +39,12 @@ files with relative paths (`design/mock.html`, `REPORT.html`, `../DESIGN.html`).
 
 `stage` is the pipeline position (`intent`, `design`, `plan`, `build`, `test`,
 `done`); `status` is whether anyone is working on it. A missing or unknown status
-reads as `backlog`. Change status by editing the tag (or the board) and `updated`;
+reads as `backlog`. Change status by editing the key (or the board) and `updated`;
 the directory is never renamed or moved, so worktrees and links survive. Record
 blockers and the report link in the body. A status change is bookkeeping: it does not
 approve work, run plans, prove completion or start sessions. Because state lives in
 the file, browse it with the board or
-`grep -r 'name="status"' .factory --include=TASK.html`.
+`grep -r '^status:' .factory --include=TASK.md`.
 
 ## Subtasks
 
@@ -53,16 +53,16 @@ A subtask is a directory in its task's `subtasks/` folder with the same files,
 but refines, never contradicts, its parent's; record "Approval: not required, subtask
 of `<parent>`". Subtasks nest without limit. The board shows a done/total count over
 all descendants and never changes subtask status by itself. Dependencies between
-siblings live in `TASK.html` under `## Depends on`; see [subtask graphs](subtasks.md).
+siblings live in `TASK.md` under `## Depends on`; see [subtask graphs](subtasks.md).
 
 ## Older layouts
 
 Tasks named `<name>-<status>/`, `<status>/<name>/` or kept in `docs/tasks/` are not
 read by the board or hook. Migrate each: drop the status suffix from the directory
 name (`git mv .factory/export-csv-done .factory/export-csv`), add the status as
-`<meta name="status">` (TASK.html) or a `status:` frontmatter key (TASK.md), and move
-nested subtasks into `subtasks/`. Moved files keep their format; new debriefs and
-reports are always HTML.
+`<meta name="status">` (legacy TASK.html) or a `status:` frontmatter key (TASK.md), and
+move nested subtasks into `subtasks/`. Moved files keep their format; new documents,
+debriefs and reports are always Markdown.
 
 ## One shared board
 

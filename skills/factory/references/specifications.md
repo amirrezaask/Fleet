@@ -1,17 +1,17 @@
 # Keep specifications true
 
 A project's specifications describe how the system behaves today: root documents
-directly under `docs/` (`README.html`, `architecture.html`, `domain.html`,
-`data-model.html`, `quality.html`, `operations.html`), area rules and contracts in
-`docs/areas/<area>.html`, and actor flows in `docs/workflows/<flow>.html`. Factory
+directly under `docs/` (`README.md`, `architecture.md`, `domain.md`,
+`data-model.md`, `quality.md`, `operations.md`), area rules and contracts in
+`docs/areas/<area>.md`, and actor flows in `docs/workflows/<flow>.md`. Factory
 reads them before a change and updates them after it is verified. It does not
 document a whole project; when specs are missing, cover only what the task touches.
 
 ## Before intent, design and plan
 
-Read `docs/README.html`, the relevant root documents, areas and workflows. Follow
+Read `docs/README.md`, the relevant root documents, areas and workflows. Follow
 their code and schema anchors and reconcile them with the actual revision. Existing
-legacy specs (`docs/*.md`, `docs/areas/*.md`, `docs/specs/*.spec.md`) remain binding
+legacy specs (`docs/*.html`, `docs/areas/*.html`, `docs/specs/*.spec.md`) remain binding
 in place.
 
 Ask the impact question:
@@ -24,7 +24,7 @@ Ask the impact question:
 > intent can be precise?
 
 Reference preserved requirements with document-qualified IDs
-(`areas/identity.html#AUTH-003`) in the intent and plan instead of redefining them.
+(`areas/identity.md#AUTH-003`) in the intent and plan instead of redefining them.
 Keep proposed behavior in the intent and design; never present it as implemented in
 current-system documents.
 
@@ -50,9 +50,9 @@ affected documents:
   records keep their original context.
 - Do not scaffold unrelated documents for a scoped change.
 
-New spec documents are HTML from the [area template](../templates/AREA_TEMPLATE.html)
-or the [workflow template](../templates/WORKFLOW_TEMPLATE.html). Edit legacy Markdown
-specs in place and format; do not move them or create a competing canonical rule.
+New spec documents are Markdown from the [area template](../templates/AREA_TEMPLATE.md)
+or the [workflow template](../templates/WORKFLOW_TEMPLATE.md). Legacy HTML specs stay
+readable and are edited in place; do not move them or create a competing canonical rule.
 
 ## Conflicts
 

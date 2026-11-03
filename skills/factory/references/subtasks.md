@@ -31,7 +31,7 @@ subtask on all of them.
 ## Record dependencies
 
 Dependencies are edges between sibling subtasks of the same parent. List them in
-the subtask's `TASK.html` under `## Depends on` as sibling subtask names, or `None`.
+the subtask's `TASK.md` under `## Depends on` as sibling subtask names, or `None`.
 Edges describe what must be `done` first, never a preferred order. Keep them
 minimal and acyclic; split or merge subtasks to break a cycle. Dependency edges
 do not change status rules and the board ignores them.
@@ -43,7 +43,7 @@ The **frontier** is every subtask not yet `done` whose dependencies are all
 
 The managing agent owns the graph and runs this loop:
 
-1. Read the parent intent and design, and every subtask's `TASK.html`, `INTENT.html` and `PLAN.html`
+1. Read the parent intent and design, and every subtask's `TASK.md`, `INTENT.md` and `PLAN.md`
    to build the graph. Do the shared exploration once (a fresh subagent that
    saves notes outside the repo, in `.work/`, for later subagents) so implementers
    do not each rediscover the same code.
@@ -59,7 +59,7 @@ The managing agent owns the graph and runs this loop:
    text. It confirms its worktree is based on the integration branch, builds its
    subtask, runs only its plan's `fast` tests, merges the integration tip into its branch,
    commits, and reports. It must not run heavy validation gates and must not
-   edit the parent intent or sibling subtasks, and it writes its own `DEBRIEF.html` only
+   edit the parent intent or sibling subtasks, and it writes its own `DEBRIEF.md` only
    when it found something worth recording.
 5. When an implementer reports, merge its branch into the integration branch
    (a separate merger subagent or the manager), resolve conflicts, move the

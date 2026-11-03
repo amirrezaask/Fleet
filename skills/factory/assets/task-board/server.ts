@@ -198,7 +198,7 @@ async function exists(path: string): Promise<boolean> {
 }
 
 // Tasks live at .factory/<name>/ and subtasks at <task>/subtasks/<name>/. Names never change;
-// the status is a field of TASK.html (or TASK.md frontmatter), so a move edits one file.
+// the status is a field of TASK.md frontmatter (or a legacy TASK.html meta tag), so a move edits one file.
 type Location = { directory: string };
 
 async function find(parent: string, name: string): Promise<Location> {
@@ -261,7 +261,7 @@ async function readDocument(root: string, id: string, name: string): Promise<str
   }
 }
 
-// New documents are HTML; older Markdown documents stay readable. HTML wins when both exist.
+// New documents are Markdown; older HTML documents stay readable. Markdown wins when both exist.
 // Earlier bases are preferred, so a legacy name can follow its replacement as a fallback.
 async function existingDocument(
   root: string,
@@ -271,7 +271,7 @@ async function existingDocument(
   const { directory } = await locate(root, id);
 
   for (const base of bases) {
-    for (const extension of [".html", ".md"]) {
+    for (const extension of [".md", ".html"]) {
       if (await exists(join(directory, base + extension))) return base + extension;
     }
   }
@@ -280,7 +280,7 @@ async function existingDocument(
 }
 
 async function documentName(root: string, id: string, base: string): Promise<string> {
-  return (await existingDocument(root, id, base)) ?? `${base}.html`;
+  return (await existingDocument(root, id, base)) ?? `${base}.md`;
 }
 
 function decodeEntities(text: string): string {
@@ -330,7 +330,7 @@ function decodeTask(text: string, name = "TASK.md") {
     };
   } catch {
     throw new BoardError(
-      "TASK.html requires a title and created/updated dates (TASK.md: title and quoted created/updated dates).",
+      "TASK.md requires a title and quoted created/updated dates (TASK.html: a title and created/updated meta tags).",
     );
   }
 }
@@ -341,13 +341,13 @@ async function readTask(root: string, id: string) {
   return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
-// The task document path relative to the project, e.g. .factory/<name>/TASK.html.
+// The task document path relative to the project, e.g. .factory/<name>/TASK.md.
 const projectFile = (root: string, directory: string, name: string) =>
   join(".factory", relative(root, join(directory, name)));
 
 // The status of the task in `directory`; an unreadable TASK file counts as backlog.
 async function childStatus(directory: string): Promise<(typeof statuses)[number]> {
-  for (const name of ["TASK.html", "TASK.md"]) {
+  for (const name of ["TASK.md", "TASK.html"]) {
     try {
       return decodeTask(await readFile(join(directory, name), "utf8"), name).data.status;
     } catch {
@@ -395,7 +395,7 @@ async function listSubtasks(root: string, id: string) {
       subtasks.push({
         id: childId,
         status: "backlog",
-        file: projectFile(root, child.directory, "TASK.html"),
+        file: projectFile(root, child.directory, "TASK.md"),
         subtasks: { total: 0, done: 0 },
         title: child.name,
         created: "",
@@ -458,7 +458,7 @@ async function renderDocument(
   const found = await existingDocument(root, id, ...bases);
 
   if (!found && optional) return `<p class="notice">Not written yet.</p>`;
-  const name = found ?? `${bases[0]}.html`;
+  const name = found ?? `${bases[0]}.md`;
 
   try {
     const text = await readDocument(root, id, name);
@@ -472,7 +472,7 @@ async function renderDocument(
       allowProtocolRelative: false,
     });
   } catch {
-    return `<p class="notice">${name} is unavailable. Check that it exists as a regular HTML or Markdown file.</p>`;
+    return `<p class="notice">${name} is unavailable. Check that it exists as a regular Markdown or HTML file.</p>`;
   }
 }
 

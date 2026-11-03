@@ -6,7 +6,7 @@ design but does not write it. Requirements and design happen in one session.
 
 ## Inputs
 
-Read `INTENT.html`, the affected specs and workflows under `docs/`, and the code paths
+Read `INTENT.md`, the affected specs and workflows under `docs/`, and the code paths
 involved. Load the skills that encode the policies the change touches (UI craft,
 accessibility, security, performance, the project's Effect or React patterns) and
 apply them **while** designing, not in a later review.
@@ -21,18 +21,18 @@ apply them **while** designing, not in a later review.
    rejected and why, and the requirement IDs it serves. Cover only choices that change
    what the user sees, the system's shape, data ownership or contracts.
 3. **Artifacts in the task's `design/` folder,** next to its subtasks
-   (`design/mock.html`, `design/flow.html`, `design/states.png`). Make the decision
+   (`design/mock.html`, `design/flow.md`, `design/states.png`). Make the decision
    visible, not described:
-   - UI: a clickable HTML mock using the project's real tokens, components and copy,
-     with states (empty, loading, error, long content) and phone width. Iterate on the
-     mock with the user before planning.
-   - Flows and architecture: an HTML page with an SVG diagram of the actual mechanism
-     (see [HBS](../../hbs/SKILL.md)).
+   - UI: a clickable HTML mock when interaction matters, using the project's real
+     tokens, components and copy, with states (empty, loading, error, long content)
+     and phone width. Iterate on the mock with the user before planning.
+   - Flows and architecture: a Markdown page with a Mermaid diagram of the actual
+     mechanism (Mermaid code blocks render in `md`).
    - Data and contracts: schemas, type shapes, API examples.
    - Images or screenshots when they are the clearest evidence.
 4. **Open questions carried forward** from the intent, each answered or still open.
 
-Use the [design template](../templates/DESIGN_TEMPLATE.html). Keep `DESIGN.html` to a
+Use the [design template](../templates/DESIGN_TEMPLATE.md). Keep `DESIGN.md` to a
 short page: concerns, decisions, artifact links. The artifacts hold the detail.
 
 ## Review with the user
@@ -41,7 +41,7 @@ Self-check before presenting: does the design solve the stated problem, does eve
 requirement map to a decision or need none, is every intent question answered or
 carried forward? Present the concerns first, then the artifacts. Revise until the user
 accepts. `/factory-plan` on the task counts as acceptance. Record it, commit
-`DESIGN.html` and `design/`, and move the stage to `plan`.
+`DESIGN.md` and `design/`, and move the stage to `plan`.
 
 A design never changes a requirement. When a concern can only be solved by changing
 one, ask the user for an intent amendment.

@@ -25,7 +25,7 @@ const skill = readdirSync(join(root, "skills"))
   .sort()
   .find(
     (name) =>
-      !["factory", "atlas"].includes(name) &&
+      name !== "factory" &&
       !name.startsWith("factory-") &&
       existsSync(join(root, "skills", name, "SKILL.md")),
   );
@@ -68,6 +68,7 @@ test("installs individual skills and globals; repeated installs preserve unrelat
     assert.equal(lstatSync(base).isDirectory(), true);
     assert.equal(readlinkSync(join(base, skill)), join(root, "skills", skill));
     assert.equal(readlinkSync(join(home, ".codex", "AGENTS.md")), join(root, "AGENTS.md"));
+    assert.equal(readlinkSync(join(home, ".local", "bin", "md")), join(root, "tools", "md.ts"));
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
     assert.equal(invoke(home).status, 0);
@@ -109,7 +110,7 @@ test("selected install includes global workflow skills; foreign symlinks are pre
     assert.equal(invoke(home, skill).status, 0);
     assert.deepEqual(
       readdirSync(join(home, ".agents", "skills")).sort(),
-      [...new Set([skill, "factory", "atlas"])].sort(),
+      [...new Set([skill, "factory"])].sort(),
     );
     const destination = join(home, ".codex", "skills", skill);
     rmSync(destination);
@@ -159,12 +160,12 @@ test("removes any retired old-source skill link but preserves unrelated links an
   }));
 
 const templateSources = [
-  { name: "INTENT_TEMPLATE.html", path: "skills/factory/templates/INTENT_TEMPLATE.html" },
-  { name: "DESIGN_TEMPLATE.html", path: "skills/factory/templates/DESIGN_TEMPLATE.html" },
-  { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
-  { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
-  { name: "TEST_REPORT_TEMPLATE.html", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.html" },
-  { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
+  { name: "INTENT_TEMPLATE.md", path: "skills/factory/templates/INTENT_TEMPLATE.md" },
+  { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
+  { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
+  { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
+  { name: "TEST_REPORT_TEMPLATE.md", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.md" },
+  { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
 ];
 
 const globalDirectories = [".agents", ".codex", ".claude"];
@@ -215,7 +216,7 @@ test("foreign template aliases and regular files fail preflight without partial 
     isolated((home) => {
       const base = join(home, ".claude");
       mkdirSync(base);
-      const alias = join(base, "SPEC_TEMPLATE.html");
+      const alias = join(base, "SPEC_TEMPLATE.md");
       const foreign = join(home, "foreign.md");
       writeFileSync(foreign, "saved");
 
@@ -233,7 +234,7 @@ test("foreign template aliases and regular files fail preflight without partial 
 });
 
 test("missing template or required skill fails before any home mutation", () => {
-  for (const missing of ["template", "factory", "atlas"])
+  for (const missing of ["template", "factory"])
     isolated((temporary) => {
       const fixture = join(temporary, "fixture");
       const home = join(temporary, "home");
@@ -242,7 +243,7 @@ test("missing template or required skill fails before any home mutation", () => 
       writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
       writeFileSync(join(fixture, "AGENTS.md"), "global");
 
-      for (const name of ["factory", "atlas"]) {
+      for (const name of ["factory"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });
 
         if (missing !== name) writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
@@ -251,7 +252,7 @@ test("missing template or required skill fails before any home mutation", () => 
       for (const { name, path } of templateSources) {
         mkdirSync(dirname(join(fixture, path)), { recursive: true });
 
-        if (missing !== "template" || name !== "SPEC_TEMPLATE.html")
+        if (missing !== "template" || name !== "SPEC_TEMPLATE.md")
           writeFileSync(join(fixture, path), "template");
       }
 
@@ -269,17 +270,19 @@ test("missing template or required skill fails before any home mutation", () => 
     });
 });
 
+const retiredSkills = ["communication", "specification", "atlas", "hbs"];
+
 test("migrates former nested template aliases and retires old workflow skills on selected installs", () =>
   isolated((home) => {
     for (const directory of globalDirectories) {
       const base = join(home, directory);
       mkdirSync(join(base, "skills"), { recursive: true });
 
-      for (const name of ["communication", "specification"])
+      for (const name of retiredSkills)
         symlinkSync(join(root, "skills", name), join(base, "skills", name));
 
       for (const { name } of templateSources) {
-        const old = name === "SPEC_TEMPLATE.html" ? "specification" : "communication";
+        const old = name === "SPEC_TEMPLATE.md" ? "specification" : "communication";
         symlinkSync(join(root, "skills", old, "templates", name), join(base, name));
       }
     }
@@ -292,7 +295,7 @@ test("migrates former nested template aliases and retires old workflow skills on
     assert.equal(invoke(home, skill).status, 0);
 
     for (const directory of globalDirectories) {
-      for (const name of ["communication", "specification"])
+      for (const name of retiredSkills)
         assert.throws(() => lstatSync(join(home, directory, "skills", name)));
       assert.equal(
         readlinkSync(join(home, directory, "skills", "factory")),
@@ -304,41 +307,44 @@ test("migrates former nested template aliases and retires old workflow skills on
     }
   }));
 
-test("retires managed Markdown template aliases on selected installs, including dangling links", () =>
+test("retires managed HTML template aliases on selected installs, including dangling links", () =>
   isolated((home) => {
-    const oldSpec = join(root, "skills", "factory", "templates", "SPEC_TEMPLATE.md");
-    const oldArea = join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.md");
-    const oldBrief = join(root, "skills", "factory", "templates", "BRIEF_TEMPLATE.md");
-    const foreign = join(home, "PLAN_TEMPLATE.md");
+    const templates = join(root, "skills", "factory", "templates");
+    const oldArea = join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.html");
+    const oldSpec = join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.md");
+    const oldBrief = join(templates, "BRIEF_TEMPLATE.md");
+    const foreign = join(home, "PLAN_TEMPLATE.html");
     writeFileSync(foreign, "mine");
 
-    for (const [index, directory] of globalDirectories.entries()) {
+    for (const directory of globalDirectories) {
       mkdirSync(join(home, directory));
-      symlinkSync(index === 0 ? oldSpec : oldArea, join(home, directory, "SPEC_TEMPLATE.md"));
+      symlinkSync(oldArea, join(home, directory, "SPEC_TEMPLATE.html"));
+      symlinkSync(
+        join(templates, "INTENT_TEMPLATE.html"),
+        join(home, directory, "INTENT_TEMPLATE.html"),
+      );
+      symlinkSync(oldSpec, join(home, directory, "SPEC_TEMPLATE.md"));
       symlinkSync(oldBrief, join(home, directory, "BRIEF_TEMPLATE.md"));
-      symlinkSync(foreign, join(home, directory, "PLAN_TEMPLATE.md"));
+      symlinkSync(foreign, join(home, directory, "PLAN_TEMPLATE.html"));
     }
 
     assert.equal(invoke(home, "--dry-run", skill).status, 0);
-    assert.equal(readlinkSync(join(home, ".agents", "SPEC_TEMPLATE.md")), oldSpec);
+    assert.equal(readlinkSync(join(home, ".agents", "SPEC_TEMPLATE.html")), oldArea);
     assert.equal(invoke(home, skill).status, 0);
 
     for (const directory of globalDirectories) {
-      assert.throws(() => lstatSync(join(home, directory, "SPEC_TEMPLATE.md")));
-      assert.throws(() => lstatSync(join(home, directory, "BRIEF_TEMPLATE.md")));
+      for (const name of ["SPEC_TEMPLATE.html", "INTENT_TEMPLATE.html", "BRIEF_TEMPLATE.md"])
+        assert.throws(() => lstatSync(join(home, directory, name)));
       assert.equal(
-        readlinkSync(join(home, directory, "PLAN_TEMPLATE.md")),
+        readlinkSync(join(home, directory, "PLAN_TEMPLATE.html")),
         foreign,
         "foreign link kept",
       );
       assert.equal(
-        readlinkSync(join(home, directory, "SPEC_TEMPLATE.html")),
-        join(root, "skills", "atlas", "templates", "AREA_TEMPLATE.html"),
+        readlinkSync(join(home, directory, "SPEC_TEMPLATE.md")),
+        join(templates, "AREA_TEMPLATE.md"),
       );
-      assert.equal(
-        readlinkSync(join(home, directory, "skills", "atlas")),
-        join(root, "skills", "atlas"),
-      );
+      assert.throws(() => lstatSync(join(home, directory, "skills", "atlas")));
     }
   }));
 
@@ -363,8 +369,8 @@ test("retires the managed BRIEF_TEMPLATE.html alias but keeps foreign ones", () 
 
     for (const directory of globalDirectories)
       assert.equal(
-        readlinkSync(join(home, directory, "INTENT_TEMPLATE.html")),
-        join(root, "skills", "factory", "templates", "INTENT_TEMPLATE.html"),
+        readlinkSync(join(home, directory, "INTENT_TEMPLATE.md")),
+        join(root, "skills", "factory", "templates", "INTENT_TEMPLATE.md"),
       );
   }));
 
@@ -376,6 +382,7 @@ test("factory stage skills are discovered and selecting one installs factory too
     mkdirSync(join(fixture, "tools"), { recursive: true });
     writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
     writeFileSync(join(fixture, "tools", budgetHook), "hook");
+    writeFileSync(join(fixture, "tools", "md.ts"), "viewer");
     writeFileSync(join(fixture, "AGENTS.md"), "global");
 
     const stages = [
@@ -386,7 +393,7 @@ test("factory stage skills are discovered and selecting one installs factory too
       "factory-test",
     ];
 
-    for (const name of ["factory", "atlas", ...stages]) {
+    for (const name of ["factory", ...stages]) {
       mkdirSync(join(fixture, "skills", name), { recursive: true });
       writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
     }
@@ -404,10 +411,9 @@ test("factory stage skills are discovered and selecting one installs factory too
 
     const listed = run("--list");
     assert.equal(listed.status, 0);
-    assert.deepEqual(listed.stdout.trim().split("\n"), ["atlas", "factory", ...stages.toSorted()]);
+    assert.deepEqual(listed.stdout.trim().split("\n"), ["factory", ...stages.toSorted()]);
     assert.equal(run("factory-design").status, 0);
     assert.deepEqual(readdirSync(join(home, ".agents", "skills")).sort(), [
-      "atlas",
       "factory",
       "factory-design",
     ]);
@@ -674,6 +680,9 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     assert.equal(stop("Which option do you want?"), "", "an escalated task may end");
 
     writeFileSync(join(task, "TASK.md"), "status: inprogress\n## Blocker\nNone\n");
+
+    // A legacy task with only a TASK.html is still read.
+    rmSync(join(task, "TASK.md"));
 
     const html = (blocker: string, status = "inprogress") =>
       `<meta name="status" content="${status}"><main><h1>Leaf</h1><h2>Blocker</h2>\n<p>${blocker}</p>\n<h2>Outcome</h2><p>None</p></main>`;

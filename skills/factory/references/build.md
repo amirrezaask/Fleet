@@ -1,14 +1,14 @@
 # Build: implement the plan and keep its fast tests green
 
 Goal: the full planned scope implemented, every `fast` test in the plan passing,
-and a `DEBRIEF.html` that tells the next agent or engineer what they need to know.
-Build has no specification of its own; `PLAN.html` is the specification.
+and a `DEBRIEF.md` that tells the next agent or engineer what they need to know.
+Build has no specification of its own; `PLAN.md` is the specification.
 
 ## Start
 
 Set the task status to `inprogress` and the stage to `build`. Work in a worktree
 under the task directory, `.factory/<task>/worktree/<branch>/` (gitignored). Status
-changes never move the directory, so the worktree stays valid. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
+changes never move the directory, so the worktree stays valid. Read `INTENT.md`, `DESIGN.md`, `PLAN.md` and the project's agent
 memory (`AGENTS.md`/`CLAUDE.md`).
 
 ## The feedback loop
@@ -32,9 +32,9 @@ nothing.
 ## Stay on the plan
 
 Follow the plan's order and contracts. When reality departs from it, update
-`PLAN.html` **in the same commit** as the departing code (date, reason, affected IDs,
+`PLAN.md` **in the same commit** as the departing code (date, reason, affected IDs,
 impact). Requirement or design conflicts stop for the user; record the blocker in
-`TASK.html` and set the status to `blocked`.
+`TASK.md` and set the status to `blocked`.
 
 Commit in coherent increments. Each message names the task and the plan steps
 (`factory(<task>): build M2-M3`).
@@ -48,10 +48,9 @@ run only their fast tests and never heavy gates.
 
 ## Debrief
 
-Before leaving Build, write `DEBRIEF.html` from the
-[debrief template](../templates/DEBRIEF_TEMPLATE.html) in the task directory. It is
-HTML, never Markdown: copy the template whole, keep its style block unchanged and
-fill its sections. It is for future agents and engineers; include what they could not learn from the diff:
+Before leaving Build, write `DEBRIEF.md` from the
+[debrief template](../templates/DEBRIEF_TEMPLATE.md) in the task directory. Copy
+the template whole and fill its sections. It is for future agents and engineers; include what they could not learn from the diff:
 
 - What was built against the plan: steps done, revisions and why.
 - Abnormalities: surprising behavior, flaky or slow tests, environment quirks, tool

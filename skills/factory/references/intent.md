@@ -1,6 +1,6 @@
 # Intent: capture what the user wants
 
-Goal: one short, approved `INTENT.html` that says what is wanted, why, and under
+Goal: one short, approved `INTENT.md` that says what is wanted, why, and under
 which constraints, in the user's own terms. It is the contract every later stage checks
 against. A human reads it; keep it to one screen.
 
@@ -33,7 +33,7 @@ recommend one. Leave implementation decisions to Design and Plan.
 
 ## Write the intent
 
-Use the [intent template](../templates/INTENT_TEMPLATE.html):
+Use the [intent template](../templates/INTENT_TEMPLATE.md):
 
 - **Problem** and **Outcome**, in the user's terms.
 - **Requirements** with stable IDs (`R1`, `R2`, ...). Each one states an observable

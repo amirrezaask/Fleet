@@ -2,8 +2,8 @@
 
 `AGENTS.md` holds global conventions. Factory is an opt-in delivery pipeline,
 Intent → Design → Plan → Build → Test, started only by `/factory` or a stage
-command. Atlas owns software specification discovery, structure and templates;
-Factory uses its maintenance guidance during delivery.
+command. Every document agents write is Markdown; ADMIN reviews any of them rendered
+as Claude-styled HTML with `md <file.md>`.
 
 ## Skills
 
@@ -11,8 +11,6 @@ Factory uses its maintenance guidance during delivery.
 | --- | --- |
 | `factory` | Only `/factory`: route a task through the pipeline, stopping at human gates; task board |
 | `factory-intent`, `factory-design`, `factory-plan`, `factory-build`, `factory-test` | Only the matching `/factory-<stage>` command: run that one stage |
-| `atlas` | Explicit `/atlas` initialization and documentation of an existing project |
-| `hbs` | Any HTML document an agent makes to communicate with ADMIN: explainers, comparisons, reviews, reports, charts, questionnaires, editors |
 | `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
@@ -25,82 +23,34 @@ goes to the gates.
 
 | Stage | Command | Artifact | Reader | Gate |
 | --- | --- | --- | --- | --- |
-| Intent | `/factory-intent` | `INTENT.html` | The user, one screen | The user approves |
-| Design | `/factory-design` | `DESIGN.html` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
-| Plan | `/factory-plan` | `PLAN.html` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
-| Build | `/factory-build` | Code, tests, `DEBRIEF.html` | Future agents | Fast tests green |
-| Test | `/factory-test` | `REPORT.html` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
+| Intent | `/factory-intent` | `INTENT.md` | The user, one screen | The user approves |
+| Design | `/factory-design` | `DESIGN.md` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
+| Plan | `/factory-plan` | `PLAN.md` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
+| Build | `/factory-build` | Code, tests, `DEBRIEF.md` | Future agents | Fast tests green |
+| Test | `/factory-test` | `REPORT.md` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
 them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
-method. Tasks live in `.factory/<task>/` with their status in `TASK.html`; the optional board shows the
+method. Tasks live in `.factory/<task>/` with their status in `TASK.md`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
 
-## HTML communication (HBS)
+## Markdown documents and `md`
 
-All agent artifacts are self-contained HTML (see `AGENTS.md`). [HBS](skills/hbs/SKILL.md)
-picks the document format for the job and the visualization for each piece of data
-or knowledge, then applies the shared Claude-style tokens in light and dark mode. Its
-ideas come from [The unreasonable effectiveness of HTML](https://thariqs.github.io/html-effectiveness/)
-and its "Know your unknowns" pages.
+Specs, intents, designs, plans, debriefs and reports are Markdown (see `AGENTS.md`),
+so agents read and edit them cheaply and Git diffs stay readable. To review one:
 
-| File | Contents |
-| --- | --- |
-| `skills/hbs/SKILL.md` | Workflow (job → visual by intent → answer first → reply loop), design and interaction rules |
-| `skills/hbs/references/formats.md` | Format catalog: explore/decide, surface unknowns, during/after implementation, review, design, report, editors |
-| `skills/hbs/references/dataviz.md` | Intent → visual tables for data and knowledge, then CSS/SVG recipes for numbers, bars, time, flows and review visuals |
-| `skills/hbs/references/interactions.md` | State → render → export, copy with fallback, reply assembly, tabs, linking, live controls, drag, interview, quiz, deck |
-| `skills/hbs/references/writing.md` | First screen, ordering by what ADMIN acts on, evidence, trade-offs, honesty devices, unknowns |
-| `skills/hbs/templates/BASE_TEMPLATE.html` | Starting shell: tokens, prompt box, stat band, timeline, cards, diff, toggle, SVG classes, live reply and copy helper |
-
-Factory's task/intent/design/plan/debrief/test-report templates and Atlas's specification templates are HTML too;
-they keep their own structure and reuse the same tokens.
-
-## Atlas specifications
-
-Initialize documentation for an existing project with:
-
-```text
-/atlas
-/atlas /path/to/project
-/atlas the ordering subsystem in this repository
+```sh
+md .factory/<task>/PLAN.md
+md docs/areas/identity.md --out /tmp/review --no-open
 ```
 
-`/atlas [project path or scope]` is the only command that starts this baseline
-workflow. Ordinary coding, explanation and documentation requests do not start
-initialization. Atlas disables implicit skill invocation. Hosts that select
-skills through `$atlas` or `/skills` should select the skill and include the
-literal `/atlas` command in the request; this repository documents an agent
-command convention, not a new host command parser.
-
-Atlas inventories actors, entry points, state writers and integrations; maps
-responsibilities; traces actor flows; and checks rules against alternate paths
-and contrary evidence before writing. Its guides cover bounded investigation of
-large repositories, source/runtime evidence, coverage gaps and accepted intent.
-Contracts stay with areas; decision reasoning stays in linked task plans/debriefs.
-
-```text
-docs/
-  README.html
-  architecture.html
-  domain.html
-  data-model.html
-  quality.html
-  operations.html
-  areas/<area-name>.html
-  workflows/<flow-name>.html
-  tasks/<task-name>/
-  reports/
-```
-
-A full baseline creates the six root documents and the applicable areas and
-workflows. Scoped maintenance updates affected documents only. Atlas preserves
-historical documents unless migration is requested; it does not create empty
-Factory tasks or require contracts/decisions directories. Factory reads affected
-specifications before planning and reconciles them after verification without
-implicitly starting a full baseline.
+`tools/md.ts` renders the file with the Claude tokens and bundled Anthropic fonts in
+light and dark mode, shows frontmatter as chips, renders Mermaid code blocks, and also
+renders the local Markdown files it links to so links work in the browser. Pages are
+written to the system temp directory (`md-preview/`) and opened with the default
+browser. The installer links it onto PATH as `~/.local/bin/md`.
 
 ## Factory tasks
 
@@ -108,24 +58,24 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
 
 ```text
 .factory/<task-name>/               # name never changes
-  TASK.html         # title, dates, status (backlog | inprogress | blocked | done), stage, blocker, report link
-  INTENT.html       # approved requirements (one screen, for the user)
-  DESIGN.html       # flagged concerns, decisions, links into design/
-  design/           # design artifacts: mocks, diagrams, prototypes, images
-  PLAN.html         # agent-facing plan, test plan, recorded revisions
-  DEBRIEF.html      # build notes for future agents and engineers
-  REPORT.html       # test report, verdict first
+  TASK.md           # frontmatter: title, dates, status (backlog | inprogress | blocked | done), stage; blocker, report link
+  INTENT.md         # approved requirements (one screen, for the user)
+  DESIGN.md         # flagged concerns, decisions, links into design/
+  design/           # design artifacts: Mermaid pages, mocks, prototypes, images
+  PLAN.md           # agent-facing plan, test plan, recorded revisions
+  DEBRIEF.md        # build notes for future agents and engineers
+  REPORT.md         # test report, verdict first
   evidence/         # raw test output (gitignored)
   subtasks/<subtask-name>/   # same files; no approval from the user needed
 ```
 
-New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
-`INTENT_TEMPLATE.html`, `DESIGN_TEMPLATE.html`, `PLAN_TEMPLATE.html`,
-`DEBRIEF_TEMPLATE.html` and `TEST_REPORT_TEMPLATE.html` (the test report is the
-task's `REPORT.html`). Older `BRIEF.*`, `TASK.md` and
-`PLAN.md` files stay readable; the board shows a legacy brief as the intent.
+New task documents are Markdown, built from Factory's `TASK_TEMPLATE.md`,
+`INTENT_TEMPLATE.md`, `DESIGN_TEMPLATE.md`, `PLAN_TEMPLATE.md`,
+`DEBRIEF_TEMPLATE.md` and `TEST_REPORT_TEMPLATE.md` (the test report is the
+task's `REPORT.md`). Older `BRIEF.*` and HTML task documents stay readable; when both
+formats exist the Markdown file wins, and the board shows a legacy brief as the intent.
 
-A task's status is the `status` meta tag in its `TASK.html`; change it by editing the tag
+A task's status is the `status:` frontmatter key in its `TASK.md`; change it by editing the key
 or with the board, never by renaming the directory. Tasks in older layouts (`<task>-<status>/`,
 `<status>/<task>/`, `docs/tasks/`) must be migrated before the board or hook reads them
 ([task layout](skills/factory/references/tasks.md)). Subtasks are full tasks nested in their parent's `subtasks/` folder, and they nest recursively: a
@@ -143,7 +93,7 @@ rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 The optional board groups cards into Backlog, In progress, Blocked, and Done (one per status directory) and shows subtask progress on parent cards.
 The single-file React app in `index.html` uses adapted shadcn components and
 Tailwind. Cards show the task's stage and open a modal with rendered Intent, Design, Plan and Debrief tabs. Drag-and-drop or keyboard moves move the task directory and update
-`TASK.html` (or a legacy `TASK.md`); they never launch sessions or prove that work is complete.
+`TASK.md` (or a legacy `TASK.html`); they never launch sessions or prove that work is complete.
 One board watches all your projects: run `npx amirreza-factory [project-dir...]`
 (see the [board instructions](skills/factory/references/tasks.md)); add or remove projects from
 the header or by passing directories. Projects are remembered in `~/.factory/projects.json`. The
@@ -183,18 +133,16 @@ npm run install:agents -- --list
 npm run install:agents -- performance
 ```
 
-Selected installs include Factory, Atlas and the global files. The global
-`BRIEF_TEMPLATE.html`, `PLAN_TEMPLATE.html`, `DEBRIEF_TEMPLATE.html`, and
-`SPEC_TEMPLATE.html` aliases remain available. Brief/plan/debrief aliases point into
-`skills/factory/templates/`; SPEC_TEMPLATE.html points to
-`skills/atlas/templates/AREA_TEMPLATE.html`. TASK_TEMPLATE.html is bundled with
-Factory, BASE_TEMPLATE.html with HBS; Atlas bundles root/area/workflow
-specification templates. Installing
-through `npx skills` includes bundled resources; install both Factory and Atlas
-when using delivery integration. Global aliases and AGENTS.md require this installer.
+Selected installs include Factory and the global files. The global
+`INTENT_TEMPLATE.md`, `DESIGN_TEMPLATE.md`, `PLAN_TEMPLATE.md`, `DEBRIEF_TEMPLATE.md`,
+`TEST_REPORT_TEMPLATE.md` and `SPEC_TEMPLATE.md` aliases point into
+`skills/factory/templates/` (SPEC_TEMPLATE.md is `AREA_TEMPLATE.md`); TASK_TEMPLATE.md
+and WORKFLOW_TEMPLATE.md are bundled with Factory. Installing through `npx skills`
+includes bundled resources. Global aliases, `md` and AGENTS.md require this installer.
 
-Managed former root, Factory spec and communication/specification template links
-migrate even when dangling. Managed communication/specification skill links are removed on
+Managed former root, Factory spec, Atlas and communication/specification template links,
+and the retired `*_TEMPLATE.html` aliases, migrate or are removed even when dangling.
+Managed communication, specification, atlas and hbs skill links are removed on
 full and selected installs. Other retired skill links are cleaned only on a full
 install. Known skill links from `~/dev/Amirreza.md` also migrate. Unrelated files,
 directories, and symlinks are preserved; collisions fail preflight before changes.
