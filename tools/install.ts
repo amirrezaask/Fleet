@@ -277,6 +277,10 @@ function main(): void {
       destination: join(home, ".local", "bin", "production-line"),
     },
     {
+      source: join(repo, "skills", "factory", "assets", "dashboard", "server.ts"),
+      destination: join(home, ".local", "bin", "factory-dashboard"),
+    },
+    {
       source: join(repo, "tools", markdownViewer),
       destination: join(home, ".local", "bin", "md"),
     },

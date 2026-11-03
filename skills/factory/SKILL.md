@@ -151,4 +151,5 @@ On resume, read `TASK.md`, the stage documents, the relevant specs and the actua
 Git diff, and continue from the recorded stage. Chat history alone is not enough.
 Keep status in `TASK.md`, decisions in the stage documents,
 and results in the debrief and report (review findings included); create no parallel progress logs. The
-optional board changes task metadata only; it never starts agents.
+optional board changes task metadata only; it never starts agents. The per-repository
+[dashboard](references/tasks.md#per-repository-dashboard) (`factory-dashboard`) only reads.

@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'">
+<title>Factory dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf9f5; --panel: #f3f1ea; --card: #fff; --hover: #f7f5ee; --line: #e3e0d4;
+    --text: #1f1e1b; --muted: #6b675c; --faint: #9a9588;
+    --accent: #c15f3c; --good: #3d7a4a; --warn: #a8731a; --stop: #b3402f;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1b19; --panel: #232220; --card: #2a2927; --hover: #33312e; --line: #3b3935;
+      --text: #ece9e0; --muted: #a29d90; --faint: #75716a;
+      --accent: #e08a68; --good: #7fc08b; --warn: #e0b061; --stop: #e8806f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+  button { font: inherit; color: inherit; }
+  header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 24px 8px; }
+  h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .status { margin-left: auto; font: 12px var(--mono); color: var(--muted); }
+  .status.error { color: var(--stop); }
+  .banner { margin: 8px 24px 0; padding: 10px 14px; border: 1px solid var(--stop); border-radius: 8px; color: var(--stop); font: 12px var(--mono); }
+  .pick { margin: 48px auto; max-width: 480px; text-align: center; color: var(--muted); }
+  .pick button { margin-top: 12px; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: none; color: var(--accent); cursor: pointer; }
+
+  .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 16px 24px 40px; align-items: start; }
+  .col-head { display: flex; gap: 8px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .col-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .col-head .count { margin-left: auto; font: 11px var(--mono); color: var(--muted); }
+  .col.blocked h2 { color: var(--stop); }
+  .col.inprogress h2 { color: var(--accent); }
+  .col.done h2 { color: var(--good); }
+  .empty { color: var(--faint); font-size: 12px; }
+  .card { display: block; width: 100%; text-align: left; cursor: pointer; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .card:hover { background: var(--hover); }
+  .card:focus-visible, .file:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.blocked { border-color: var(--stop); }
+  .card.done { opacity: .72; }
+  .num { font: 12px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .title { margin: 2px 0 6px; font-size: 13px; line-height: 1.4; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; font: 10.5px var(--mono); color: var(--muted); }
+  .chip { padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); }
+  .blocker { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; color: var(--stop); }
+  .item { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); font-size: 13px; }
+  .item.taken { color: var(--faint); text-decoration: line-through; }
+  .item .ctx { color: var(--muted); font-size: 12px; white-space: pre-wrap; }
+  footer { display: flex; gap: 20px; flex-wrap: wrap; padding: 0 24px 24px; font: 11px var(--mono); color: var(--faint); }
+
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(920px, 100vw); background: var(--panel); border-left: 1px solid var(--line); display: none; grid-template-rows: auto 1fr; }
+  .open .scrim { display: block; } .open .drawer { display: grid; }
+  .d-head { padding: 18px 56px 14px 24px; border-bottom: 1px solid var(--line); position: relative; }
+  .d-head h3 { margin: 4px 0; font-size: 16px; }
+  .close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: none; cursor: pointer; color: var(--muted); font-size: 18px; }
+  .d-body { display: grid; grid-template-columns: 200px 1fr; min-height: 0; }
+  .files { border-right: 1px solid var(--line); padding: 12px 8px; overflow-y: auto; }
+  .group { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin: 12px 8px 4px; }
+  .group:first-child { margin-top: 0; }
+  .file { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: 5px 8px; cursor: pointer; font: 12px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .file:hover { background: var(--card); color: var(--text); }
+  .file.on { background: var(--hover); color: var(--text); }
+  .doc { overflow-y: auto; padding: 20px 28px 60px; min-width: 0; }
+  .md { max-width: 700px; line-height: 1.65; }
+  .md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 1.5em 0 .5em; }
+  .md h1 { font-size: 20px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 14px; color: var(--muted); }
+  .md > :first-child { margin-top: 0; }
+  .md p, .md ul, .md ol, .md blockquote, .md pre, .md table { margin: 0 0 .9em; }
+  .md ul, .md ol { padding-left: 1.3em; }
+  .md li.task { list-style: none; margin-left: -1.3em; }
+  .md li.task::before { content: "☐"; margin-right: .5em; color: var(--faint); }
+  .md li.task.done::before { content: "☑"; color: var(--good); }
+  .md code { font: 12px var(--mono); background: var(--card); padding: 1px 5px; border-radius: 4px; }
+  .md pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+  .md pre code { background: none; padding: 0; }
+  .md blockquote { border-left: 2px solid var(--line); padding-left: 12px; color: var(--muted); }
+  .md a { color: var(--accent); }
+  .md table { border-collapse: collapse; font-size: 13px; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; }
+  .meta-table { margin-bottom: 16px; font: 12px var(--mono); color: var(--muted); }
+
+  @media (max-width: 1100px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) {
+    header { padding: 16px; } .board { grid-template-columns: 1fr; padding: 12px 16px 32px; } footer { padding: 0 16px 24px; }
+    .d-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .files { border-right: 0; border-bottom: 1px solid var(--line); display: flex; overflow-x: auto; }
+    .group { display: none; } .file { width: auto; white-space: nowrap; } .doc { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="name">Factory</h1>
+  <div class="status" id="status">starting…</div>
+</header>
+<div id="banner"></div>
+<main id="main"></main>
+<footer>
+  <span>/factory intent &lt;request&gt;</span>
+  <span>/factory next</span>
+  <span>/factory design | plan | build | review</span>
+</footer>
+<div id="overlay">
+  <div class="scrim" data-close></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="d-title">
+    <div class="d-head">
+      <div class="num" id="d-num"></div>
+      <h3 id="d-title"></h3>
+      <button class="close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="d-body">
+      <nav class="files" id="d-files"></nav>
+      <article class="doc"><div class="md" id="d-doc"></div></article>
+    </div>
+  </aside>
+</div>
+
+<script>
+// One page, two data sources: the tiny server (http://) or a folder picked in the browser (file://).
+// Everything above `boot` is pure so tools/factory-dashboard.test.ts can run it without a DOM.
+const STATUSES = ["backlog", "inprogress", "blocked", "done"];
+const SKIP = new Set(["evidence", "worktree", "node_modules", ".git"]);
+const DOC_ORDER = ["TASK.md", "INTENT.md", "DESIGN.md", "PLAN.md", "DEBRIEF.md", "REVIEW.md"];
+
+const esc = (s) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function parseFrontmatter(text) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+  if (!m) return { data: {}, body: text };
+  const data = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
+    if (kv) data[kv[1]] = kv[2].trim().replace(/^(["'])(.*)\1$/, "$2");
+  }
+  return { data, body: text.slice(m[0].length) };
+}
+
+// files: [{path, mtime}] relative to .factory; texts: path -> TASK.md text.
+// A task is a `NNN-name` directory at the top level or directly inside a `subtasks/` folder.
+function buildTasks(files, texts) {
+  const tasks = new Map();
+  const ensure = (dir, id) => {
+    if (!tasks.has(dir)) {
+      const cut = dir.lastIndexOf("/subtasks/");
+      tasks.set(dir, { dir, id, parent: cut < 0 ? null : dir.slice(0, cut), files: [], subtasks: [] });
+    }
+    return tasks.get(dir);
+  };
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let owner = null;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (/^\d{3}-/.test(parts[i]) && (i === 0 || parts[i - 1] === "subtasks")) {
+        owner = ensure(parts.slice(0, i + 1).join("/"), parts[i]);
+      }
+    }
+    if (owner) owner.files.push(file.path.slice(owner.dir.length + 1));
+  }
+  for (const task of tasks.values()) {
+    const { data, body } = parseFrontmatter(texts[`${task.dir}/TASK.md`] ?? "");
+    task.title = data.title || task.id.replace(/^\d{3}-/, "").replace(/-/g, " ");
+    task.status = STATUSES.includes(data.status) ? data.status : "backlog";
+    task.stage = data.stage || "";
+    task.updated = data.updated || "";
+    const blocker = /^## Blocker\s*\n([\s\S]*?)(?=\n## |$)/m.exec(body);
+    const text = blocker ? blocker[1].trim() : "";
+    task.blocker = task.status === "blocked" && !/^none\.?$/i.test(text) ? text : "";
+    task.files = task.files
+      .filter((f) => !f.startsWith("subtasks/"))
+      .sort((a, b) => {
+        const rank = (f) => (DOC_ORDER.includes(f) ? DOC_ORDER.indexOf(f) : DOC_ORDER.length);
+        return rank(a) - rank(b) || a.localeCompare(b);
+      });
+  }
+  const roots = [];
+  for (const task of tasks.values()) {
+    const parent = task.parent && tasks.get(task.parent);
+    (parent ? parent.subtasks : roots).push(task);
+  }
+  const byId = (a, b) => a.id.localeCompare(b.id);
+  for (const task of tasks.values()) task.subtasks.sort(byId);
+  return roots.sort(byId);
+}
+
+function parseBacklog(text) {
+  const items = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^- \[([ xX])\]\s+(.*)$/.exec(line);
+    if (m) {
+      const taken = m[1] !== " ";
+      const arrow = taken ? /^(.*?)\s*→\s*(\S+)\s*$/.exec(m[2]) : null;
+      items.push({ taken, text: arrow ? arrow[1] : m[2], task: arrow ? arrow[2] : "", context: "" });
+    } else if (items.length && /^\s+\S/.test(line)) {
+      const item = items[items.length - 1];
+      item.context += (item.context ? "\n" : "") + line.trim();
+    }
+  }
+  return items;
+}
+
+function resolveRelative(from, href) {
+  const parts = from.split("/").slice(0, -1);
+  for (const seg of href.split("#")[0].split("/")) {
+    if (seg === "..") parts.pop();
+    else if (seg && seg !== ".") parts.push(seg);
+  }
+  return parts.join("/");
+}
+
+function inline(s) {
+  const codes = [];
+  s = esc(s).replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`);
+  s = s
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\(([^)\s]*)\)/g, (_, label, href) => {
+      if (/^https?:\/\//.test(href)) return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+      if (/^[\w./-]+\.md(#[\w-]*)?$/.test(href)) return `<a href="#" data-rel="${href}">${label}</a>`;
+      return label;
+    });
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
+}
+
+function markdown(src) {
+  const lines = parseFrontmatter(src).body.replace(/\r/g, "").split("\n");
+  const isList = (l) => /^\s*([-*+]|\d+\.)\s+/.test(l);
+  const isBlock = (l) => /^(#{1,6}\s|```|\s*>|\|)/.test(l) || isList(l);
+  let html = "";
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    if (line.startsWith("```")) {
+      const body = [];
+      for (i++; i < lines.length && !lines[i].startsWith("```"); i++) body.push(lines[i]);
+      i++;
+      html += `<pre><code>${esc(body.join("\n"))}</code></pre>`;
+      continue;
+    }
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) { const n = Math.min(h[1].length, 4); html += `<h${n}>${inline(h[2])}</h${n}>`; i++; continue; }
+    if (/^\s*>/.test(line)) {
+      const body = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) body.push(lines[i++].replace(/^\s*>\s?/, ""));
+      html += `<blockquote>${inline(body.join(" "))}</blockquote>`;
+      continue;
+    }
+    if (line.startsWith("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith("|")) rows.push(lines[i++]);
+      const cells = (r) => r.replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+      const body = rows.filter((r) => !/^\|[\s:|-]+\|$/.test(r));
+      html += "<table>" + body.map((r, n) => `<tr>${cells(r).map((c) => (n ? `<td>${c}</td>` : `<th>${c}</th>`)).join("")}</tr>`).join("") + "</table>";
+      continue;
+    }
+    if (isList(line)) {
+      const ordered = /^\s*\d+\./.test(line);
+      const items = [];
+      while (i < lines.length && (isList(lines[i]) || (/^\s{2,}\S/.test(lines[i]) && items.length))) {
+        const l = lines[i++];
+        if (isList(l)) items.push({ indent: /^\s*/.exec(l)[0].length, text: l.replace(/^\s*([-*+]|\d+\.)\s+/, "") });
+        else items[items.length - 1].text += " " + l.trim();
+      }
+      const lis = items.map(({ indent, text }) => {
+        const task = /^\[([ xX])\]\s+(.*)$/.exec(text);
+        const style = indent ? ` style="margin-left:${indent * 0.6}em"` : "";
+        return task
+          ? `<li class="task ${task[1] === " " ? "" : "done"}"${style}>${inline(task[2])}</li>`
+          : `<li${style}>${inline(text)}</li>`;
+      }).join("");
+      html += ordered ? `<ol>${lis}</ol>` : `<ul>${lis}</ul>`;
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !isBlock(lines[i])) para.push(lines[i++]);
+    html += `<p>${inline(para.join(" "))}</p>`;
+  }
+  return html;
+}
+
+// ---- Data sources ---------------------------------------------------------
+
+const serverSource = {
+  async list() {
+    const res = await fetch("api/files", { cache: "no-store" });
+    if (!res.ok) throw new Error(`api/files: HTTP ${res.status}`);
+    return res.json();
+  },
+  async read(path) {
+    const res = await fetch(`api/file?p=${encodeURIComponent(path)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+    return res.text();
+  },
+};
+
+async function walk(dir, prefix, out) {
+  for await (const [name, handle] of dir.entries()) {
+    if (handle.kind === "directory") {
+      if (!SKIP.has(name)) await walk(handle, `${prefix}${name}/`, out);
+    } else if (name.endsWith(".md")) {
+      out.push({ path: prefix + name, mtime: (await handle.getFile()).lastModified });
+    }
+  }
+}
+
+async function folderSource(picked) {
+  let root = picked;
+  try { root = await picked.getDirectoryHandle(".factory"); } catch { /* picked .factory itself */ }
+  const name = picked.name === ".factory" ? "" : picked.name;
+  return {
+    async list() {
+      const files = [];
+      await walk(root, "", files);
+      return { name, files: files.sort((a, b) => a.path.localeCompare(b.path)) };
+    },
+    async read(path) {
+      const parts = path.split("/");
+      let dir = root;
+      for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
+      return (await (await dir.getFileHandle(parts.at(-1))).getFile()).text();
+    },
+  };
+}
+
+// The picked folder is remembered per browser; a returning visit only re-asks for permission.
+function remembered(op, value) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(undefined), 1500); // storage can be blocked or never answer; never block the picker
+    try {
+      const req = indexedDB.open("factory-dashboard", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("kv");
+      req.onerror = () => resolve(undefined);
+      req.onsuccess = () => {
+        const store = req.result.transaction("kv", op === "get" ? "readonly" : "readwrite").objectStore("kv");
+        const call = op === "get" ? store.get("root") : store.put(value, "root");
+        call.onsuccess = () => resolve(call.result);
+        call.onerror = () => resolve(undefined);
+      };
+    } catch { resolve(undefined); }
+  });
+}
+
+// ---- UI -------------------------------------------------------------------
+
+function boot() {
+  const $ = (id) => document.getElementById(id);
+  const cache = new Map(); // path -> { mtime, text }
+  let source = null;
+  let tasks = [];
+  let backlog = [];
+  let signature = "";
+  let open = null; // { dir, path }
+  let shown = "";
+
+  async function load(path, mtime) {
+    const hit = cache.get(path);
+    if (hit && hit.mtime === mtime) return hit.text;
+    const text = await source.read(path);
+    cache.set(path, { mtime, text });
+    return text;
+  }
+
+  async function refresh() {
+    const { name, files } = await source.list();
+    const sig = JSON.stringify(files);
+    if (sig !== signature) {
+      signature = sig;
+      const texts = {};
+      await Promise.all(files.filter((f) => f.path.endsWith("/TASK.md") || f.path === "backlog.md")
+        .map(async (f) => { texts[f.path] = await load(f.path, f.mtime); }));
+      tasks = buildTasks(files, texts);
+      backlog = parseBacklog(texts["backlog.md"] ?? "");
+      $("name").textContent = name ? `${name} · Factory` : "Factory";
+      document.title = name ? `${name} · Factory` : "Factory dashboard";
+      renderBoard();
+    }
+    if (open) await renderDrawer(files);
+    $("status").className = "status";
+    $("status").textContent = `${source.label} · ${new Date().toLocaleTimeString()}`;
+  }
+
+  function count(list) { return list.reduce((n, t) => n + 1 + count(t.subtasks), 0); }
+  function doneCount(list) { return list.reduce((n, t) => n + (t.status === "done" ? 1 : 0) + doneCount(t.subtasks), 0); }
+
+  function renderBoard() {
+    const columns = [
+      { key: "queue", label: "Queue" },
+      { key: "backlog", label: "Backlog" },
+      { key: "inprogress", label: "In progress" },
+      { key: "blocked", label: "Blocked" },
+      { key: "done", label: "Done" },
+    ];
+    const card = (t) => {
+      const sub = count(t.subtasks);
+      return `<button class="card ${t.status}" data-task="${esc(t.dir)}">
+        <div class="num">${esc(t.id)}</div>
+        <p class="title">${esc(t.title)}</p>
+        <div class="meta">${t.stage ? `<span class="chip">${esc(t.stage)}</span>` : ""}${t.updated ? `<span>${esc(t.updated)}</span>` : ""}${sub ? `<span>${doneCount(t.subtasks)}/${sub} subtasks</span>` : ""}</div>
+        ${t.blocker ? `<div class="blocker">${esc(t.blocker)}</div>` : ""}
+      </button>`;
+    };
+    const queue = backlog.map((b) => `<div class="item ${b.taken ? "taken" : ""}">${esc(b.text)}${b.task ? ` <span class="num">→ ${esc(b.task)}</span>` : ""}${b.context ? `<div class="ctx">${esc(b.context)}</div>` : ""}</div>`);
+    $("main").className = "board";
+    $("main").innerHTML = columns.map((c) => {
+      const cards = c.key === "queue" ? queue : tasks.filter((t) => t.status === c.key).reverse().map(card);
+      return `<section class="col ${c.key}"><div class="col-head"><h2>${c.label}</h2><span class="count">${cards.length || ""}</span></div>${cards.join("") || '<div class="empty">—</div>'}</section>`;
+    }).join("");
+  }
+
+  const find = (list, dir) => {
+    for (const t of list) { const hit = t.dir === dir ? t : find(t.subtasks, dir); if (hit) return hit; }
+    return null;
+  };
+
+  async function renderDrawer(files) {
+    const task = find(tasks, open.dir);
+    if (!task) { closeDrawer(); return; }
+    if (!open.path || !task.files.includes(open.path)) open.path = task.files[0] ?? null;
+    $("d-num").textContent = `${task.id} · ${task.status}${task.stage ? ` · ${task.stage}` : ""}`;
+    $("d-title").textContent = task.title;
+    const group = (f) => (f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : "Task");
+    let last = null;
+    const items = task.files.map((f) => {
+      const g = group(f);
+      const head = g !== last ? `<div class="group">${esc(g)}</div>` : "";
+      last = g;
+      return `${head}<button class="file ${f === open.path ? "on" : ""}" data-file="${esc(f)}">${esc(f.split("/").pop())}</button>`;
+    });
+    if (task.subtasks.length) {
+      items.push('<div class="group">Subtasks</div>', ...task.subtasks.map((s) =>
+        `<button class="file" data-task="${esc(s.dir)}">${esc(s.id)} · ${esc(s.status)}</button>`));
+    }
+    $("d-files").innerHTML = items.join("");
+    const full = open.path ? `${task.dir}/${open.path}` : null;
+    const meta = full ? files.find((f) => f.path === full) : null;
+    const key = `${full}|${meta ? meta.mtime : ""}`;
+    if (key !== shown) {
+      shown = key;
+      $("d-doc").innerHTML = meta ? markdown(await load(full, meta.mtime)) : '<p class="empty">No documents yet.</p>';
+    }
+  }
+
+  function openTask(dir) { open = { dir, path: null }; shown = ""; document.body.classList.add("open"); refresh().catch(fail); }
+  function closeDrawer() { open = null; shown = ""; document.body.classList.remove("open"); }
+
+  document.addEventListener("click", (e) => {
+    const rel = e.target.closest("[data-rel]");
+    if (rel && open) {
+      e.preventDefault();
+      const full = resolveRelative(`${open.dir}/${open.path}`, rel.dataset.rel);
+      if (full.startsWith(`${open.dir}/`)) { open.path = full.slice(open.dir.length + 1); shown = ""; refresh().catch(fail); }
+      return;
+    }
+    const t = e.target.closest("[data-task]");
+    if (t) { openTask(t.dataset.task); return; }
+    const f = e.target.closest("[data-file]");
+    if (f && open) { open.path = f.dataset.file; shown = ""; $("d-doc").parentElement.scrollTop = 0; refresh().catch(fail); return; }
+    if (e.target.closest("[data-close]")) closeDrawer();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
+  function fail(err) {
+    $("status").className = "status error";
+    $("status").textContent = err.message;
+  }
+
+  async function start(src) {
+    source = src;
+    document.body.classList.remove("picking");
+    await refresh();
+    setInterval(() => refresh().catch(fail), 2000);
+  }
+
+  async function pick() {
+    const dir = await window.showDirectoryPicker({ id: "factory", mode: "read" });
+    await remembered("put", dir);
+    const src = await folderSource(dir);
+    src.label = "folder";
+    await start(src);
+  }
+
+  function offerPicker(note, saved) {
+    $("name").textContent = "Factory";
+    if (!window.showDirectoryPicker) {
+      $("main").innerHTML = `<div class="pick"><p>Opening a folder needs a Chromium-based browser. Run <code>factory-dashboard</code> in the repository to serve this page instead.</p></div>`;
+      return;
+    }
+    $("main").innerHTML = `<div class="pick"><p>${esc(note)}</p><button id="pick">${saved ? `Reopen ${esc(saved.name)}` : "Open repository folder"}</button></div>`;
+    $("pick").onclick = async () => {
+      try {
+        if (saved && (await saved.requestPermission({ mode: "read" })) === "granted") {
+          const src = await folderSource(saved);
+          src.label = "folder";
+          await start(src);
+        } else {
+          await pick();
+        }
+      } catch (err) { fail(err); }
+    };
+  }
+
+  (async () => {
+    if (location.protocol.startsWith("http")) {
+      const src = serverSource;
+      src.label = "server";
+      try { await start(src); } catch (err) { fail(err); }
+      return;
+    }
+    const saved = await remembered("get");
+    if (saved && (await saved.queryPermission({ mode: "read" })) === "granted") {
+      try {
+        const src = await folderSource(saved);
+        src.label = "folder";
+        await start(src);
+        return;
+      } catch { /* fall through to the picker */ }
+    }
+    offerPicker("Pick the repository (or its .factory folder). Nothing leaves your machine and nothing is written.", saved);
+  })();
+}
+
+if (typeof document === "undefined") {
+  globalThis.factoryModel = { parseFrontmatter, buildTasks, parseBacklog, markdown, resolveRelative, folderSource };
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
