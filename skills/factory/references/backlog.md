@@ -22,36 +22,21 @@ Work starts only when `/factory next` runs, for example when resources allow.
 
 ## `/factory next`
 
-Sessions run in separate worktrees and cannot see each other's edits, so the claim is
-made once, on `master` in the main checkout, under a lock all sessions share. The main
-checkout is the directory that holds the git common dir
-(`dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`); call it `<main>`.
+1. Take the lock of [Creating a task](tasks.md#creating-a-task-one-lock-one-commit),
+   check that `<main>` is on `master`, and read `<main>/.factory/backlog.md`. If it is
+   missing or has no `- [ ]` line, release the lock, say so and stop; create no file
+   and no task.
+2. Take the first `- [ ]` line and pick the task name from the item. In the shared
+   claim commit, replace exactly that line with `- [x] <item> → <NNN>-<slug>` and
+   include `.factory/backlog.md` among the committed paths, so the claim and the new
+   task land together.
+3. Continue from the worktree of that task: run `/factory intent` on it with the item
+   and its indented context as the request. The pipeline is unchanged: the user's
+   approval of `INTENT.md` is the gate, and `/factory next` never runs design, plan or
+   build by itself. Writing a line in the backlog does not approve anything.
 
-1. **Lock.** `mkdir <main>/.git/factory-claim.lock` (no `-p`; the directory is
-   untracked). If it exists, wait a few seconds and retry; if it is older than ten
-   minutes, a session crashed: remove it and retry. Always `rmdir` it when step 3 ends,
-   including on failure.
-2. **Check.** `<main>` must be on `master`; if not, release the lock and tell the user.
-   Read `<main>/.factory/backlog.md`. If it is missing or has no `- [ ]` line, release
-   the lock, say so and stop; create no file and no task.
-3. **Claim and number, in one commit on `master`.** Take the first `- [ ]` line.
-   Pick the task directory `<NNN>-<slug>` (next free number in `<main>/.factory/`,
-   slug from the item). Replace exactly that line with `- [x] <item> → <NNN>-<slug>`,
-   create `<main>/.factory/<NNN>-<slug>/TASK.md` from the
-   [task template](../templates/TASK_TEMPLATE.md) with status `backlog` and stage
-   `intent`, and commit only those two paths
-   (`git -C <main> commit -m "factory(<task>): claim from backlog" -- .factory/backlog.md .factory/<NNN>-<slug>`),
-   which leaves any other change in the main checkout alone. Release the lock.
-4. **Intent.** Create the task's worktree from `master` (it now holds the claim), then
-   run `/factory intent` on the task with the item and its indented context as the
-   request. The pipeline is unchanged: the user's approval of `INTENT.md` is the gate,
-   and `/factory next` never runs design, plan or build by itself. Writing a line in
-   the backlog does not approve anything.
-
-Two sessions can never take the same line or the same number: the second one waits on
-the lock, then reads the first one's committed claim. Run `/factory next` once per
-call; starting several tasks takes several calls, so the user chooses how much runs at
-once.
+Run `/factory next` once per call; starting several tasks takes several calls, so the
+user chooses how much runs at once.
 
 ## Rules
 

@@ -19,7 +19,7 @@ Factory is one command, `/factory`, with an optional stage subcommand.
 | --- | --- | --- | --- |
 | `/factory [request or task]` | — | Router: find or create the task, report its stage, run stages forward | It stops at each human gate |
 | `/factory next` | `.factory/backlog.md` | Take the first open backlog line, claim it, and run `/factory intent` on it; see [backlog](references/backlog.md) | The intent stops at its approval gate |
-| `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` (next free number) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
+| `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` under the [shared lock](references/tasks.md#creating-a-task-one-lock-one-commit) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
 | `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |

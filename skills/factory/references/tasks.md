@@ -33,6 +33,32 @@ A task starts from a request. Requests without a task yet wait in
 [`.factory/backlog.md`](backlog.md), which is a file, not a directory, and the board
 ignores it.
 
+## Creating a task: one lock, one commit
+
+Sessions run in separate worktrees and cannot see each other's new directories, so
+every new top-level task (from `/factory intent` or `/factory next`) takes its number
+on `master` in the main checkout, under a lock all sessions share. The main checkout is
+the directory that holds the git common dir
+(`dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`); call it `<main>`.
+
+1. **Lock.** `mkdir <main>/.git/factory-claim.lock` (no `-p`; the directory is
+   untracked). If it exists, wait a few seconds and retry; if it is older than ten
+   minutes, a session crashed: remove it and retry. Always `rmdir` it when step 3 ends,
+   including on failure.
+2. **Check.** `<main>` must be on `master`; if not, release the lock and tell the user.
+3. **Number and commit.** Pick `<NNN>-<slug>` (next free number in `<main>/.factory/`),
+   create `<main>/.factory/<NNN>-<slug>/TASK.md` from the
+   [task template](../templates/TASK_TEMPLATE.md) with status `backlog` and stage
+   `intent`, plus any other path the caller names (the backlog claim), and commit only
+   those paths (`git -C <main> commit -m "factory(<task>): create" -- <paths>`), which
+   leaves other changes in the main checkout alone. Release the lock.
+4. Create the task's worktree from `master`, which now holds the task, and continue
+   there.
+
+Two sessions never get the same number: the second waits on the lock, then reads the
+first one's committed directory. Subtasks need no lock; their parent's managing agent
+is the only writer of its `subtasks/` folder.
+
 ## Metadata and status
 
 `TASK.md` frontmatter carries a nonempty `title`, quoted ISO `created` and
