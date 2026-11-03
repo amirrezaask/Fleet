@@ -158,7 +158,7 @@ const templateSources = [
   { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
   { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
   { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
-  { name: "TEST_REPORT_TEMPLATE.md", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.md" },
+  { name: "REVIEW_TEMPLATE.md", path: "skills/factory/templates/REVIEW_TEMPLATE.md" },
   { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
 ];
 

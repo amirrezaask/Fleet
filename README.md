@@ -25,8 +25,8 @@ goes to the gates.
 | Intent | `/factory intent` | `INTENT.md` | The user, one screen | The user approves |
 | Design | `/factory design` | `DESIGN.md` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
 | Plan | `/factory plan` | `PLAN.md` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
-| Build | `/factory build` | Code, tests, `DEBRIEF.md`, `REPORT.md` | Future agents; the user reads the verdict | Fast tests green, regression, acceptance, then heavy gates last |
-| Review | `/factory review` | Review section of `REPORT.md` | The user, verdict first | Four parallel reviewers (code, security, UI, UX) pass |
+| Build | `/factory build` | Code, tests, `DEBRIEF.md`, `REVIEW.md` | Future agents; the user reads the verdict | Fast tests green, regression, acceptance, then heavy gates last |
+| Review | `/factory review` | Review section of `REVIEW.md` | The user, verdict first | Four parallel reviewers (code, security, UI, UX) pass |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
@@ -63,15 +63,15 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
   design/           # design artifacts: Mermaid pages, mocks, prototypes, images
   PLAN.md           # agent-facing plan, test plan, recorded revisions
   DEBRIEF.md        # build notes for future agents and engineers
-  REPORT.md         # verification report, verdict first; Review appends its findings
+  REVIEW.md         # review, verdict first; sections per reviewer
   evidence/         # raw test output (gitignored)
   subtasks/<NNN>-<subtask-name>/   # same files; no approval from the user needed
 ```
 
 New task documents are Markdown, built from Factory's `TASK_TEMPLATE.md`,
 `INTENT_TEMPLATE.md`, `DESIGN_TEMPLATE.md`, `PLAN_TEMPLATE.md`,
-`DEBRIEF_TEMPLATE.md` and `TEST_REPORT_TEMPLATE.md` (the test report is the
-task's `REPORT.md`). Older `BRIEF.*` and HTML task documents stay readable; when both
+`DEBRIEF_TEMPLATE.md` and `REVIEW_TEMPLATE.md` (the review is the
+task's `REVIEW.md`). Older `BRIEF.*` and HTML task documents stay readable; when both
 formats exist the Markdown file wins, and the board shows a legacy brief as the intent.
 
 A task's status is the `status:` frontmatter key in its `TASK.md`; change it by editing the key
@@ -134,7 +134,7 @@ npm run install:agents -- performance
 
 Selected installs include Factory and the global files. The global
 `INTENT_TEMPLATE.md`, `DESIGN_TEMPLATE.md`, `PLAN_TEMPLATE.md`, `DEBRIEF_TEMPLATE.md`,
-`TEST_REPORT_TEMPLATE.md` and `SPEC_TEMPLATE.md` aliases point into
+`REVIEW_TEMPLATE.md` and `SPEC_TEMPLATE.md` aliases point into
 `skills/factory/templates/` (SPEC_TEMPLATE.md is `AREA_TEMPLATE.md`); TASK_TEMPLATE.md
 and WORKFLOW_TEMPLATE.md are bundled with Factory. Installing through `npx skills`
 includes bundled resources. Global aliases, `md` and AGENTS.md require this installer.

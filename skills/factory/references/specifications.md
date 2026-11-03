@@ -41,7 +41,7 @@ affected documents:
 - Update canonical facts in one owning document and link from others; do not
   duplicate rules.
 - Keep existing IDs and meanings unless the user authorized a change; record that
-  authorization in the intent's amendment entry and the test report. Add new IDs
+  authorization in the intent's amendment entry and the review. Add new IDs
   rather than renumbering.
 - Link consequential decisions to the task plan or debrief from the relevant area or
   architecture document.

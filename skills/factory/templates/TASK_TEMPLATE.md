@@ -18,7 +18,7 @@ status: <backlog | inprogress | blocked | done>
 
 ## Outcome
 
-<Link to `REPORT.md` once Build has verified.>
+<Link to `REVIEW.md` once Build has verified.>
 
 ## Depends on
 

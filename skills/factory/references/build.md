@@ -2,7 +2,7 @@
 
 Goal: the full planned scope implemented, every `fast` test passing, every
 requirement evidenced, the plan's `heavy` gates run once at the very end, and a
-`DEBRIEF.md` and `REPORT.md` for the people who read next. Build has no specification
+`DEBRIEF.md` and `REVIEW.md` for the people who read next. Build has no specification
 of its own; `PLAN.md` is the specification. Build and verification are one stage so
 development never waits on slow checks: **cheap checks run continuously, heavy gates
 run last.**
@@ -79,13 +79,14 @@ claim an unrun check passed; mark it Not run or Blocked with the reason. Keep ra
 output (json, logs, traces, png) in the task's gitignored `evidence/` folder; track
 only the Markdown report.
 
-### Report
+### Review file
 
-Write `REPORT.md` in the task directory, next to the debrief, from the
-[test report template](../templates/TEST_REPORT_TEMPLATE.md). First screen: the
+Write `REVIEW.md` in the task directory, next to the debrief, from the
+[review template](../templates/REVIEW_TEMPLATE.md). First screen: the
 verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
-decide. Below that: gate results, limitations and out-of-scope findings. Link the
-report from `TASK.md`. The Review stage appends its findings to it.
+decide. Below that: gate results, limitations and out-of-scope findings. Leave the
+Review section for `/factory review`, which fills one subsection per reviewer. Link
+`REVIEW.md` from `TASK.md`.
 
 Then commit, set the stage to `review`, and continue with `/factory review` when
 `/factory` is running the pipeline. Build does not set the task to `done`; Review does.

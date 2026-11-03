@@ -8,7 +8,7 @@
 ```text
 .factory/
   001-account-recovery/
-    TASK.md  INTENT.md  DESIGN.md  PLAN.md  DEBRIEF.md  REPORT.md
+    TASK.md  INTENT.md  DESIGN.md  PLAN.md  DEBRIEF.md  REVIEW.md
     design/                                                   # design artifacts
       flow.md  mock.html  states.png
     evidence/                                                 # raw test output, gitignored
@@ -27,7 +27,7 @@ letters and numbers separated by single hyphens, unique among its siblings. Comm
 may name a task by its full directory name, its number or its slug. Reuse existing tasks; never overwrite another task to resolve a
 collision. Only directories inside `subtasks/` are subtasks, so `design/`,
 `evidence/` and `worktree/` are never mistaken for them. Link between a task's own
-files with relative paths (`design/mock.html`, `REPORT.md`, `../DESIGN.md`).
+files with relative paths (`design/mock.html`, `REVIEW.md`, `../DESIGN.md`).
 
 ## Metadata and status
 
