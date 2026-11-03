@@ -40,7 +40,7 @@ short page: concerns, decisions, artifact links. The artifacts hold the detail.
 Self-check before presenting: does the design solve the stated problem, does every
 requirement map to a decision or need none, is every intent question answered or
 carried forward? Present the concerns first, then the artifacts. Revise until the user
-accepts. `/factory-plan` on the task counts as acceptance. Record it, commit
+accepts. `/factory plan` on the task counts as acceptance. Record it, commit
 `DESIGN.md` and `design/`, and move the stage to `plan`.
 
 A design never changes a requirement. When a concern can only be solved by changing

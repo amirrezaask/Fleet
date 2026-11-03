@@ -62,5 +62,5 @@ the template whole and fill its sections. It is for future agents and engineers;
 - Out-of-scope findings with evidence and location (see the loop in the Factory skill).
 - Fast test results: command, revision, outcome.
 
-Then commit, set the stage to `test`, and continue with `/factory-test` when `/factory`
+Then commit, set the stage to `test`, and continue with `/factory test` when `/factory`
 is running the pipeline.

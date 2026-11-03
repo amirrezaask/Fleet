@@ -20,15 +20,9 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const installer = join(root, "tools", "install.ts");
 
-// Factory stage skills (factory-*) are left out so the sample stays independent of factory.
 const skill = readdirSync(join(root, "skills"))
   .sort()
-  .find(
-    (name) =>
-      name !== "factory" &&
-      !name.startsWith("factory-") &&
-      existsSync(join(root, "skills", name, "SKILL.md")),
-  );
+  .find((name) => name !== "factory" && existsSync(join(root, "skills", name, "SKILL.md")));
 
 assert.ok(skill);
 
@@ -270,7 +264,17 @@ test("missing template or required skill fails before any home mutation", () => 
     });
 });
 
-const retiredSkills = ["communication", "specification", "atlas", "hbs"];
+const retiredSkills = [
+  "communication",
+  "specification",
+  "atlas",
+  "hbs",
+  "factory-intent",
+  "factory-design",
+  "factory-plan",
+  "factory-build",
+  "factory-test",
+];
 
 test("migrates former nested template aliases and retires old workflow skills on selected installs", () =>
   isolated((home) => {
@@ -372,51 +376,6 @@ test("retires the managed BRIEF_TEMPLATE.html alias but keeps foreign ones", () 
         readlinkSync(join(home, directory, "INTENT_TEMPLATE.md")),
         join(root, "skills", "factory", "templates", "INTENT_TEMPLATE.md"),
       );
-  }));
-
-test("factory stage skills are discovered and selecting one installs factory too", () =>
-  isolated((temporary) => {
-    const fixture = join(temporary, "fixture");
-    const home = join(temporary, "home");
-    mkdirSync(home);
-    mkdirSync(join(fixture, "tools"), { recursive: true });
-    writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
-    writeFileSync(join(fixture, "tools", budgetHook), "hook");
-    writeFileSync(join(fixture, "tools", "md.ts"), "viewer");
-    writeFileSync(join(fixture, "AGENTS.md"), "global");
-
-    const stages = [
-      "factory-intent",
-      "factory-design",
-      "factory-plan",
-      "factory-build",
-      "factory-test",
-    ];
-
-    for (const name of ["factory", ...stages]) {
-      mkdirSync(join(fixture, "skills", name), { recursive: true });
-      writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
-    }
-
-    for (const { path } of templateSources) {
-      mkdirSync(dirname(join(fixture, path)), { recursive: true });
-      writeFileSync(join(fixture, path), "template");
-    }
-
-    const run = (...args: string[]) =>
-      spawnSync(process.execPath, [join(fixture, "tools", "install.ts"), ...args], {
-        env: { ...process.env, HOME: home },
-        encoding: "utf8",
-      });
-
-    const listed = run("--list");
-    assert.equal(listed.status, 0);
-    assert.deepEqual(listed.stdout.trim().split("\n"), ["factory", ...stages.toSorted()]);
-    assert.equal(run("factory-design").status, 0);
-    assert.deepEqual(readdirSync(join(home, ".agents", "skills")).sort(), [
-      "factory",
-      "factory-design",
-    ]);
   }));
 
 const budgetHook = "session-budget-hook.ts";

@@ -69,7 +69,18 @@ const budgetHook = "session-budget-hook.ts";
 const markdownViewer = "md.ts";
 
 // Skill links superseded by Factory and Markdown documents; removed even on selected installs.
-const retiredWorkflowSkills = ["communication", "specification", "atlas", "hbs"];
+// The factory-<stage> skills became `/factory <stage>` subcommands of the factory skill.
+const retiredWorkflowSkills = [
+  "communication",
+  "specification",
+  "atlas",
+  "hbs",
+  "factory-intent",
+  "factory-design",
+  "factory-plan",
+  "factory-build",
+  "factory-test",
+];
 
 // Claude Code compacts the session itself once context reaches this many tokens;
 // the "Compact Instructions" section of AGENTS.md steers what the summary keeps.

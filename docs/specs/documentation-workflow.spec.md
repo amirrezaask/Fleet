@@ -4,8 +4,8 @@ title: "Factory workflow"
 
 ## Area
 
-`skills/factory/` and its stage commands `skills/factory-{intent,design,plan,build,test}/`
-own the opt-in delivery pipeline: intents, designs, plans, debriefs, test reports and
+`skills/factory/`, whose stages run as `/factory <stage>` subcommands,
+owns the opt-in delivery pipeline: intents, designs, plans, debriefs, test reports and
 task metadata. Factory is self-contained: it carries its own guide for keeping
 specifications true and the area and workflow templates it needs.
 
@@ -16,7 +16,7 @@ with their test reports, and R4, R9 and R10 a third time (2026-11-03) so a task 
 
 ## Requirements
 
-- **R1:** Given any request, when no `/factory` or `/factory-<stage>` command was typed, then Factory does not run and no task is created; every Factory skill declares `disable-model-invocation: true` and `allow_implicit_invocation: false`. Research alone never authorizes implementation.
+- **R1:** Given any request, when no `/factory` command (with or without a stage subcommand) was typed, then Factory does not run and no task is created; every Factory skill declares `disable-model-invocation: true` and `allow_implicit_invocation: false`. Research alone never authorizes implementation.
 - **R2:** Given a Factory task, when it moves through the pipeline, then the stages are Intent, Design, Plan, Build and Test, in that order; each stage ends by committing its artifact and the next starts by reading it. Design may be skipped only with the reason recorded in the intent.
 - **R3:** Given the gates, when leaving Intent or Design, then the user's approval is required and recorded; running the next stage's command counts as approval. The plan needs no human approval but must pass its self-check and be committed before any implementation.
 - **R4:** Given a task, when its documents are written, then `.factory/<NNN>-<task-name>/` (a three-digit, zero-padded sequence number, one more than the highest sibling, so directories sort in creation order; amended 2026-11-03 by ADMIN's request) holds `TASK.md` (with `stage:` and `status:` frontmatter keys), `INTENT.md`, optional `DESIGN.md` with its artifacts in a `design/` folder next to the `subtasks/` folder, `PLAN.md`, `DEBRIEF.md` and the test report `REPORT.md`, with raw evidence in a gitignored `evidence/` folder; `.factory/` lists every task and replaces `docs/tasks/`. The `status:` key of `TASK.md` is the only status record; the directory name never changes, so changing status renames and moves nothing, and there are no status directories. Intent, design and the report's first screen are short and written for the user; plan and debrief are complete and written for agents. Legacy `BRIEF.*` files count as the intent, and legacy HTML task documents stay readable; when both formats exist the Markdown file is canonical.

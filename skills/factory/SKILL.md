@@ -1,31 +1,38 @@
 ---
 name: factory
-description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Test with committed Markdown task documents and the local task board. Run only when the user types /factory or a /factory-<stage> command; never start it from an inferred trigger.
+description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Test with committed Markdown task documents and the local task board. Run only when the user types /factory, optionally with a stage subcommand (/factory intent|design|plan|build|test); never start it from an inferred trigger.
 disable-model-invocation: true
 ---
 
 # Factory
 
 Factory is an **opt-in** delivery pipeline. It runs only when the user types
-`/factory` or a stage command. Without a command, handle coding requests directly
+`/factory`, with or without a subcommand. Without a command, handle coding requests directly
 and create no Factory task. Research discussions, status questions and document
 viewing never authorize implementation.
 
 ## Commands
 
-| Command | Does |
-| --- | --- |
-| `/factory [request or task]` | Router: find or create the task, report its stage, run stages forward and stop at each human gate |
-| `/factory-intent [request]` | Capture intent: clarify with the user, write `INTENT.md` |
-| `/factory-design [task]` | Accept the intent, then write `DESIGN.md` and the `design/` artifacts |
-| `/factory-plan [task]` | Accept the design, then write the agent-facing `PLAN.md` with its test plan |
-| `/factory-build [task]` | Implement the plan, keep its fast tests green, write `DEBRIEF.md` |
-| `/factory-test [task]` | Run the gates: regression, acceptance, review, heavy checks; write the report, close the task |
+Factory is one command, `/factory`, with an optional stage subcommand.
 
-A stage command names the task by its directory name, number or slug. Without one,
-use the only `inprogress` task, or ask. If a command skips an unfinished earlier
-stage, run that stage first (`/factory-build` on a task without a plan plans first),
-unless the user said to skip it.
+| Command | Accepts on entry | Does | Ends when |
+| --- | --- | --- | --- |
+| `/factory [request or task]` | — | Router: find or create the task, report its stage, run stages forward | It stops at each human gate |
+| `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` (next free number) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
+| `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
+| `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
+| `/factory build [task]` | — | Follow [build](references/build.md); no heavy gates | The planned scope is implemented, every `fast` test passes, `DEBRIEF.md` is committed |
+| `/factory test [task]` | — | Managing agent only; follow [test](references/test.md) | `REPORT.md` and specs are committed with status `done`, or failures are fixed and re-verified, or status is `blocked` |
+
+The first word after `/factory` is a subcommand only when it is exactly `intent`,
+`design`, `plan`, `build` or `test`; anything else goes to the router. A subcommand
+names the task by directory name, number or slug (`intent` may instead describe a new
+request); without one, use the only `inprogress` task, or ask. Running a subcommand
+records the acceptance of the previous artifact if missing, and sets
+`status: inprogress` and `stage: <subcommand>` in `TASK.md`. It runs only its own
+stage, except that a skipped unfinished earlier stage runs first (`/factory build`
+without a plan plans first) unless the user said to skip it. It ends with a commit
+of the stage's artifact and tells the user the next command.
 
 ## Pipeline
 
@@ -42,7 +49,7 @@ reading it. The commit chain is the audit trail: what was asked, what was decide
 what was built, and what was proven. Commit messages name the task and stage
 (`factory(<task>): design`) and reference `INTENT.md` and `PLAN.md` once they exist.
 
-**Gates.** The user running the next stage's command accepts the previous artifact.
+**Gates.** The user running the next stage's subcommand accepts the previous artifact.
 Record that acceptance in the artifact's approval entry with the date. `/factory`
 stops at the two human gates and asks; it continues without stopping only when the
 user's message explicitly says so ("run the whole pipeline, don't stop after
@@ -90,7 +97,7 @@ records the state in frontmatter: `status:` is `backlog`, `inprogress`,
 `intent`, `design`, `plan`, `build`, `test` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 
-`/factory-intent` creates `.factory/<NNN>-<name>/` (the next free number) with `TASK.md` from the
+`/factory intent` creates `.factory/<NNN>-<name>/` (the next free number) with `TASK.md` from the
 [task template](templates/TASK_TEMPLATE.md), status `backlog`. **When an agent picks
 a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
 sets `backlog` when it stops between stages with no work in flight, `blocked` with the
