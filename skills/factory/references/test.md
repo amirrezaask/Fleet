@@ -53,12 +53,12 @@ and out-of-scope findings. Link the report from `TASK.html`.
 
 1. Update the affected specs from the verified behavior
    ([specification integration](specifications.md)).
-2. Out-of-scope findings worth doing become draft-intent tasks named `<name>-backlog`.
+2. Out-of-scope findings worth doing become draft-intent tasks with status `backlog`.
 3. A memory candidate from the debrief that recurred here is proposed to the user as a
    concrete `AGENTS.md`/`CLAUDE.md` or skill edit.
-4. Rename the task to `-done`, set the stage to `done`, and update `updated`. Commit.
+4. Set the task status to `done`, set the stage to `done`, and update `updated`. Commit.
 
-`-done` requires: all requirements evidenced, every gate passed or explicitly accepted
+Status `done` requires: all requirements evidenced, every gate passed or explicitly accepted
 by the user as a known limitation, the debrief and report present, and specs matching
-the verified behavior. A task named `-done` without that evidence is reported and
-reconciled before anyone claims success. Then follow the project's worktree cleanup rules: remove the task's `worktree/` contents with `git worktree remove` before or while renaming to `-done`.
+the verified behavior. A task with status `done` without that evidence is reported and
+reconciled before anyone claims success. Then follow the project's worktree cleanup rules: remove the task's `worktree/` contents with `git worktree remove` before setting the status to `done`.

@@ -6,7 +6,7 @@ title: "Atlas specifications"
 
 Atlas provides explicit existing-project baseline discovery and specification
 methods. Factory owns delivery and reuses Atlas's targeted maintenance guide.
-The approved intent is recorded in [the Atlas brief](../../.factory/atlas-done/BRIEF.md).
+The approved intent is recorded in [the Atlas brief](../../.factory/atlas/BRIEF.md).
 
 ## Ground rules
 
@@ -59,7 +59,7 @@ current repository is the default; consequential missing scope needs clarificati
 Templates and references ship within the skill. Full initialization needs no
 external skills, generated code index or new dependencies.
 
-The [plan](../../.factory/atlas-done/PLAN.md) explains the separate ownership and migration
+The [plan](../../.factory/atlas/PLAN.md) explains the separate ownership and migration
 choices. [Factory workflow](../specs/documentation-workflow.spec.md) retains its
 existing requirement IDs and delivery obligations.
 

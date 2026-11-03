@@ -35,7 +35,7 @@ Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
 them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
-method. Tasks live in `.factory/<task>-<status>/`; the optional board shows the
+method. Tasks live in `.factory/<task>/` with their status in `TASK.html`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
 
 ## HTML communication (HBS)
@@ -107,8 +107,8 @@ implicitly starting a full baseline.
 Run `/factory <request>` (or one stage command at a time). The task then lives in:
 
 ```text
-.factory/<task-name>-<status>/      # status: backlog | inprogress | blocked | done
-  TASK.html         # title, dates, stage, blocker, report link
+.factory/<task-name>/               # name never changes
+  TASK.html         # title, dates, status (backlog | inprogress | blocked | done), stage, blocker, report link
   INTENT.html       # approved requirements (one screen, for the user)
   DESIGN.html       # flagged concerns, decisions, links into design/
   design/           # design artifacts: mocks, diagrams, prototypes, images
@@ -116,7 +116,7 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
   DEBRIEF.html      # build notes for future agents and engineers
   REPORT.html       # test report, verdict first
   evidence/         # raw test output (gitignored)
-  <subtask-name>-<status>/   # same files; no approval from the user needed
+  subtasks/<subtask-name>/   # same files; no approval from the user needed
 ```
 
 New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
@@ -125,10 +125,10 @@ New task documents are HTML, built from Factory's `TASK_TEMPLATE.html`,
 task's `REPORT.html`). Older `BRIEF.*`, `TASK.md` and
 `PLAN.md` files stay readable; the board shows a legacy brief as the intent.
 
-A task's status is the last segment of its directory name; change it by renaming
-the directory with `git mv` or the board. Projects still on `docs/tasks/` stay
-readable until moved to `.factory/`, and older `<status>/<task>/` tasks migrate when
-moved. Subtasks are full tasks nested in their parent, and they nest recursively: a
+A task's status is the `status` meta tag in its `TASK.html`; change it by editing the tag
+or with the board, never by renaming the directory. Tasks in older layouts (`<task>-<status>/`,
+`<status>/<task>/`, `docs/tasks/`) must be migrated before the board or hook reads them
+([task layout](skills/factory/references/tasks.md)). Subtasks are full tasks nested in their parent's `subtasks/` folder, and they nest recursively: a
 subtask can have subtasks, to any depth. Their intents refine the parent
 intent and need no approval from the user, and the parent finishes only when all of its
 subtasks, at every depth, are done.

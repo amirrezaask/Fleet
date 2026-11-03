@@ -10,8 +10,8 @@ This command runs one stage of Factory's opt-in pipeline. Read the
 [Factory skill](../factory/SKILL.md) first: it holds the task layout, gates, document
 audiences and requirement rules this stage relies on.
 
-Create the task as `<name>-backlog/` (or reuse the named one), rename it to
-`-inprogress`, and set the stage to `intent`. Follow
+Create the task as `.factory/<name>/` (or reuse the named one), set its status to
+`inprogress` and its stage to `intent` in `TASK.html`. Follow
 [the intent guide](../factory/references/intent.md). The stage ends when the user
 approves the intent and it is committed. Do not design, plan or build in this command.
 

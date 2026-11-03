@@ -6,10 +6,9 @@ Build has no specification of its own; `PLAN.html` is the specification.
 
 ## Start
 
-Rename the task to `-inprogress` and set the stage to `build`. Work in a worktree
-under the task directory, `.factory/<task>-<status>/worktree/<branch>/` (gitignored).
-When a status change renames the task directory, run `git worktree move` for each
-worktree inside it (or `git worktree repair`) so git keeps tracking them. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
+Set the task status to `inprogress` and the stage to `build`. Work in a worktree
+under the task directory, `.factory/<task>/worktree/<branch>/` (gitignored). Status
+changes never move the directory, so the worktree stays valid. Read `INTENT.html`, `DESIGN.html`, `PLAN.html` and the project's agent
 memory (`AGENTS.md`/`CLAUDE.md`).
 
 ## The feedback loop
@@ -35,7 +34,7 @@ nothing.
 Follow the plan's order and contracts. When reality departs from it, update
 `PLAN.html` **in the same commit** as the departing code (date, reason, affected IDs,
 impact). Requirement or design conflicts stop for the user; record the blocker in
-`TASK.html` and rename the task to `-blocked`.
+`TASK.html` and set the status to `blocked`.
 
 Commit in coherent increments. Each message names the task and the plan steps
 (`factory(<task>): build M2-M3`).
