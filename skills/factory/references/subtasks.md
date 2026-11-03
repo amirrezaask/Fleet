@@ -50,7 +50,7 @@ The managing agent owns the graph and runs this loop:
 2. Create one integration branch for the parent task, named per the repository
    branch rules, with its worktree at `worktree/<branch>/` in the parent task directory.
 3. For each frontier subtask, start a fresh-context **implementer subagent** in
-   the background, in its own worktree under the parent task's `worktree/` directory (`.factory/<task>-<status>/worktree/<branch>/`) on its own branch.
+   the background, in its own worktree under the parent task's `worktree/` directory (`.factory/<task>/worktree/<branch>/`) on its own branch.
    Run independent subtasks concurrently; never give two concurrent writers
    overlapping files. If two frontier subtasks touch the same files, serialize
    them by adding a dependency edge.
@@ -63,16 +63,16 @@ The managing agent owns the graph and runs this loop:
    when it found something worth recording.
 5. When an implementer reports, merge its branch into the integration branch
    (a separate merger subagent or the manager), resolve conflicts, move the
-   subtask to `-done` (rename) and record results in its plan.
+   subtask status to `done` and record results in its plan.
 6. Recompute the frontier; start newly unblocked subtasks immediately.
 7. When every subtask is `done`, the managing agent alone runs the heavy
    [Test stage](test.md) on the integration branch and fixes failures, using one fresh implementer
    subagent for a batch of fixes when useful.
-8. Write the report, update specs, rename the parent to `-done`, and remove every
+8. Write the report, update specs, set the parent status to `done`, and remove every
    implementer worktree.
 
 Keep communication with subagents sparse: pointers in, a short report out. A
-subtask blocked on a decision is renamed to `-blocked` with the reason; the rest of the
+subtask blocked on a decision gets status `blocked` with the reason; the rest of the
 frontier continues.
 
 Adapted from the implement-spec and to-tickets skills in mattpocock/skills; this

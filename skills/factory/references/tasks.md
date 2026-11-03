@@ -2,72 +2,67 @@
 
 ## Layout
 
-`.factory/` at the project root lists every task. Each task is one flat directory
-named `<task-name>-<status>`:
+`.factory/` at the project root lists every task. Each task is one directory named
+`<task-name>`, and the name never changes:
 
 ```text
 .factory/
-  account-recovery-inprogress/
+  account-recovery/
     TASK.html  INTENT.html  DESIGN.html  PLAN.html  DEBRIEF.html  REPORT.html
     design/                                                   # design artifacts
       flow.html  mock.html  states.png
     evidence/                                                 # raw test output, gitignored
-    email-token-done/                                         # subtask, same layout
-    rate-limit-backlog/
-  export-csv-backlog/
+    worktree/                                                 # task worktrees, gitignored
+    subtasks/
+      email-token/                                            # subtask, same layout
+      rate-limit/
+  export-csv/
 ```
 
-`<status>` is the **last** hyphen segment of the directory name and is one of:
+The name is lowercase ASCII letters and numbers separated by single hyphens, unique
+among its siblings. Reuse existing tasks; never overwrite another task to resolve a
+collision. Only directories inside `subtasks/` are subtasks, so `design/`,
+`evidence/` and `worktree/` are never mistaken for them. Link between a task's own
+files with relative paths (`design/mock.html`, `REPORT.html`, `../DESIGN.html`).
 
-| Suffix | Board column | Meaning |
-| --- | --- | --- |
-| `-backlog` | Backlog | Captured; nobody is working on it (any stage before `done`) |
-| `-inprogress` | In progress | An agent is working on it, in any stage |
-| `-blocked` | Blocked | A recorded decision or dependency prevents progress |
-| `-done` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
-
-The name before the suffix is lowercase ASCII letters and numbers separated by single
-hyphens, unique among its siblings. Reuse existing tasks; never overwrite another
-task to resolve a collision. Change status by renaming the directory
-(`git mv .factory/export-csv-backlog .factory/export-csv-inprogress`) and updating
-`updated`. The name is the status record; `TASK.html` has no status field.
-
-Everything that belongs to a task sits directly in its directory: the stage
-documents, the test `REPORT.html`, a `design/` folder with the design artifacts, an
-`evidence/` folder with raw test output (gitignored), and its subtasks. Nothing else
-goes there; `design` and `evidence` never end in a status suffix, so they are never
-mistaken for subtasks. Link between a task's own files with relative paths
-(`design/mock.html`, `REPORT.html`, `../DESIGN.html`) so links survive renames.
-
-## Metadata
+## Metadata and status
 
 `TASK.html` carries a nonempty `<title>`, `<meta name="created">` and
-`<meta name="updated">` ISO dates, and `<meta name="stage">` (`intent`, `design`,
-`plan`, `build`, `test`, `done`). The stage is the pipeline position; the status is
-whether anyone is working on it. Record blockers and the report link in the body.
-A status change is bookkeeping: it does not approve work, run plans, prove
-completion or start sessions.
+`<meta name="updated">` ISO dates, `<meta name="stage">` and `<meta name="status">`:
+
+| `status` | Board column | Meaning |
+| --- | --- | --- |
+| `backlog` | Backlog | Captured; nobody is working on it (any stage before `done`) |
+| `inprogress` | In progress | An agent is working on it, in any stage |
+| `blocked` | Blocked | A recorded decision or dependency prevents progress |
+| `done` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
+
+`stage` is the pipeline position (`intent`, `design`, `plan`, `build`, `test`,
+`done`); `status` is whether anyone is working on it. A missing or unknown status
+reads as `backlog`. Change status by editing the tag (or the board) and `updated`;
+the directory is never renamed or moved, so worktrees and links survive. Record
+blockers and the report link in the body. A status change is bookkeeping: it does not
+approve work, run plans, prove completion or start sessions. Because state lives in
+the file, browse it with the board or
+`grep -r 'name="status"' .factory --include=TASK.html`.
 
 ## Subtasks
 
-A subtask is a child directory of its task with the same naming and files,
-`<subtask-name>-<status>/`. A subtask intent needs no approval from the user but
-refines, never contradicts, its parent's; record "Approval: not required, subtask
-of `<parent>`". Subtasks nest without limit. Renaming a parent carries its subtasks
-with it. The board shows a done/total count over all descendants and never moves
-subtasks by itself. Dependencies between siblings live in `TASK.html` under
-`## Depends on`; see [subtask graphs](subtasks.md).
+A subtask is a directory in its task's `subtasks/` folder with the same files,
+`<task>/subtasks/<subtask-name>/`. A subtask intent needs no approval from the user
+but refines, never contradicts, its parent's; record "Approval: not required, subtask
+of `<parent>`". Subtasks nest without limit. The board shows a done/total count over
+all descendants and never changes subtask status by itself. Dependencies between
+siblings live in `TASK.html` under `## Depends on`; see [subtask graphs](subtasks.md).
 
-## Legacy layout
+## Older layouts
 
-Older projects keep tasks in `docs/tasks/` instead of `.factory/`; the board and
-hook read `docs/tasks/` only while `.factory/` does not exist. Migrate with
-`git mv docs/tasks .factory`, moving each task's report or debrief from
-`docs/reports/` into its directory at the same time. Moved files keep their format;
-new debriefs and reports are always HTML. Even older projects use
-`<status>/<task-name>/` with `subtasks/<status>/` nesting, a `BRIEF` as the intent
-and a `design/` folder. They stay readable; do not migrate them unless the user asks. A legacy task that an agent works on may be moved
-to the flat layout in its first status change.
+Tasks named `<name>-<status>/`, `<status>/<name>/` or kept in `docs/tasks/` are not
+read by the board or hook. Migrate each: drop the status suffix from the directory
+name (`git mv .factory/export-csv-done .factory/export-csv`), add the status as
+`<meta name="status">` (TASK.html) or a `status:` frontmatter key (TASK.md), and move
+nested subtasks into `subtasks/`. Moved files keep their format; new debriefs and
+reports are always HTML.
 
 ## One shared board
 
@@ -76,7 +71,7 @@ A single board serves every project; projects do not carry a copy. Run it with
 `skills/factory/assets/task-board/` after `npm install` there, then run
 `amirreza-factory`). Node.js 24+ is required. Listed directories are registered;
 with none given and an empty registry the current directory is adopted if it has
-`.factory/` (or legacy `docs/tasks/`). Registered projects persist in `~/.factory/projects.json`
+`.factory/` . Registered projects persist in `~/.factory/projects.json`
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
 reports the URL. Leave a preview running only when the user asks to use it. Never

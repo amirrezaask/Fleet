@@ -11,7 +11,7 @@ This command runs one stage of Factory's opt-in pipeline. Read the
 audiences and requirement rules this stage relies on.
 
 Running this command accepts the task's `DESIGN.html` (or the recorded design skip);
-record the acceptance if it is missing. Rename the task to `-inprogress`, set the stage
+record the acceptance if it is missing. Set the task status to `inprogress` in `TASK.html`, set the stage
 to `plan`, and follow [the plan guide](../factory/references/plan.md). Plan read-only:
 change no code. The stage ends when the plan passes its self-check and is committed.
 

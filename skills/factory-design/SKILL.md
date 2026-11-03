@@ -11,7 +11,7 @@ This command runs one stage of Factory's opt-in pipeline. Read the
 audiences and requirement rules this stage relies on.
 
 Running this command accepts the task's `INTENT.html`; record the approval entry if
-it is missing. Rename the task to `-inprogress`, set the stage to `design`, and follow
+it is missing. Set the task status to `inprogress` in `TASK.html`, set the stage to `design`, and follow
 [the design guide](../factory/references/design.md). The stage ends when the user
 accepts the design and it is committed. Do not plan or build in this command.
 

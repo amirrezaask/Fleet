@@ -22,8 +22,8 @@ viewing never authorize implementation.
 | `/factory-build [task]` | Implement the plan, keep its fast tests green, write `DEBRIEF.html` |
 | `/factory-test [task]` | Run the gates: regression, acceptance, review, heavy checks; write the report, close the task |
 
-A stage command names the task by name (without the status suffix). Without one,
-use the only `-inprogress` task, or ask. If a command skips an unfinished earlier
+A stage command names the task by name (its directory name). Without one,
+use the only `inprogress` task, or ask. If a command skips an unfinished earlier
 stage, run that stage first (`/factory-build` on a task without a plan plans first),
 unless the user said to skip it.
 
@@ -81,20 +81,20 @@ without the pipeline.
 
 ## Tasks
 
-A task is one flat directory, `.factory/<task-name>-<status>/`, holding
-`TASK.html`, its stage documents and test `REPORT.html`, its `design/` folder and
-its subtask directories. `.factory/` at the project root lists every task.
-`<status>` is `backlog`, `inprogress`, `blocked` or `done`: the last segment of
-the name is the status. `TASK.html` records `<meta name="stage">`:
+A task is one directory, `.factory/<task-name>/`, whose name never changes. It holds
+`TASK.html`, its stage documents and test `REPORT.html`, its `design/` folder and its
+`subtasks/` folder. `.factory/` at the project root lists every task. `TASK.html`
+records the state in meta tags: `<meta name="status">` is `backlog`, `inprogress`,
+`blocked` or `done`, and `<meta name="stage">` is
 `intent`, `design`, `plan`, `build`, `test` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 
-`/factory-intent` creates the task as `<name>-backlog/` with `TASK.html` from the
-[task template](templates/TASK_TEMPLATE.html). **When an agent picks a task up, it
-renames it to `-inprogress`** (`git mv`) and updates `stage` and `updated`. It
-renames it back to `-backlog` when it stops between stages with no work in flight,
-to `-blocked` with the reason when a decision or dependency stops it, and to
-`-done` only when Test passes.
+`/factory-intent` creates `.factory/<name>/` with `TASK.html` from the
+[task template](templates/TASK_TEMPLATE.html), status `backlog`. **When an agent picks
+a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
+sets `backlog` when it stops between stages with no work in flight, `blocked` with the
+reason when a decision or dependency stops it, and `done` only when Test passes.
+Nothing is renamed, so links and worktrees stay valid.
 
 **Requirements are a contract.** Agents may change the plan's steps, interfaces,
 order or approach whenever all intent requirements, the accepted design and existing
@@ -105,16 +105,16 @@ the affected document, with the earlier text kept in Git.
 
 **The loop.** A finding outside the task's scope (a bug, a risk, a debt) is not fixed
 silently. Record it in the debrief or report, and when it deserves work, create a
-new `-backlog` task holding a draft `INTENT.html` marked "Draft: not approved". It
+new task with status `backlog` holding a draft `INTENT.html` marked "Draft: not approved". It
 enters the pipeline when the user runs a command on it.
 
 ## Subtasks
 
 Split a task when parts can be planned, built and tested separately. A subtask is a
-child directory `<subtask-name>-<status>/` with the same files, nests without limit,
+directory `<task>/subtasks/<subtask-name>/` with the same files, nests without limit,
 and refines its parent: its intent needs no approval from the user ("Approval: not
 required, subtask of `<parent>`"), may add detail and `R` IDs, and never weakens a
-parent requirement. A parent becomes `-done` only after every descendant is done and
+parent requirement. A parent becomes `done` only after every descendant is done and
 its own Test passes. Read [subtask graphs](references/subtasks.md) to cut vertical
 slices, record dependencies and build the ready subtasks in parallel.
 

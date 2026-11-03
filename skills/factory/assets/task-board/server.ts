@@ -1,8 +1,8 @@
 import type { AddressInfo } from "node:net";
 import { execFile, type ChildProcess } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { constants, existsSync, watch, type FSWatcher } from "node:fs";
-import { lstat, mkdir, open, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { constants, watch, type FSWatcher } from "node:fs";
+import { lstat, mkdir, open, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,13 +47,8 @@ const registered: string[] = await readFile(registryFile, "utf8").then(
 
 const projectId = (path: string) => createHash("sha1").update(path).digest("hex").slice(0, 10);
 
-// Tasks live in <project>/.factory/; projects not yet migrated keep docs/tasks/.
-const legacyRoot = join("docs", "tasks");
-
-const tasksOf = (project: string) =>
-  existsSync(join(project, legacyRoot)) && !existsSync(join(project, ".factory"))
-    ? join(project, legacyRoot)
-    : join(project, ".factory");
+// Tasks live in <project>/.factory/.
+const tasksOf = (project: string) => join(project, ".factory");
 
 async function saveRegistry(): Promise<void> {
   await mkdir(dirname(registryFile), { recursive: true });
@@ -151,7 +146,7 @@ async function pickFolder(): Promise<Picked> {
   return kdialog === "missing" ? { unsupported: true } : kdialog;
 }
 
-const statuses = ["backlog", "inprogress", "blocked", "done"];
+const statuses = ["backlog", "inprogress", "blocked", "done"] as const;
 
 const stages = ["intent", "design", "plan", "build", "test", "done"] as const;
 
@@ -162,6 +157,8 @@ const metadata = Schema.Struct({
 });
 
 const stageField = Schema.Struct({ stage: Schema.Literals(stages) });
+
+const statusField = Schema.Struct({ status: Schema.Literals(statuses) });
 
 // The pipeline stage is optional; an absent or unknown value shows no stage on the board.
 function stageOf(fields: { stage?: string }): { stage?: (typeof stages)[number] } {
@@ -200,48 +197,22 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-// Tasks live at .factory/<name>-<status>/; subtasks are child directories named the same way.
-// The status is always the last hyphen segment, so a task name may itself contain status words.
-const named = new RegExp(`^([a-z0-9]+(?:-[a-z0-9]+)*)-(${statuses.join("|")})$`);
+// Tasks live at .factory/<name>/ and subtasks at <task>/subtasks/<name>/. Names never change;
+// the status is a field of TASK.html (or TASK.md frontmatter), so a move edits one file.
+type Location = { directory: string };
 
-function parseEntry(entry: string): { name: string; status: string } | undefined {
-  const match = named.exec(entry);
+async function find(parent: string, name: string): Promise<Location> {
+  const directory = join(parent, name);
 
-  return match?.[1] && match[2] ? { name: match[1], status: match[2] } : undefined;
-}
+  if (!(await exists(directory))) throw new BoardError("Task not found.", 404);
 
-// Legacy tasks live at <root>/<status>/<name>/ with subtasks at <task>/subtasks/<status>/<name>/.
-type Location = { status: string; directory: string; legacy: boolean };
-
-async function find(parent: string, legacyParent: string, name: string): Promise<Location> {
-  const found: Location[] = [];
-
-  for (const status of statuses) {
-    if (await exists(join(parent, `${name}-${status}`)))
-      found.push({ status, directory: join(parent, `${name}-${status}`), legacy: false });
-
-    if (await exists(join(legacyParent, status, name)))
-      found.push({ status, directory: join(legacyParent, status, name), legacy: true });
-  }
-
-  if (found.length > 1) throw new BoardError("Task exists in more than one status.");
-  const [only] = found;
-
-  if (!only) throw new BoardError("Task not found.", 404);
-
-  if (
-    only.legacy &&
-    !((await realDirectory(dirname(only.directory))) && (await realDirectory(legacyParent)))
-  )
-    throw new BoardError("Task not found.", 404);
-
-  if (!(await realDirectory(only.directory)))
+  if (!(await realDirectory(directory)))
     throw new BoardError("Task directory must be a real directory.");
 
-  return only;
+  return { directory };
 }
 
-// An id is a slash-separated path of task names without status suffixes, so it survives moves.
+// An id is a slash-separated path of task names, one per nesting level.
 async function locate(root: string, id: string): Promise<Location> {
   const [top, ...nested] = id.split("/");
 
@@ -249,39 +220,23 @@ async function locate(root: string, id: string): Promise<Location> {
     throw new BoardError("Invalid task name.");
 
   if (!(await realDirectory(root))) throw new BoardError("Task not found.", 404);
-  let current = await find(root, root, top);
+  let current = await find(root, top);
 
-  for (const name of nested)
-    current = await find(current.directory, join(current.directory, "subtasks"), name);
+  for (const name of nested) current = await find(join(current.directory, "subtasks"), name);
 
   return current;
 }
 
-// Direct subtasks of a task directory, in the flat layout and the legacy subtasks/<status>/ one.
-async function childTasks(
-  directory: string,
-): Promise<Array<{ name: string; status: string; directory: string }>> {
-  const children = [];
+// Direct subtasks of a task directory: the child directories of its subtasks/ folder.
+async function childTasks(directory: string): Promise<Array<{ name: string; directory: string }>> {
+  const parent = join(directory, "subtasks");
 
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const parsed = parseEntry(entry.name);
+  if (!(await realDirectory(parent))) return [];
 
-    if (parsed && entry.isDirectory() && !entry.isSymbolicLink())
-      children.push({ ...parsed, directory: join(directory, entry.name) });
-  }
-
-  if (await realDirectory(join(directory, "subtasks")))
-    for (const status of statuses) {
-      const parent = join(directory, "subtasks", status);
-
-      if (!(await realDirectory(parent))) continue;
-
-      for (const entry of await readdir(parent, { withFileTypes: true }))
-        if (entry.isDirectory() && !entry.isSymbolicLink())
-          children.push({ name: entry.name, status, directory: join(parent, entry.name) });
-    }
-
-  return children.sort((left, right) => left.name.localeCompare(right.name));
+  return (await readdir(parent, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink() && slug.test(entry.name))
+    .map((entry) => ({ name: entry.name, directory: join(parent, entry.name) }))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 async function taskFile(root: string, id: string, name: string): Promise<string> {
@@ -340,6 +295,13 @@ function decodeEntities(text: string): string {
 const htmlMeta = (name: string) =>
   new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"\\s*/?>`, "i");
 
+// A task with no readable status is a backlog task.
+function statusOf(fields: { status?: string }): { status: (typeof statuses)[number] } {
+  return Option.getOrElse(Schema.decodeUnknownOption(statusField)(fields), () => ({
+    status: "backlog" as const,
+  }));
+}
+
 function decodeTask(text: string, name = "TASK.md") {
   try {
     if (name.endsWith(".html")) {
@@ -350,7 +312,11 @@ function decodeTask(text: string, name = "TASK.md") {
       });
 
       return {
-        data: { ...data, ...stageOf({ stage: htmlMeta("stage").exec(text)?.[1] }) },
+        data: {
+          ...data,
+          ...statusOf({ status: htmlMeta("status").exec(text)?.[1] }),
+          ...stageOf({ stage: htmlMeta("stage").exec(text)?.[1] }),
+        },
         content: text,
       };
     }
@@ -358,7 +324,10 @@ function decodeTask(text: string, name = "TASK.md") {
     const parsed = matter(text);
     const data = Schema.decodeUnknownSync(metadata)(parsed.data);
 
-    return { data: { ...data, ...stageOf(parsed.data) }, content: parsed.content };
+    return {
+      data: { ...data, ...statusOf(parsed.data), ...stageOf(parsed.data) },
+      content: parsed.content,
+    };
   } catch {
     throw new BoardError(
       "TASK.html requires a title and created/updated dates (TASK.md: title and quoted created/updated dates).",
@@ -372,9 +341,22 @@ async function readTask(root: string, id: string) {
   return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
-// The task document path relative to the project, e.g. .factory/<name>-<status>/TASK.html.
+// The task document path relative to the project, e.g. .factory/<name>/TASK.html.
 const projectFile = (root: string, directory: string, name: string) =>
-  join(root.endsWith(legacyRoot) ? legacyRoot : ".factory", relative(root, join(directory, name)));
+  join(".factory", relative(root, join(directory, name)));
+
+// The status of the task in `directory`; an unreadable TASK file counts as backlog.
+async function childStatus(directory: string): Promise<(typeof statuses)[number]> {
+  for (const name of ["TASK.html", "TASK.md"]) {
+    try {
+      return decodeTask(await readFile(join(directory, name), "utf8"), name).data.status;
+    } catch {
+      continue;
+    }
+  }
+
+  return "backlog";
+}
 
 async function countSubtasks(directory: string): Promise<{ total: number; done: number }> {
   const count = { total: 0, done: 0 };
@@ -382,19 +364,18 @@ async function countSubtasks(directory: string): Promise<{ total: number; done: 
   for (const child of await childTasks(directory)) {
     const nested = await countSubtasks(child.directory);
     count.total += 1 + nested.total;
-    count.done += nested.done + (child.status === "done" ? 1 : 0);
+    count.done += nested.done + ((await childStatus(child.directory)) === "done" ? 1 : 0);
   }
 
   return count;
 }
 
 async function summary(root: string, id: string): Promise<TaskSummary> {
-  const { status, directory } = await locate(root, id);
+  const { directory } = await locate(root, id);
   const { name, data } = await readTask(root, id);
 
   return {
     id,
-    status,
     file: projectFile(root, directory, name),
     subtasks: await countSubtasks(directory),
     ...data,
@@ -413,7 +394,7 @@ async function listSubtasks(root: string, id: string) {
     } catch {
       subtasks.push({
         id: childId,
-        status: child.status,
+        status: "backlog",
         file: projectFile(root, child.directory, "TASK.html"),
         subtasks: { total: 0, done: 0 },
         title: child.name,
@@ -436,41 +417,21 @@ async function listTasks(root: string) {
   for (const entry of (await readdir(root, { withFileTypes: true })).sort((left, right) =>
     left.name.localeCompare(right.name),
   )) {
-    if (statuses.includes(entry.name) || (!entry.isDirectory() && !entry.isSymbolicLink()))
-      continue;
-    const parsed = parseEntry(entry.name);
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 
-    if (!parsed) {
+    if (!slug.test(entry.name)) {
       errors.push(
-        `${entry.name}: task directories must be named <task>-<status> (${statuses.join(", ")}), for example ${entry.name}-backlog.`,
+        `${entry.name}: task directories are named with lowercase letters, numbers and single hyphens.`,
       );
       continue;
     }
 
     try {
-      tasks.push(await summary(root, parsed.name));
+      tasks.push(await summary(root, entry.name));
     } catch {
       errors.push(
         `${entry.name}: unable to load task; check TASK metadata and regular document paths.`,
       );
-    }
-  }
-
-  // Legacy layout: <root>/<status>/<task>/ stays readable until the task is moved.
-  for (const status of statuses) {
-    if (!(await realDirectory(join(root, status)))) continue;
-    const entries = await readdir(join(root, status), { withFileTypes: true });
-
-    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
-
-      try {
-        tasks.push(await summary(root, entry.name));
-      } catch {
-        errors.push(
-          `${status}/${entry.name}: unable to load task; check TASK metadata and regular document paths.`,
-        );
-      }
     }
   }
 
@@ -548,16 +509,13 @@ async function formFields(request: IncomingMessage, address: string): Promise<UR
   return fields;
 }
 
-// Moving renames the task directory to <name>-<status> in place; subtasks move with it.
-// A legacy <root>/<status>/<name>/ task migrates to <root>/<name>-<status>/.
+// Moving writes the status into the task's TASK file (and bumps updated); the directory stays put.
 async function move(fields: URLSearchParams): Promise<TaskSummary> {
   const root = tasksOf(projectPath(fields.get("project")));
   const id = fields.get("task") ?? "";
-
-  if (id.includes("/")) throw new BoardError("Only top-level tasks can change status.");
   const status = fields.get("status") ?? "";
 
-  if (!statuses.includes(status)) throw new BoardError("Unknown task status.");
+  if (!Schema.is(statusField.fields.status)(status)) throw new BoardError("Unknown task status.");
   const current = await locate(root, id);
   const name = await documentName(root, id, "TASK");
   const path = await taskFile(root, id, name);
@@ -578,34 +536,39 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
         html ? "Use a plain updated meta tag." : "Use a plain updated frontmatter key.",
       );
 
-    const target = join(current.legacy ? root : dirname(current.directory), `${id}-${status}`);
-    const renaming = target !== current.directory;
-
-    if (renaming && (await exists(target)))
-      throw new BoardError("A task with this name already exists in that status.", 409);
-
     const today = new Date().toISOString().slice(0, 10);
+    const updatedTag = `<meta name="updated" content="${today}">`;
+
+    const statusTag = `<meta name="status" content="${status}">`;
 
     const text =
       html || !frontmatter
-        ? original.replace(htmlMeta("updated"), `<meta name="updated" content="${today}">`)
+        ? original.replace(htmlMeta("updated"), updatedTag).replace(htmlMeta("status"), statusTag)
         : frontmatter[1] +
-          frontmatter[2].replace(/^updated:[^\r\n]*/m, `updated: "${today}"`) +
+          frontmatter[2]
+            .replace(/^updated:[^\r\n]*/m, `updated: "${today}"`)
+            .replace(/^status:[^\r\n]*/m, `status: ${status}`) +
+          (/^status:/m.test(frontmatter[2])
+            ? ""
+            : `${frontmatter[2].includes("\r\n") ? "\r\n" : "\n"}status: ${status}`) +
           frontmatter[3] +
           original.slice(frontmatter[0].length);
 
-    decodeTask(text, name);
-    await file.write(text, 0, "utf8");
-    await file.truncate(Buffer.byteLength(text));
+    // A TASK.html written before statuses moved into metadata gets the tag after updated.
+    const written =
+      html && !htmlMeta("status").test(text)
+        ? text.replace(htmlMeta("updated"), `${updatedTag}\n  ${statusTag}`)
+        : text;
 
-    if (renaming) await rename(current.directory, target);
+    decodeTask(written, name);
+    await file.write(written, 0, "utf8");
+    await file.truncate(Buffer.byteLength(written));
 
     return {
       id,
-      status,
-      file: projectFile(root, target, name),
-      subtasks: await countSubtasks(target),
-      ...decodeTask(text, name).data,
+      file: projectFile(root, current.directory, name),
+      subtasks: await countSubtasks(current.directory),
+      ...decodeTask(written, name).data,
     };
   } finally {
     await file.close();

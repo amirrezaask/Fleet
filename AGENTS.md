@@ -4,7 +4,7 @@ Address the user as ADMIN. GLOBAL means `~/.agents/`.
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `.factory/<task-name>-<status>/` (status: `backlog`, `inprogress`, `blocked`, `done`): Factory tasks with `TASK.html` metadata, approved `INTENT.html`, accepted `DESIGN.html` with its artifacts in the task's `design/` folder, mutable `PLAN.html`, `DEBRIEF.html`, and the test `REPORT.html` (raw evidence in the task's gitignored `evidence/` folder). `.factory/` lists every Factory task; there is no `docs/tasks/`. The directory name's last segment is the task's status; changing status renames the directory. Subtasks are child directories `<subtask-name>-<status>/` with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
+- `.factory/<task-name>/` : Factory tasks with `TASK.html` metadata (including `status`: `backlog`, `inprogress`, `blocked`, `done`), approved `INTENT.html`, accepted `DESIGN.html` with its artifacts in the task's `design/` folder, mutable `PLAN.html`, `DEBRIEF.html`, and the test `REPORT.html` (raw evidence in the task's gitignored `evidence/` folder). `.factory/` lists every Factory task; there is no `docs/tasks/`. The directory name never changes; status lives in `TASK.html`. Subtasks are directories `<subtask-name>/` in the task's `subtasks/` folder with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
 - `docs/reports/`: benchmark, test and verification results not tied to a Factory task (a task's report and debrief live in its `.factory/` directory), one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
 - `docs/README.html`, `docs/architecture.html`, `docs/domain.html`, `docs/data-model.html`, `docs/quality.html`, and `docs/operations.html`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
 - `docs/areas/<area-name>.html`: ground rules, state ownership, and relevant contracts for each software area.
@@ -12,12 +12,11 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.
-- `.worktrees/`: git worktrees not tied to a Factory task. A Factory task's worktrees live in its own `.factory/<task-name>-<status>/worktree/<branch-name>/` (gitignored); subtasks use their own `worktree/` the same way.
+- `.worktrees/`: git worktrees not tied to a Factory task. A Factory task's worktrees live in its own `.factory/<task-name>/worktree/<branch-name>/` (gitignored); subtasks use their own `worktree/` the same way.
 
 ## Rules
 ### Version Control
 **Keep worktrees of each project in it's own directory: `worktree/` inside the Factory task directory for task work, `.worktrees/` otherwise**
-**Renaming a task directory for a status change must move its worktrees with `git worktree move` (or `git worktree repair` afterwards)**
 **Each new session should start from a clean git worktree from a branch (default to master/main)**
 **Never checkout the main repository to other branch than main all work happens in worktrees**
 **Each agent round should conclude with a commit.**

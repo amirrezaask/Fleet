@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 // Claude Code hook installed by tools/install.ts for SessionStart, PreToolUse
 // and Stop. It keeps ADMIN's autonomous sessions on the rules in AGENTS.md: one
@@ -220,19 +220,28 @@ function escalated(task: string): boolean {
   return blocker !== "" && !/^(none\.?|<[^>]*>)$/i.test(blocker);
 }
 
-// A Factory task directory is in progress when named <task>-inprogress, or, in the
-// legacy layout, when it sits in an inprogress/ status directory.
+// A Factory task is in progress when its TASK.html status meta (or TASK.md status key) says so.
 function inProgress(task: string): boolean {
-  return basename(task).endsWith("-inprogress") || basename(dirname(task)) === "inprogress";
+  for (const name of ["TASK.html", "TASK.md"]) {
+    const file = join(task, name);
+
+    if (!existsSync(file)) continue;
+    const text = readFileSync(file, "utf8");
+
+    return (
+      /<meta\s+name="status"\s+content="inprogress"/i.test(text) ||
+      /^status:\s*inprogress\s*$/m.test(text)
+    );
+  }
+
+  return false;
 }
 
 // In-progress, unescalated Factory tasks whose documents this session touched.
-// A moved task (renamed to another status) no longer exists at the recorded path.
 function openTasks(text: string, cwd: string): string[] {
   const tasks = new Set<string>();
 
-  const documents =
-    /(?:\.factory|docs\/tasks)\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
+  const documents = /\.factory\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
 
   for (const match of text.matchAll(documents)) {
     // The root is the session's cwd, or an absolute prefix (which may contain
@@ -259,29 +268,14 @@ function openTasks(text: string, cwd: string): string[] {
   return [...tasks].filter((task) => existsSync(task) && !escalated(task));
 }
 
-// In-progress task directories directly under `parent`: flat <task>-inprogress/
-// children plus legacy children of `legacy` (an inprogress/ status directory).
-function inProgressChildren(parent: string, legacy: string): string[] {
-  const children = (directory: string, keep: (name: string) => boolean) =>
-    existsSync(directory)
-      ? readdirSync(directory, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory() && keep(entry.name))
-          .map((entry) => join(directory, entry.name))
-      : [];
-
-  return [
-    ...children(parent, (name) => /^[a-z0-9-]+-inprogress$/.test(name)),
-    ...children(legacy, () => true),
-  ];
-}
-
-// Tasks live in .factory/; projects not yet migrated keep docs/tasks/.
-function tasksDirectory(root: string): string {
-  const legacy = join(root, "docs", "tasks");
-
-  return existsSync(legacy) && !existsSync(join(root, ".factory"))
-    ? legacy
-    : join(root, ".factory");
+// In-progress task directories directly under `directory`.
+function inProgressChildren(directory: string): string[] {
+  return existsSync(directory)
+    ? readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(directory, entry.name))
+        .filter(inProgress)
+    : [];
 }
 
 // In-progress leaf tasks: in-progress tasks with no in-progress subtask.
@@ -291,14 +285,13 @@ function inProgressTasks(root: string): string[] {
   const walk = (tasks: string[]) => {
     for (const task of tasks) {
       const before = found.length;
-      walk(inProgressChildren(task, join(task, "subtasks", "inprogress")));
+      walk(inProgressChildren(join(task, "subtasks")));
 
       if (found.length === before) found.push(task);
     }
   };
 
-  const tasksRoot = tasksDirectory(root);
-  walk(inProgressChildren(tasksRoot, join(tasksRoot, "inprogress")));
+  walk(inProgressChildren(join(root, ".factory")));
 
   return found;
 }
@@ -306,7 +299,7 @@ function inProgressTasks(root: string): string[] {
 function sessionStart(input: HookInput): void {
   const cwd = input.cwd ?? process.cwd();
 
-  if (input.agent_id || !autonomous || !existsSync(tasksDirectory(cwd))) return;
+  if (input.agent_id || !autonomous || !existsSync(join(cwd, ".factory"))) return;
   const tasks = inProgressTasks(cwd).map((task) => relative(cwd, task));
 
   const resumed =
