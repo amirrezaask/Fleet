@@ -98,22 +98,37 @@ name (`git mv .factory/export-csv-done .factory/export-csv`), add the status as
 move nested subtasks into `subtasks/`. Moved files keep their format; new documents,
 debriefs and reports are always Markdown.
 
-## Per-repository dashboard
+## Per-repository board
 
 A read-only view of one repository's `.factory/`: kanban columns by `status`, the
 `.factory/backlog.md` queue, and a drawer with each task's Markdown documents. It
-changes nothing and starts no agents; the commands stay in the chat. Two ways to run the
-same `skills/factory/assets/dashboard/dashboard.html`:
+changes nothing and starts no agents; the commands stay in the chat. Every project
+carries its own copy, made of two skill assets:
 
-- **Server:** `factory-dashboard [repo] [--port N]` (linked onto PATH by the installer;
-  in this repository `npm run factory:dashboard`). Node.js 24+, built-ins only, binds to
-  `127.0.0.1` on a free port and prints the URL. It serves only `.md` files under
-  `.factory/` (no symlinks, `evidence/` or `worktree/`), checks the `Host` header, and
-  refuses everything but GET. The page polls every 2 seconds. Leave it running only
-  when the user asks.
-- **Standalone:** open `dashboard.html` straight from disk (or copy it to a repository)
-  in a Chromium browser and pick the repository or its `.factory` folder once; the
-  browser remembers the folder and asks only for read permission again. No process runs.
+- `skills/factory/assets/dashboard/board.ts`: the tiny server (Node.js 24+, built-ins
+  only). It binds to `127.0.0.1` on a free port and prints the URL, serves only `.md`
+  files under `.factory/` (no symlinks, `evidence/` or `worktree/`), checks the `Host`
+  header and refuses everything but GET.
+- `skills/factory/assets/dashboard/dashboard.html`: the page it serves, read from the
+  directory beside `board.ts`. It polls every 2 seconds.
+
+**Install and refresh.** When Factory starts in a project, or the user asks for the board:
+
+1. Copy both files to `tools/factory-board/` in the project (create the directory).
+   Do this when either is missing or `cmp` shows it differs from the skill's asset, so
+   projects pick up board updates the next time Factory runs there. Copy as-is; never
+   edit the project's copy.
+2. If the project has a `package.json` without a `factory:board` script, add
+   `"factory:board": "node tools/factory-board/board.ts ."` (keep the file's other keys
+   and formatting). A project without `package.json` is launched with
+   `node tools/factory-board/board.ts`.
+3. Commit the copy with the rest of the work. Leave the board running only when the user
+   asks.
+
+Launch it from the project root with `npm run factory:board` or
+`node tools/factory-board/board.ts [repo] [--port N]`. Without a server, `dashboard.html`
+also opens straight from disk in a Chromium browser: pick the repository or its
+`.factory` folder once and the browser remembers it.
 
 The page is React, shadcn-style components and Tailwind in the Claude look (light, dark
 or system theme), bundled with its fonts into that one file, so it needs no network.
@@ -122,8 +137,8 @@ every parent task. Sources live in `skills/factory/assets/dashboard/src/`; after
 changing them run `npm run build:dashboard` and commit the regenerated `dashboard.html`
 (a test fails if it drifts).
 
-Never copy the server or add a `factory:dashboard` script to a project: the skill keeps
-the single copy. This is separate from the shared board below.
+This repository is the source of both assets and runs them in place with
+`npm run factory:board`. The per-repository board is separate from the shared board below.
 
 ## One shared board
 
@@ -136,7 +151,8 @@ with none given and an empty registry the current directory is adopted if it has
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
 reports the URL. Leave a preview running only when the user asks to use it. Never
-add `server.ts`, `index.html`, fonts or a `factory:board` script to a project.
+add its `server.ts`, `index.html` or fonts to a project; projects use the per-repository
+board above. In this repository it runs with `npm run factory:shared-board`.
 
 The header shows the selected project name and a project switcher; the name is read from package.json
 `displayName`, then `name`, then the project directory. React renders it as text.
