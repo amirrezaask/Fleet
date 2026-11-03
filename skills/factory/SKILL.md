@@ -22,7 +22,7 @@ viewing never authorize implementation.
 | `/factory-build [task]` | Implement the plan, keep its fast tests green, write `DEBRIEF.md` |
 | `/factory-test [task]` | Run the gates: regression, acceptance, review, heavy checks; write the report, close the task |
 
-A stage command names the task by name (its directory name). Without one,
+A stage command names the task by its directory name, number or slug. Without one,
 use the only `inprogress` task, or ask. If a command skips an unfinished earlier
 stage, run that stage first (`/factory-build` on a task without a plan plans first),
 unless the user said to skip it.
@@ -82,7 +82,7 @@ debrief template, including one for work done without the pipeline.
 
 ## Tasks
 
-A task is one directory, `.factory/<task-name>/`, whose name never changes. It holds
+A task is one directory, `.factory/<NNN>-<task-name>/`, numbered `001`, `002`, ... in creation order, whose name never changes. It holds
 `TASK.md`, its stage documents and test `REPORT.md`, its `design/` folder and its
 `subtasks/` folder. `.factory/` at the project root lists every task. `TASK.md`
 records the state in frontmatter: `status:` is `backlog`, `inprogress`,
@@ -90,7 +90,7 @@ records the state in frontmatter: `status:` is `backlog`, `inprogress`,
 `intent`, `design`, `plan`, `build`, `test` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 
-`/factory-intent` creates `.factory/<name>/` with `TASK.md` from the
+`/factory-intent` creates `.factory/<NNN>-<name>/` (the next free number) with `TASK.md` from the
 [task template](templates/TASK_TEMPLATE.md), status `backlog`. **When an agent picks
 a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
 sets `backlog` when it stops between stages with no work in flight, `blocked` with the
@@ -112,7 +112,7 @@ enters the pipeline when the user runs a command on it.
 ## Subtasks
 
 Split a task when parts can be planned, built and tested separately. A subtask is a
-directory `<task>/subtasks/<subtask-name>/` with the same files, nests without limit,
+directory `<task>/subtasks/<NNN>-<subtask-name>/`, numbered within its parent, with the same files, nests without limit,
 and refines its parent: its intent needs no approval from the user ("Approval: not
 required, subtask of `<parent>`"), may add detail and `R` IDs, and never weakens a
 parent requirement. A parent becomes `done` only after every descendant is done and
@@ -137,6 +137,6 @@ update them with verified behavior after Test. Follow
 
 On resume, read `TASK.md`, the stage documents, the relevant specs and the actual
 Git diff, and continue from the recorded stage. Chat history alone is not enough.
-Keep status in the directory name and `TASK.md`, decisions in the stage documents,
+Keep status in `TASK.md`, decisions in the stage documents,
 and results in the debrief and report; create no parallel progress logs. The
 optional board changes task metadata only; it never starts agents.

@@ -57,7 +57,7 @@ browser. The installer links it onto PATH as `~/.local/bin/md`.
 Run `/factory <request>` (or one stage command at a time). The task then lives in:
 
 ```text
-.factory/<task-name>/               # name never changes
+.factory/<NNN>-<task-name>/         # 001, 002, ... in creation order; name never changes
   TASK.md           # frontmatter: title, dates, status (backlog | inprogress | blocked | done), stage; blocker, report link
   INTENT.md         # approved requirements (one screen, for the user)
   DESIGN.md         # flagged concerns, decisions, links into design/
@@ -66,7 +66,7 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
   DEBRIEF.md        # build notes for future agents and engineers
   REPORT.md         # test report, verdict first
   evidence/         # raw test output (gitignored)
-  subtasks/<subtask-name>/   # same files; no approval from the user needed
+  subtasks/<NNN>-<subtask-name>/   # same files; no approval from the user needed
 ```
 
 New task documents are Markdown, built from Factory's `TASK_TEMPLATE.md`,

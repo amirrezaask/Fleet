@@ -3,24 +3,28 @@
 ## Layout
 
 `.factory/` at the project root lists every task. Each task is one directory named
-`<task-name>`, and the name never changes:
+`<NNN>-<task-name>`, and the name never changes:
 
 ```text
 .factory/
-  account-recovery/
+  001-account-recovery/
     TASK.md  INTENT.md  DESIGN.md  PLAN.md  DEBRIEF.md  REPORT.md
     design/                                                   # design artifacts
       flow.md  mock.html  states.png
     evidence/                                                 # raw test output, gitignored
     worktree/                                                 # task worktrees, gitignored
     subtasks/
-      email-token/                                            # subtask, same layout
-      rate-limit/
-  export-csv/
+      001-email-token/                                        # subtask, same layout
+      002-rate-limit/
+  002-export-csv/
 ```
 
-The name is lowercase ASCII letters and numbers separated by single hyphens, unique
-among its siblings. Reuse existing tasks; never overwrite another task to resolve a
+`<NNN>` is a three-digit, zero-padded sequence number (`001`, `002`, ...) so the
+directories always list in creation order: a new task takes one more than the highest
+number among its siblings in `.factory/` (or in the parent's `subtasks/`), starting at
+`001`; numbers are never reused or renumbered. The rest of the name is lowercase ASCII
+letters and numbers separated by single hyphens, unique among its siblings. Commands
+may name a task by its full directory name, its number or its slug. Reuse existing tasks; never overwrite another task to resolve a
 collision. Only directories inside `subtasks/` are subtasks, so `design/`,
 `evidence/` and `worktree/` are never mistaken for them. Link between a task's own
 files with relative paths (`design/mock.html`, `REPORT.md`, `../DESIGN.md`).
@@ -49,7 +53,7 @@ the file, browse it with the board or
 ## Subtasks
 
 A subtask is a directory in its task's `subtasks/` folder with the same files,
-`<task>/subtasks/<subtask-name>/`. A subtask intent needs no approval from the user
+`<task>/subtasks/<NNN>-<subtask-name>/`, numbered within its parent. A subtask intent needs no approval from the user
 but refines, never contradicts, its parent's; record "Approval: not required, subtask
 of `<parent>`". Subtasks nest without limit. The board shows a done/total count over
 all descendants and never changes subtask status by itself. Dependencies between
