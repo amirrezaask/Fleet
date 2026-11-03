@@ -29,6 +29,10 @@ collision. Only directories inside `subtasks/` are subtasks, so `design/`,
 `evidence/` and `worktree/` are never mistaken for them. Link between a task's own
 files with relative paths (`design/mock.html`, `REVIEW.md`, `../DESIGN.md`).
 
+A task starts from a request. Requests without a task yet wait in
+[`.factory/backlog.md`](backlog.md), which is a file, not a directory, and the board
+ignores it.
+
 ## Metadata and status
 
 `TASK.md` frontmatter carries a nonempty `title`, quoted ISO `created` and
