@@ -65,7 +65,10 @@ export async function startDashboard(
   });
 
   const name = basename(await realpath(repo));
-  const page = await readFile(join(here, "dashboard.html"));
+  const escaped = name.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+  const page = (await readFile(join(here, "dashboard.html")))
+    .toString("utf8")
+    .replace("<title>Factory dashboard</title>", () => `<title>${escaped}</title>`);
 
   const server = createServer(async (req, res) => {
     const send = (status: number, body: string | Buffer, type = "text/plain; charset=utf-8") => {
