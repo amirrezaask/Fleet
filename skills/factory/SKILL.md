@@ -21,8 +21,8 @@ Factory is one command, `/factory`, with an optional stage subcommand.
 | `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` (next free number) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
-| `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REPORT.md` are committed |
-| `/factory review [task]` | `REPORT.md` | Managing agent only; follow [review](references/review.md): four parallel reviewers (code, security, UI, UX) | Findings are resolved, `REPORT.md` has the review, specs are committed with status `done`, or status is `blocked` |
+| `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |
+| `/factory review [task]` | `REVIEW.md` | Managing agent only; follow [review](references/review.md): four parallel reviewers (code, security, UI, UX) | Findings are resolved, `REVIEW.md` has the review, specs are committed with status `done`, or status is `blocked` |
 
 The first word after `/factory` is a subcommand only when it is exactly `intent`,
 `design`, `plan`, `build` or `review`; anything else goes to the router. A subcommand
@@ -41,8 +41,8 @@ of the stage's artifact and tells the user the next command.
 | Intent | [intent](references/intent.md) | `INTENT.md` | The user: one screen | **The user approves the intent** |
 | Design | [design](references/design.md) | `DESIGN.md`, `design/` | The user reviews | **The user accepts the design**, or the intent says it is skipped |
 | Plan | [plan](references/plan.md) | `PLAN.md` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
-| Build | [build](references/build.md) | Code, tests, `DEBRIEF.md`, `REPORT.md` | Future agents; the user reads the verdict | Fast tests green, then regression, acceptance and heavy gates (last) pass |
-| Review | [review](references/review.md) | Review section of `REPORT.md` | The user: verdict first | Code, security, UI and UX reviewers pass and specs match the verified behavior |
+| Build | [build](references/build.md) | Code, tests, `DEBRIEF.md`, `REVIEW.md` | Future agents; the user reads the verdict | Fast tests green, then regression, acceptance and heavy gates (last) pass |
+| Review | [review](references/review.md) | Review section of `REVIEW.md` | The user: verdict first | Code, security, UI and UX reviewers pass and specs match the verified behavior |
 
 **Every stage ends with a commit** of its artifact, and the next stage starts by
 reading it. The commit chain is the audit trail: what was asked, what was decided,
@@ -76,7 +76,7 @@ documents for agents are complete.
   interrogation. Verbosity helps here.
 - **`DEBRIEF.md`** (future agents and engineers): how the build went, deviations,
   abnormalities, traps and lessons. Factual and complete.
-- **`REPORT.md`** (the user first, auditors after): verdict and requirement matrix on
+- **`REVIEW.md`** (the user first, auditors after): verdict and requirement matrix on
   the first screen, evidence below.
 
 All documents are Markdown from the [templates](templates/); the user reviews any of
@@ -89,7 +89,7 @@ debrief template, including one for work done without the pipeline.
 ## Tasks
 
 A task is one directory, `.factory/<NNN>-<task-name>/`, numbered `001`, `002`, ... in creation order, whose name never changes. It holds
-`TASK.md`, its stage documents and test `REPORT.md`, its `design/` folder and its
+`TASK.md`, its stage documents and `REVIEW.md` (older tasks: `REPORT.md`), its `design/` folder and its
 `subtasks/` folder. `.factory/` at the project root lists every task. `TASK.md`
 records the state in frontmatter: `status:` is `backlog`, `inprogress`,
 `blocked` or `done`, and `stage:` is

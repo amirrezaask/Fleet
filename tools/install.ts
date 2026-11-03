@@ -226,7 +226,7 @@ function main(): void {
     { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
     { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
     { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
-    { name: "TEST_REPORT_TEMPLATE.md", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.md" },
+    { name: "REVIEW_TEMPLATE.md", path: "skills/factory/templates/REVIEW_TEMPLATE.md" },
     { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
   ];
 
@@ -334,7 +334,7 @@ function main(): void {
   // the target no longer exists.
   const retiredTemplates = [
     "BRIEF_TEMPLATE.md",
-    ...["BRIEF", "INTENT", "DESIGN", "PLAN", "DEBRIEF", "TEST_REPORT", "SPEC"].map(
+    ...["BRIEF", "INTENT", "DESIGN", "PLAN", "DEBRIEF", "REVIEW", "SPEC"].map(
       (kind) => `${kind}_TEMPLATE.html`,
     ),
   ];
