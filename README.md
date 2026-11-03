@@ -1,4 +1,4 @@
-# Global agent instructions and skills
+# Amirreza's Custom Agents.md
 
 `AGENTS.md` holds global conventions. Factory is an opt-in delivery pipeline,
 Intent → Design → Plan → Build → Review, started only by `/factory` or a stage
