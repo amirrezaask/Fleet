@@ -4,11 +4,11 @@ Address the user as ADMIN. GLOBAL means `~/.agents/`.
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `.factory/<task-name>/` : Factory tasks with `TASK.html` metadata (including `status`: `backlog`, `inprogress`, `blocked`, `done`), approved `INTENT.html`, accepted `DESIGN.html` with its artifacts in the task's `design/` folder, mutable `PLAN.html`, `DEBRIEF.html`, and the test `REPORT.html` (raw evidence in the task's gitignored `evidence/` folder). `.factory/` lists every Factory task; there is no `docs/tasks/`. The directory name never changes; status lives in `TASK.html`. Subtasks are directories `<subtask-name>/` in the task's `subtasks/` folder with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
-- `docs/reports/`: benchmark, test and verification results not tied to a Factory task (a task's report and debrief live in its `.factory/` directory), one dir or `.html` per run, `$date-$title`. Track only HTML summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
-- `docs/README.html`, `docs/architecture.html`, `docs/domain.html`, `docs/data-model.html`, `docs/quality.html`, and `docs/operations.html`: Atlas's system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
-- `docs/areas/<area-name>.html`: ground rules, state ownership, and relevant contracts for each software area.
-- `docs/workflows/<flow-name>.html`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
+- `.factory/<NNN>-<task-name>/` : Factory tasks, numbered `001`, `002`, ... in creation order so directories always sort, with `TASK.md` frontmatter metadata (including `status`: `backlog`, `inprogress`, `blocked`, `done`), approved `INTENT.md`, accepted `DESIGN.md` with its artifacts in the task's `design/` folder, mutable `PLAN.md`, `DEBRIEF.md`, and the test `REPORT.md` (raw evidence in the task's gitignored `evidence/` folder). `.factory/` lists every Factory task; there is no `docs/tasks/`. The directory name never changes; status lives in `TASK.md`. Subtasks are directories `<NNN>-<subtask-name>/`, numbered within the task's `subtasks/` folder, with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
+- `docs/reports/`: benchmark, test and verification results not tied to a Factory task (a task's report and debrief live in its `.factory/` directory), one dir or `.md` per run, `$date-$title`. Track only Markdown summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
+- `docs/README.md`, `docs/architecture.md`, `docs/domain.md`, `docs/data-model.md`, `docs/quality.md`, and `docs/operations.md`: system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
+- `docs/areas/<area-name>.md`: ground rules, state ownership, and relevant contracts for each software area.
+- `docs/workflows/<flow-name>.md`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.
@@ -36,7 +36,7 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - It's really important when pursuing a goal we should move towards implementing all the goal specifies first and then validation and qualification. We should spend hours validating a half baked implementation which proves nothing.
 
 ### Artifacts
-**All artifacts are HTML. No Markdown.** Specs, intents, designs, plans, debriefs, reports and any other document an agent produces are `.html` files (`INTENT.html`, `PLAN.html`, ...), self-contained, using the Factory skill's design tokens, Claude-style CSS and fonts. Only this file and `SKILL.md` files stay Markdown; projects may keep older Markdown files, but every new file is HTML. Before creating any HTML meant to communicate with ADMIN, read [HBS](skills/hbs/SKILL.md).
+**All artifacts are Markdown.** Specs, intents, designs, plans, debriefs, reports and any other document an agent produces are `.md` files (`INTENT.md`, `PLAN.md`, ...). Do not write HTML documents to communicate with ADMIN: ADMIN reviews any Markdown file rendered in Claude-style HTML with `md <file.md>` (`tools/md.ts`, linked onto PATH by the installer). Use Mermaid code blocks for diagrams. Projects may keep older HTML documents in place; every new document is Markdown.
 
 ### Cleanliness
 - **No leftover files.** Add no Markdown or JSON that nothing will read again (progress notes, handoffs, summaries, audit dumps, receipts). Delete your own scratch files, `.work` contents and stray processes when the request is done.
@@ -51,13 +51,10 @@ When the conversation is compacted, keep ADMIN's main goal: the request being wo
 Intent → Design → Plan → Build → Test. It runs only when ADMIN types `/factory` or a
 stage command (`/factory-intent`, `/factory-design`, `/factory-plan`, `/factory-build`,
 `/factory-test`); never start it from an inferred trigger. Without a command, handle
-software requests directly under these rules. [Atlas](skills/atlas/SKILL.md) owns
-specification discovery methods, the structure above, and specification templates.
-Only ADMIN's explicit `/atlas` command starts initialization/documentation of an
-existing project. Factory reads affected specs before intent and plan, and
-reconciles them with verified behavior in Test using its own specification guide;
-it does not depend on Atlas. Research discussions do not authorize implementation.
+software requests directly under these rules. Factory reads affected specs before
+intent and plan, and reconciles them with verified behavior in Test using its own
+specification guide. Research discussions do not authorize implementation.
 
 GLOBAL template filenames remain available through installer-managed symlinks;
-intent, design, plan, debrief, test report and task templates live inside Factory;
-specification templates live inside Atlas.
+intent, design, plan, debrief, test report, task and specification templates live
+inside Factory.

@@ -1,6 +1,6 @@
 ---
 name: factory-design
-description: Factory design stage, run only when the user types /factory-design. Accept the task's intent, then produce DESIGN.html with flagged concerns, decisions and design/ artifacts (mocks, diagrams) in the task directory for the user's review.
+description: Factory design stage, run only when the user types /factory-design. Accept the task's intent, then produce DESIGN.md with flagged concerns, decisions and design/ artifacts (mocks, diagrams) in the task directory for the user's review.
 disable-model-invocation: true
 ---
 
@@ -10,8 +10,8 @@ This command runs one stage of Factory's opt-in pipeline. Read the
 [Factory skill](../factory/SKILL.md) first: it holds the task layout, gates, document
 audiences and requirement rules this stage relies on.
 
-Running this command accepts the task's `INTENT.html`; record the approval entry if
-it is missing. Set the task status to `inprogress` in `TASK.html`, set the stage to `design`, and follow
+Running this command accepts the task's `INTENT.md`; record the approval entry if
+it is missing. Set the task status to `inprogress` in `TASK.md`, set the stage to `design`, and follow
 [the design guide](../factory/references/design.md). The stage ends when the user
 accepts the design and it is committed. Do not plan or build in this command.
 

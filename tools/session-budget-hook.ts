@@ -206,23 +206,23 @@ function htmlBlockerSection(html: string): string {
     .trim();
 }
 
-// A task is escalated when its TASK.html (or legacy TASK.md) Blocker section names a real blocker.
+// A task is escalated when its TASK.md (or legacy TASK.html) Blocker section names a real blocker.
 function escalated(task: string): boolean {
-  const html = join(task, "TASK.html");
   const markdown = join(task, "TASK.md");
+  const html = join(task, "TASK.html");
 
-  const blocker = existsSync(html)
-    ? htmlBlockerSection(readFileSync(html, "utf8"))
-    : existsSync(markdown)
-      ? blockerSection(readFileSync(markdown, "utf8"))
+  const blocker = existsSync(markdown)
+    ? blockerSection(readFileSync(markdown, "utf8"))
+    : existsSync(html)
+      ? htmlBlockerSection(readFileSync(html, "utf8"))
       : "";
 
   return blocker !== "" && !/^(none\.?|<[^>]*>)$/i.test(blocker);
 }
 
-// A Factory task is in progress when its TASK.html status meta (or TASK.md status key) says so.
+// A Factory task is in progress when its TASK.md status key (or legacy TASK.html status meta) says so.
 function inProgress(task: string): boolean {
-  for (const name of ["TASK.html", "TASK.md"]) {
+  for (const name of ["TASK.md", "TASK.html"]) {
     const file = join(task, name);
 
     if (!existsSync(file)) continue;
@@ -304,7 +304,7 @@ function sessionStart(input: HookInput): void {
 
   const resumed =
     input.source === "compact" || input.source === "resume"
-      ? " Context was compacted or resumed: re-read the task's TASK.html, PLAN.html Handoff (or legacy .md) and the git diff before the next step."
+      ? " Context was compacted or resumed: re-read the task's TASK.md, PLAN.md Handoff (or legacy .html) and the git diff before the next step."
       : "";
 
   const listed = tasks.length
@@ -313,7 +313,7 @@ function sessionStart(input: HookInput): void {
 
   context(
     "SessionStart",
-    `Autonomous session (AGENTS.md): never ask ADMIN anything or end a turn waiting for ADMIN; decide, record the decision in PLAN.html, continue. Before working a task, call list_sessions: if a live session already works that task, take a different unowned subtask or end. Title this session after its task. Start other sessions only for independent subtasks. Never start one to continue this task: Claude Code compacts the context itself.${resumed}${listed}`,
+    `Autonomous session (AGENTS.md): never ask ADMIN anything or end a turn waiting for ADMIN; decide, record the decision in PLAN.md, continue. Before working a task, call list_sessions: if a live session already works that task, take a different unowned subtask or end. Title this session after its task. Start other sessions only for independent subtasks. Never start one to continue this task: Claude Code compacts the context itself.${resumed}${listed}`,
   );
 }
 
@@ -340,7 +340,7 @@ function newestCall(lines: TranscriptLine[], name: string, pending?: string): nu
 }
 
 const escalation =
-  "Only a change to an approved BRIEF requirement, or an action outside the repository and sessions, goes to ADMIN, and then as the task's Blocker in TASK.html (referenced from the PLAN.html Handoff), never as a question.";
+  "Only a change to an approved BRIEF requirement, or an action outside the repository and sessions, goes to ADMIN, and then as the task's Blocker in TASK.md (referenced from the PLAN.md Handoff), never as a question.";
 
 function preToolUse(input: HookInput): void {
   if (!autonomous) return;
@@ -349,7 +349,7 @@ function preToolUse(input: HookInput): void {
 
   if (tool === "AskUserQuestion") {
     deny(
-      `ADMIN does not answer questions in these sessions. Decide yourself, record the decision and its reason in PLAN.html, and continue. ${escalation}`,
+      `ADMIN does not answer questions in these sessions. Decide yourself, record the decision and its reason in PLAN.md, and continue. ${escalation}`,
     );
 
     return;
@@ -367,7 +367,7 @@ function preToolUse(input: HookInput): void {
 
   if (tool === handOff) {
     deny(
-      "hand_off_to_session forks this whole context into a second worker. Keep working here: Claude Code compacts the context automatically, and the PLAN.html Handoff carries the task across it.",
+      "hand_off_to_session forks this whole context into a second worker. Keep working here: Claude Code compacts the context automatically, and the PLAN.md Handoff carries the task across it.",
     );
 
     return;
@@ -425,7 +425,7 @@ function stop(input: HookInput): void {
 
   emit({
     decision: "block",
-    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.map((task) => relative(cwd, task) || task).join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.html, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.html, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
+    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.map((task) => relative(cwd, task) || task).join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.md, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.md, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
   });
 }
 

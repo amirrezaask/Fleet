@@ -65,6 +65,12 @@ interface Settings {
 
 const budgetHook = "session-budget-hook.ts";
 
+// Linked onto PATH as `md`: renders a Markdown document as styled HTML for review.
+const markdownViewer = "md.ts";
+
+// Skill links superseded by Factory and Markdown documents; removed even on selected installs.
+const retiredWorkflowSkills = ["communication", "specification", "atlas", "hbs"];
+
 // Claude Code compacts the session itself once context reaches this many tokens;
 // the "Compact Instructions" section of AGENTS.md steers what the summary keeps.
 const autoCompactWindow = 300_000;
@@ -191,7 +197,7 @@ function main(): void {
     join(home, ".cursor", "skills-cursor"),
   ];
 
-  const requiredSkills = ["factory", "atlas"];
+  const requiredSkills = ["factory"];
 
   for (const name of requiredSkills) {
     const source = join(repo, "skills", name, "SKILL.md");
@@ -205,18 +211,19 @@ function main(): void {
 
   const globalFiles = [
     { name: "AGENTS.md", path: "AGENTS.md" },
-    { name: "INTENT_TEMPLATE.html", path: "skills/factory/templates/INTENT_TEMPLATE.html" },
-    { name: "DESIGN_TEMPLATE.html", path: "skills/factory/templates/DESIGN_TEMPLATE.html" },
-    { name: "PLAN_TEMPLATE.html", path: "skills/factory/templates/PLAN_TEMPLATE.html" },
-    { name: "DEBRIEF_TEMPLATE.html", path: "skills/factory/templates/DEBRIEF_TEMPLATE.html" },
-    {
-      name: "TEST_REPORT_TEMPLATE.html",
-      path: "skills/factory/templates/TEST_REPORT_TEMPLATE.html",
-    },
-    { name: "SPEC_TEMPLATE.html", path: "skills/atlas/templates/AREA_TEMPLATE.html" },
+    { name: "INTENT_TEMPLATE.md", path: "skills/factory/templates/INTENT_TEMPLATE.md" },
+    { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
+    { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
+    { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
+    { name: "TEST_REPORT_TEMPLATE.md", path: "skills/factory/templates/TEST_REPORT_TEMPLATE.md" },
+    { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
   ];
 
-  for (const path of [...globalFiles.map((file) => file.path), join("tools", budgetHook)]) {
+  for (const path of [
+    ...globalFiles.map((file) => file.path),
+    join("tools", budgetHook),
+    join("tools", markdownViewer),
+  ]) {
     const source = join(repo, path);
 
     if (!existsSync(source) || !statSync(source).isFile()) {
@@ -231,13 +238,16 @@ function main(): void {
         destination: join(base, name),
         previousSources: [
           join(repo, name),
-          ...(name === "SPEC_TEMPLATE.html"
-            ? [join(repo, "skills/factory/templates/SPEC_TEMPLATE.html")]
+          ...(name === "SPEC_TEMPLATE.md"
+            ? [
+                join(repo, "skills/factory/templates/SPEC_TEMPLATE.md"),
+                join(repo, "skills/atlas/templates/AREA_TEMPLATE.md"),
+              ]
             : []),
           join(
             repo,
             "skills",
-            name === "SPEC_TEMPLATE.html" ? "specification" : "communication",
+            name === "SPEC_TEMPLATE.md" ? "specification" : "communication",
             "templates",
             name,
           ),
@@ -254,6 +264,10 @@ function main(): void {
     {
       source: join(repo, "skills", "factory", "assets", "task-board", "bin.js"),
       destination: join(home, ".local", "bin", "production-line"),
+    },
+    {
+      source: join(repo, "tools", markdownViewer),
+      destination: join(home, ".local", "bin", "md"),
     },
   ];
 
@@ -274,7 +288,7 @@ function main(): void {
     if (!present(base) || !lstatSync(base).isDirectory()) continue;
 
     for (const name of readdirSync(base)) {
-      if (selected.length && !["communication", "specification"].includes(name)) continue;
+      if (selected.length && !retiredWorkflowSkills.includes(name)) continue;
       const path = join(base, name);
 
       if (!skills.includes(name) && present(path) && lstatSync(path).isSymbolicLink()) {
@@ -304,12 +318,14 @@ function main(): void {
       throw new Error(`Refusing unrelated symlink: ${destination} -> ${target}`);
   }
 
-  // Markdown template aliases were replaced by HTML ones and the HTML brief by the intent;
+  // HTML template aliases were replaced by Markdown ones and the brief by the intent;
   // each is removed only when it points at a location this repository managed, even if
   // the target no longer exists.
   const retiredTemplates = [
-    ...["BRIEF", "PLAN", "DEBRIEF", "SPEC"].map((kind) => `${kind}_TEMPLATE.md`),
-    "BRIEF_TEMPLATE.html",
+    "BRIEF_TEMPLATE.md",
+    ...["BRIEF", "INTENT", "DESIGN", "PLAN", "DEBRIEF", "TEST_REPORT", "SPEC"].map(
+      (kind) => `${kind}_TEMPLATE.html`,
+    ),
   ];
 
   for (const base of globals) {
@@ -322,11 +338,11 @@ function main(): void {
       const formerTargets = [
         join(repo, name),
         join(repo, "skills", "factory", "templates", name),
-        join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.md"),
+        join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.html"),
         join(
           repo,
           "skills",
-          name === "SPEC_TEMPLATE.md" ? "specification" : "communication",
+          name === "SPEC_TEMPLATE.html" ? "specification" : "communication",
           "templates",
           name,
         ),

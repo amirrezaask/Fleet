@@ -1,21 +1,21 @@
 # Plan: write the implementation plan agents build from
 
-Goal: a `PLAN.html` complete enough that an agent who never saw the conversation
+Goal: a `PLAN.md` complete enough that an agent who never saw the conversation
 can implement and test the change in one pass. The plan is for agents; be explicit
 and verbose where it removes guessing. Plan in read-only mode: inspect the code,
 change nothing.
 
 ## Inputs
 
-Read `INTENT.html`, `DESIGN.html` and its artifacts, the affected area specs and
+Read `INTENT.md`, `DESIGN.md` and its artifacts, the affected area specs and
 workflows, and the implementation. Use qualified references (`INTENT:R1`,
-`DESIGN:D2`, `areas/identity.html#AUTH-003`, or a legacy spec's own ID) so IDs from
+`DESIGN:D2`, `areas/identity.md#AUTH-003`, or a legacy spec's own ID) so IDs from
 different documents are not confused. Never restate or redefine requirements in the
 plan; link them. List preserved requirements next to the new behavior.
 
 ## Contents
 
-Use the [plan template](../templates/PLAN_TEMPLATE.html):
+Use the [plan template](../templates/PLAN_TEMPLATE.md):
 
 - **Current state:** behavior, relevant paths and their responsibilities, interfaces,
   dependencies and evidence. For a bug: reproduction, expected and actual result,
@@ -58,7 +58,7 @@ Before committing, confirm:
   or is marked as not runnable here with the reason.
 - No open question blocks a step.
 
-Commit `PLAN.html` and set the stage to `build`. The user may ask to review the plan;
+Commit `PLAN.md` and set the stage to `build`. The user may ask to review the plan;
 otherwise no human approval is needed. When the user authorizes subagents for the build,
 give each a bounded deliverable with pointers to the intent, design, plan rows,
 interfaces and the fast tests it owns.
