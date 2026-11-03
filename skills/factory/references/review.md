@@ -18,11 +18,19 @@ heavy gates (their results are in `REVIEW.md`). It may run a command only to con
 specific finding. No custom agent definitions are needed: spawn each with the generic
 subagent and the lens prompt below, so the stage works in any host.
 
-Each reviewer returns `VERDICT: PASS | CHANGES` and a numbered list of findings, each
-`<Important|Nit> · <path:line> · <problem and the fix wanted>`. `Important` breaks
-behavior, leaks data, violates a requirement, the design or a policy; `Nit` is
-everything else (at most five per reviewer). From a second round on, the reviewer also
-checks whether its earlier findings were fixed.
+Each reviewer's reply **starts with exactly one verdict line**, `VERDICT: PASS` or
+`VERDICT: CHANGES`, then a numbered list of findings, each
+`<Important|Nit> · <path:line> · <problem and the fix wanted>`. Nothing precedes the
+verdict line. `PASS` means no `Important` finding remains; any `Important` finding
+means `CHANGES`. `Important` breaks behavior, leaks data, violates a requirement, the
+design or a policy; `Nit` is everything else (at most five per reviewer). From a second
+round on, the reviewer also checks whether its earlier findings were fixed.
+
+**Barrier.** A round is complete only when every started reviewer has replied. Read
+each reply's first line as its verdict, and change no code while a reviewer is still
+running. A reply whose first line is not a verdict line is a failed reviewer: re-run
+that lens once with the same prompt, and if it fails again set the task `blocked` with
+that reason. Never infer a verdict from the prose.
 
 ### Lenses
 
@@ -61,15 +69,24 @@ intent's outcome is actually reachable and discoverable.
    decision stops for the user. Fix or consciously accept `Nit`s. When a fix changes the
    approach, revise `PLAN.md` in the same commit and add the incident to `DEBRIEF.md`.
 3. Re-run the affected fast tests, and the heavy gates a fix could have changed, then
-   run the reviewers that raised `Important` findings again. Repeat until all four
-   return `PASS` or the user accepts the remainder as a known limitation. Stop after
-   three rounds and ask the user.
+   run the reviewers that raised `Important` findings again as the next round. Repeat
+   until all started reviewers return `VERDICT: PASS` or the user accepts the
+   remainder as a known limitation.
+
+**Round cap: `MAX_ROUNDS = 3`.** The first run is round 1; at most two fix rounds
+follow. If any reviewer still returns `VERDICT: CHANGES` after round 3, escalate
+instead of looping: set `status: blocked` in `TASK.md` with the reason "Review rounds
+exhausted", record the outstanding `Important` findings (reviewer, location, problem)
+in the Review section of `REVIEW.md` and `DEBRIEF.md`, keep the branch and worktree
+for inspection, commit, and report the task as blocked. Do not wait for the user to
+answer; they unblock it by accepting the findings, amending the requirement or design,
+or running `/factory review` again, which starts a fresh cap of three rounds.
 
 ## Record and close
 
 Fill the **Review** section of `REVIEW.md`, one subsection per reviewer (Code,
 Security, UI, UX) from the [review template](../templates/REVIEW_TEMPLATE.md): its
-verdict and each finding with its resolution (fixed in `<sha>`, accepted by the user,
+verdict (the same `PASS`/`CHANGES` word as its verdict line, per round) and each finding with its resolution (fixed in `<sha>`, accepted by the user,
 rejected because), or "Skipped: <reason>". Then:
 
 1. Update the affected specs from the verified behavior
