@@ -12,7 +12,7 @@ Never add a top-level directory without asking. Beyond the stack's own source la
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.
-- `.worktrees/`: git worktrees not tied to a Factory task. A Factory task's worktrees live in its own `.factory/<task-name>/worktree/<branch-name>/` (gitignored); subtasks use their own `worktree/` the same way.
+- `.worktrees/`: git worktrees not tied to a Factory task. A Factory task's worktrees live in its own `.factory/<NNN>-<task-name>/worktree/<branch-name>/` (gitignored); subtasks use their own `worktree/` the same way.
 
 ## Rules
 ### Version Control
