@@ -50,7 +50,7 @@ does not change what gets built or how it is judged.
 ## Approval
 
 Show the user the intent (path, or a short summary in chat) and stop for approval.
-`/factory-design` or `/factory-plan` on the task counts as approval. Record the
+`/factory design` or `/factory plan` on the task counts as approval. Record the
 approval entry with who and when, then commit. After approval the requirements are
 frozen; change them only through an amendment that the user authorized.
 

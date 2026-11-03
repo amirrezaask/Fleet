@@ -32,7 +32,7 @@ Use the [plan template](../templates/PLAN_TEMPLATE.md):
   - `fast`: runs in seconds to a minute with one command. Build writes these and
     keeps them green; Test only re-runs them as regression.
   - `heavy`: e2e, browser, load, performance, cross-platform, long suites. Runs only
-    in `/factory-test`.
+    in `/factory test`.
 
   Every requirement has at least one test. Tests prove behavior and meaningful failure
   modes, not code structure. For a bug, `T1` is the reproducing test, written and

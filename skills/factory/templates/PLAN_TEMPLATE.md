@@ -32,7 +32,7 @@ Plan · for [INTENT.md](<INTENT.md>) and [DESIGN.md](<DESIGN.md>) · created <YY
 
 ## Test plan
 
-_Decided before code. Every R and D has a test. `fast` tests run during build and must be green before Test; `heavy` tests run only in /factory-test. For a bug, T1 reproduces it and is committed failing before the fix._
+_Decided before code. Every R and D has a test. `fast` tests run during build and must be green before Test; `heavy` tests run only in /factory test. For a bug, T1 reproduces it and is committed failing before the fix._
 
 | ID | Proves | Level | Tier | File or procedure | Command | Pass condition |
 | --- | --- | --- | --- | --- | --- | --- |

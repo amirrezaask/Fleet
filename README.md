@@ -10,7 +10,6 @@ as Claude-styled HTML with `md <file.md>`.
 | Skill | Task trigger |
 | --- | --- |
 | `factory` | Only `/factory`: route a task through the pipeline, stopping at human gates; task board |
-| `factory-intent`, `factory-design`, `factory-plan`, `factory-build`, `factory-test` | Only the matching `/factory-<stage>` command: run that one stage |
 | `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
@@ -23,11 +22,11 @@ goes to the gates.
 
 | Stage | Command | Artifact | Reader | Gate |
 | --- | --- | --- | --- | --- |
-| Intent | `/factory-intent` | `INTENT.md` | The user, one screen | The user approves |
-| Design | `/factory-design` | `DESIGN.md` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
-| Plan | `/factory-plan` | `PLAN.md` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
-| Build | `/factory-build` | Code, tests, `DEBRIEF.md` | Future agents | Fast tests green |
-| Test | `/factory-test` | `REPORT.md` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
+| Intent | `/factory intent` | `INTENT.md` | The user, one screen | The user approves |
+| Design | `/factory design` | `DESIGN.md` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
+| Plan | `/factory plan` | `PLAN.md` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
+| Build | `/factory build` | Code, tests, `DEBRIEF.md` | Future agents | Fast tests green |
+| Test | `/factory test` | `REPORT.md` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
