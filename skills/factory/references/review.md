@@ -91,7 +91,7 @@ rejected because), or "Skipped: <reason>". Then:
 
 1. Update the affected specs from the verified behavior
    ([specification integration](specifications.md)).
-2. Out-of-scope findings worth doing become draft-intent tasks with status `backlog`.
+2. Out-of-scope findings worth doing are appended to `.factory/backlog.md`.
 3. A memory candidate from the debrief that recurred here is proposed to the user as a
    concrete `AGENTS.md`/`CLAUDE.md` or skill edit.
 4. Remove the task's `worktree/` contents with `git worktree remove`, set the status to

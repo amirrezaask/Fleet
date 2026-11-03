@@ -1,6 +1,6 @@
 ---
 name: factory
-description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Review with committed Markdown task documents and the local task board. Run only when the user types /factory, optionally with a stage subcommand (/factory intent|design|plan|build|review); never start it from an inferred trigger.
+description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Review with committed Markdown task documents and the local task board. Run only when the user types /factory, optionally with a stage subcommand (/factory intent|design|plan|build|review|next); never start it from an inferred trigger.
 disable-model-invocation: true
 ---
 
@@ -18,13 +18,14 @@ Factory is one command, `/factory`, with an optional stage subcommand.
 | Command | Accepts on entry | Does | Ends when |
 | --- | --- | --- | --- |
 | `/factory [request or task]` | — | Router: find or create the task, report its stage, run stages forward | It stops at each human gate |
+| `/factory next` | `.factory/backlog.md` | Take the first open backlog line, claim it, and run `/factory intent` on it; see [backlog](references/backlog.md) | The intent stops at its approval gate |
 | `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` (next free number) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
 | `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |
 | `/factory review [task]` | `REVIEW.md` | Managing agent only; follow [review](references/review.md): four parallel reviewers (code, security, UI, UX) | All reviewers return `VERDICT: PASS` within 3 rounds, `REVIEW.md` has the review, specs are committed with status `done`; or the cap is hit and status is `blocked` |
 
-The first word after `/factory` is a subcommand only when it is exactly `intent`,
+The first word after `/factory` is a subcommand only when it is exactly `next`, `intent`,
 `design`, `plan`, `build` or `review`; anything else goes to the router. A subcommand
 names the task by directory name, number or slug (`intent` may instead describe a new
 request); without one, use the only `inprogress` task, or ask. Running a subcommand
@@ -110,10 +111,14 @@ remove, weaken or reinterpret a requirement or an accepted design decision. A
 conflict needs the user's explicit authorization, recorded as an amendment entry in
 the affected document, with the earlier text kept in Git.
 
+**The backlog.** `.factory/backlog.md` is the user's queue of requests that have no task
+yet: one line each, no ceremony. `/factory next` turns the first open line into a task
+and the pipeline runs as usual. Read [backlog](references/backlog.md).
+
 **The loop.** A finding outside the task's scope (a bug, a risk, a debt) is not fixed
-silently. Record it in the debrief or report, and when it deserves work, create a
-new task with status `backlog` holding a draft `INTENT.md` marked "Draft: not approved". It
-enters the pipeline when the user runs a command on it.
+silently. Record it in the debrief or report, and when it deserves work, append it as
+an open line to `.factory/backlog.md`. It enters the pipeline when `/factory next`
+reaches it or the user runs `/factory intent` on it.
 
 ## Subtasks
 
