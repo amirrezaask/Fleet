@@ -61,8 +61,11 @@ is the only writer of its `subtasks/` folder.
 
 ## Metadata and status
 
-`TASK.md` frontmatter carries a nonempty `title`, quoted ISO `created` and
-`updated` dates, `stage` and `status`:
+`TASK.md` is frontmatter only: a nonempty `title`, quoted ISO `created` and
+`updated` dates, `stage` and `status`, plus optional `blocker` (reason, while blocked)
+and `depends_on` (sibling subtasks, subtasks only). Everything else is derived or lives
+in the stage documents: subtasks are the `subtasks/` directories, the outcome is
+`REVIEW.md`, and the parent is the enclosing directory.
 
 | `status` | Board column | Meaning |
 | --- | --- | --- |
@@ -75,7 +78,7 @@ is the only writer of its `subtasks/` folder.
 `done`); `status` is whether anyone is working on it. A missing or unknown status
 reads as `backlog`. Change status by editing the key (or the board) and `updated`;
 the directory is never renamed or moved, so worktrees and links survive. Record
-blockers and the report link in the body. A status change is bookkeeping: it does not
+the blocker in `blocker:`. A status change is bookkeeping: it does not
 approve work, run plans, prove completion or start sessions. Because state lives in
 the file, browse it with the board or
 `grep -r '^status:' .factory --include=TASK.md`.
@@ -87,7 +90,7 @@ A subtask is a directory in its task's `subtasks/` folder with the same files,
 but refines, never contradicts, its parent's; record "Approval: not required, subtask
 of `<parent>`". Subtasks nest without limit. The board shows a done/total count over
 all descendants and never changes subtask status by itself. Dependencies between
-siblings live in `TASK.md` under `## Depends on`; see [subtask graphs](subtasks.md).
+siblings live in `TASK.md` as `depends_on`; see [subtask graphs](subtasks.md).
 
 ## Older layouts
 

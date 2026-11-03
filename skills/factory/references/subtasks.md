@@ -31,7 +31,7 @@ subtask on all of them.
 ## Record dependencies
 
 Dependencies are edges between sibling subtasks of the same parent. List them in
-the subtask's `TASK.md` under `## Depends on` as sibling subtask names, or `None`.
+the subtask's `TASK.md` frontmatter as `depends_on: [<sibling>, ...]` (sibling subtask directory names; omit when none).
 Edges describe what must be `done` first, never a preferred order. Keep them
 minimal and acyclic; split or merge subtasks to break a cycle. Dependency edges
 do not change status rules and the board ignores them.

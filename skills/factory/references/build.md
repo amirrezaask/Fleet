@@ -36,8 +36,8 @@ nothing. Heavy gates are never run mid-build.
 
 Follow the plan's order and contracts. When reality departs from it, update
 `PLAN.md` **in the same commit** as the departing code (date, reason, affected IDs,
-impact). Requirement or design conflicts stop for the user; record the blocker in
-`TASK.md` and set the status to `blocked`.
+impact). Requirement or design conflicts stop for the user; record the reason in
+`TASK.md` as `blocker:` and set the status to `blocked`.
 
 Commit in coherent increments. Each message names the task and the plan steps
 (`factory(<task>): build M2-M3`).
@@ -85,8 +85,7 @@ Write `REVIEW.md` in the task directory, next to the debrief, from the
 [review template](../templates/REVIEW_TEMPLATE.md). First screen: the
 verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
 decide. Below that: gate results, limitations and out-of-scope findings. Leave the
-Review section for `/factory review`, which fills one subsection per reviewer. Link
-`REVIEW.md` from `TASK.md`.
+Review section for `/factory review`, which fills one subsection per reviewer.
 
 Then commit, set the stage to `review`, and continue with `/factory review` when
 `/factory` is running the pipeline. Build does not set the task to `done`; Review does.
