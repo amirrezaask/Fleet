@@ -115,6 +115,13 @@ same `skills/factory/assets/dashboard/dashboard.html`:
   in a Chromium browser and pick the repository or its `.factory` folder once; the
   browser remembers the folder and asks only for read permission again. No process runs.
 
+The page is React, shadcn-style components and Tailwind in the Claude look (light, dark
+or system theme), bundled with its fonts into that one file, so it needs no network.
+Task documents open in an animated drawer; inside a subtask, breadcrumbs lead back to
+every parent task. Sources live in `skills/factory/assets/dashboard/src/`; after
+changing them run `npm run build:dashboard` and commit the regenerated `dashboard.html`
+(a test fails if it drifts).
+
 Never copy the server or add a `factory:dashboard` script to a project: the skill keeps
 the single copy. This is separate from the shared board below.
 

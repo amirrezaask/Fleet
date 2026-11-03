@@ -2,133 +2,25 @@ import assert from "node:assert/strict";
 import { request, type IncomingHttpHeaders } from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
-import vm from "node:vm";
 import { startDashboard } from "../skills/factory/assets/dashboard/server.ts";
-
-const assets = join(
-  resolve(dirname(fileURLToPath(import.meta.url)), ".."),
-  "skills",
-  "factory",
-  "assets",
-  "dashboard",
-);
-
-interface Task {
-  id: string;
-  status: string;
-  title: string;
-  blocker: string;
-  files: string[];
-  subtasks: Task[];
-}
-
-interface Model {
-  parseFrontmatter(text: string): { data: Record<string, string>; body: string };
-  buildTasks(files: { path: string }[], texts: Record<string, string>): Task[];
-  parseBacklog(text: string): { taken: boolean; text: string; task: string; context: string }[];
-  markdown(src: string): string;
-  resolveRelative(from: string, href: string): string;
-  folderSource(picked: FakeDirectory): Promise<{
-    list(): Promise<{ name: string; files: { path: string; mtime: number }[] }>;
-    read(path: string): Promise<string>;
-  }>;
-}
-
-// The slice of the File System Access API the dashboard uses, backed by an in-memory tree.
-interface DirNode {
-  kind: "directory";
-  children: Record<string, Node>;
-}
-
-interface FileNode {
-  kind: "file";
-  text: string;
-}
-
-type Node = DirNode | FileNode;
-
-interface FakeDirectory {
-  kind: "directory";
-  name: string;
-  entries(): AsyncGenerator<[string, FakeDirectory | FakeFile]>;
-  getDirectoryHandle(name: string): Promise<FakeDirectory>;
-  getFileHandle(name: string): Promise<FakeFile>;
-}
-
-interface FakeFile {
-  kind: "file";
-  getFile(): Promise<{ lastModified: number; text(): Promise<string> }>;
-}
-
-const dir = (children: Record<string, Node>): DirNode => ({ kind: "directory", children });
-const file = (text: string): FileNode => ({ kind: "file", text });
-
-function fakeDirectory(name: string, node: DirNode): FakeDirectory {
-  const lookup = (key: string): Node => {
-    const child = node.children[key];
-
-    if (child === undefined) throw new Error(`NotFoundError: ${key}`);
-
-    return child;
-  };
-
-  const asFile = (child: FileNode): FakeFile => ({
-    kind: "file",
-    getFile: async () => ({ lastModified: 7, text: async () => child.text }),
-  });
-
-  const asHandle = (key: string, child: Node) =>
-    child.kind === "file" ? asFile(child) : fakeDirectory(key, child);
-
-  return {
-    kind: "directory",
-    name,
-    async *entries() {
-      for (const [key, child] of Object.entries(node.children)) yield [key, asHandle(key, child)];
-    },
-    async getDirectoryHandle(key) {
-      const child = lookup(key);
-
-      if (child.kind !== "directory") throw new Error(`TypeMismatchError: ${key}`);
-
-      return fakeDirectory(key, child);
-    },
-    async getFileHandle(key) {
-      const child = lookup(key);
-
-      if (child.kind !== "file") throw new Error(`TypeMismatchError: ${key}`);
-
-      return asFile(child);
-    },
-  };
-}
-
-function loadModel(): Model {
-  const html = readFileSync(join(assets, "dashboard.html"), "utf8");
-  const script = /<script>([\s\S]*)<\/script>/.exec(html)?.[1] ?? "";
-  const context = vm.createContext({});
-
-  vm.runInContext(script, context);
-
-  // SAFETY: with no `document`, the page script assigns the Model functions to globalThis.factoryModel.
-  const model = vm.runInContext("factoryModel", context) as Model;
-  // Values from the vm context have another realm's prototypes; round-trip them for deepEqual.
-  const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value));
-
-  return {
-    ...model,
-    buildTasks: (files, texts) => plain(model.buildTasks(files, texts)),
-    parseBacklog: (text) => plain(model.parseBacklog(text)),
-    folderSource: async (picked) => {
-      const source = await model.folderSource(picked);
-
-      return { ...source, list: async () => plain(await source.list()) };
-    },
-  };
-}
+import { renderMarkdown } from "../skills/factory/assets/dashboard/src/markdown.ts";
+import {
+  buildTasks,
+  countDone,
+  countTasks,
+  findTask,
+  parseBacklog,
+  resolveRelative,
+  trail,
+} from "../skills/factory/assets/dashboard/src/model.ts";
+import {
+  folderSource,
+  type DirectoryLike,
+  type FileLike,
+} from "../skills/factory/assets/dashboard/src/sources.ts";
+import { buildDashboard, outputPath } from "./build-dashboard.ts";
 
 function get(url: string, options: { method?: string; host?: string } = {}) {
   return new Promise<{ status: number; body: string; headers: IncomingHttpHeaders }>(
@@ -145,6 +37,7 @@ function get(url: string, options: { method?: string; host?: string } = {}) {
         },
         (res) => {
           let body = "";
+
           res.on("data", (chunk) => (body += chunk));
           res.on("end", () => done({ status: res.statusCode ?? 0, body, headers: res.headers }));
         },
@@ -224,13 +117,14 @@ test("refuses traversal, symlink escapes, non-markdown files, other methods and 
     assert.equal((await get(`${url}nothing`)).status, 404);
   }));
 
-test("serves the dashboard page with a restrictive content security policy", () =>
+test("serves a self-contained dashboard page with a restrictive content security policy", () =>
   withRepo(async (url) => {
     const page = await get(url);
 
     assert.equal(page.status, 200);
     assert.match(String(page.headers["content-type"]), /^text\/html/);
     assert.match(page.body, /Content-Security-Policy[^>]*default-src 'none'/);
+    assert.doesNotMatch(page.body, /<script[^>]+src=|<link[^>]+href=|https?:\/\/cdn/i);
   }));
 
 test("fails clearly when the repository has no .factory directory", async () => {
@@ -243,27 +137,39 @@ test("fails clearly when the repository has no .factory directory", async () => 
   }
 });
 
-test("builds the task tree with defaults, subtasks and blockers", () => {
-  const { buildTasks } = loadModel();
+test("the committed dashboard.html is exactly what the sources build to", async () => {
+  assert.equal(
+    readFileSync(outputPath, "utf8"),
+    await buildDashboard(),
+    "run `npm run build:dashboard` and commit the result",
+  );
+});
 
-  const files = [
-    "001-alpha/TASK.md",
-    "001-alpha/INTENT.md",
-    "001-alpha/PLAN.md",
-    "001-alpha/design/notes.md",
-    "001-alpha/subtasks/001-part/TASK.md",
-    "001-alpha/subtasks/001-part/PLAN.md",
+const files = [
+  "001-alpha/TASK.md",
+  "001-alpha/INTENT.md",
+  "001-alpha/PLAN.md",
+  "001-alpha/design/notes.md",
+  "001-alpha/subtasks/001-part/TASK.md",
+  "001-alpha/subtasks/001-part/PLAN.md",
+  "001-alpha/subtasks/001-part/subtasks/001-leaf/TASK.md",
+  "002-beta/TASK.md",
+  "003-bare/DEBRIEF.md",
+  "backlog.md",
+].map((path) => ({ path, mtime: 1 }));
+
+const texts = new Map([
+  ["001-alpha/TASK.md", '---\ntitle: "Alpha"\nstatus: inprogress\nstage: build\n---\n'],
+  ["001-alpha/subtasks/001-part/TASK.md", "---\ntitle: Part\nstatus: done\n---\n"],
+  ["001-alpha/subtasks/001-part/subtasks/001-leaf/TASK.md", "---\ntitle: Leaf\n---\n"],
+  [
     "002-beta/TASK.md",
-    "003-bare/DEBRIEF.md",
-    "backlog.md",
-  ].map((path) => ({ path }));
+    "---\ntitle: Beta\nstatus: blocked\n---\n\n## Blocker\n\nWaiting on keys.\n\n## Outcome\n\nNone\n",
+  ],
+]);
 
-  const tasks = buildTasks(files, {
-    "001-alpha/TASK.md": '---\ntitle: "Alpha"\nstatus: inprogress\nstage: build\n---\n',
-    "001-alpha/subtasks/001-part/TASK.md": "---\ntitle: Part\nstatus: done\n---\n",
-    "002-beta/TASK.md":
-      "---\ntitle: Beta\nstatus: blocked\n---\n\n## Blocker\n\nWaiting on keys.\n\n## Outcome\n\nNone\n",
-  });
+test("builds the task tree with defaults, subtasks and blockers", () => {
+  const tasks = buildTasks(files, texts);
 
   assert.deepEqual(
     tasks.map((t) => [t.id, t.status]),
@@ -281,40 +187,108 @@ test("builds the task tree with defaults, subtasks and blockers", () => {
   );
   assert.equal(tasks[1]?.blocker, "Waiting on keys.");
   assert.equal(tasks[2]?.title, "bare");
+  assert.equal(countTasks(tasks[0]?.subtasks ?? []), 2);
+  assert.equal(countDone(tasks[0]?.subtasks ?? []), 1);
+});
+
+test("finds a task at any depth and returns the breadcrumb trail from the root", () => {
+  const tasks = buildTasks(files, texts);
+  const leaf = "001-alpha/subtasks/001-part/subtasks/001-leaf";
+
+  assert.equal(findTask(tasks, leaf)?.title, "Leaf");
+  assert.deepEqual(
+    trail(tasks, leaf).map((t) => t.id),
+    ["001-alpha", "001-part", "001-leaf"],
+  );
+  assert.deepEqual(
+    trail(tasks, "002-beta").map((t) => t.id),
+    ["002-beta"],
+  );
+  assert.deepEqual(trail(tasks, "999-missing"), []);
+  assert.equal(findTask(tasks, "999-missing"), undefined);
 });
 
 test("parses the backlog queue with taken items and context", () => {
-  const { parseBacklog } = loadModel();
-
-  const items = parseBacklog(
-    "# Backlog\n\n- [ ] Rate limit\n  per IP\n- [x] Dark mode → 004-dark-mode\n",
+  assert.deepEqual(
+    parseBacklog("# Backlog\n\n- [ ] Rate limit\n  per IP\n- [x] Dark mode → 004-dark-mode\n"),
+    [
+      { taken: false, text: "Rate limit", task: "", context: "per IP" },
+      { taken: true, text: "Dark mode", task: "004-dark-mode", context: "" },
+    ],
   );
-
-  assert.deepEqual(items, [
-    { taken: false, text: "Rate limit", task: "", context: "per IP" },
-    { taken: true, text: "Dark mode", task: "004-dark-mode", context: "" },
-  ]);
 });
 
-test("renders markdown with every character escaped and no script or javascript links", () => {
-  const { markdown, resolveRelative } = loadModel();
-
-  const html = markdown(
-    "---\ntitle: x\n---\n# Hi <img src=x onerror=alert(1)>\n\n[bad](javascript:alert(1)) [ok](https://example.com) [doc](PLAN.md)\n\n- [x] done\n\n```\n<script>boom()</script>\n```\n",
+test("renders markdown with raw HTML shown as text and only safe links kept", () => {
+  const html = renderMarkdown(
+    "---\ntitle: x\n---\n# Hi <img src=x onerror=alert(1)>\n\n<script>boom()</script>\n\n[bad](javascript:alert(1)) [ok](https://example.com) [doc](PLAN.md)\n\n- [x] done\n\n```\n<script>boom()</script>\n```\n",
   );
 
   assert.doesNotMatch(html, /<img|<script|javascript:/);
   assert.match(html, /&lt;img/);
   assert.match(html, /href="https:\/\/example\.com"/);
   assert.match(html, /data-rel="PLAN\.md"/);
-  assert.match(html, /<li class="task done">/);
+  assert.match(html, /<input[^>]*checked/);
   assert.equal(resolveRelative("001-a/PLAN.md", "design/x.md#top"), "001-a/design/x.md");
   assert.equal(resolveRelative("001-a/design/x.md", "../PLAN.md"), "001-a/PLAN.md");
 });
 
-test("a picked folder lists only task markdown, finds .factory below the repository root and reads files", async () => {
-  const { folderSource } = loadModel();
+// The slice of the File System Access API the dashboard uses, backed by an in-memory tree.
+interface DirNode {
+  readonly kind: "directory";
+  readonly children: Record<string, Node>;
+}
 
+interface FileNode {
+  readonly kind: "file";
+  readonly text: string;
+}
+
+type Node = DirNode | FileNode;
+
+const dir = (children: Record<string, Node>): DirNode => ({ kind: "directory", children });
+const file = (text: string): FileNode => ({ kind: "file", text });
+
+function fakeDirectory(name: string, node: DirNode): DirectoryLike {
+  const lookup = (key: string): Node => {
+    const child = node.children[key];
+
+    if (child === undefined) throw new Error(`NotFoundError: ${key}`);
+
+    return child;
+  };
+
+  const asFile = (child: FileNode): FileLike => ({
+    kind: "file",
+    getFile: async () => ({ lastModified: 7, text: async () => child.text }),
+  });
+
+  const asHandle = (key: string, child: Node) =>
+    child.kind === "file" ? asFile(child) : fakeDirectory(key, child);
+
+  return {
+    kind: "directory",
+    name,
+    async *entries() {
+      for (const [key, child] of Object.entries(node.children)) yield [key, asHandle(key, child)];
+    },
+    async getDirectoryHandle(key) {
+      const child = lookup(key);
+
+      if (child.kind !== "directory") throw new Error(`TypeMismatchError: ${key}`);
+
+      return fakeDirectory(key, child);
+    },
+    async getFileHandle(key) {
+      const child = lookup(key);
+
+      if (child.kind !== "file") throw new Error(`TypeMismatchError: ${key}`);
+
+      return asFile(child);
+    },
+  };
+}
+
+test("a picked folder lists only task markdown, finds .factory below the repository root and reads files", async () => {
   const factory = dir({
     "001-a": dir({
       "TASK.md": file("task"),
@@ -330,13 +304,13 @@ test("a picked folder lists only task markdown, finds .factory below the reposit
     fakeDirectory(".factory", factory),
   ]) {
     const source = await folderSource(picked);
-    const { name, files } = await source.list();
+    const listing = await source.list();
 
     assert.deepEqual(
-      files.map((f) => f.path),
+      listing.files.map((f) => f.path),
       ["001-a/TASK.md", "backlog.md"],
     );
-    assert.equal(name, picked.name === ".factory" ? "" : "repo");
+    assert.equal(listing.name, picked.name === ".factory" ? "" : "repo");
     assert.equal(await source.read("001-a/TASK.md"), "task");
   }
 });
