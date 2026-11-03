@@ -121,8 +121,12 @@ carries its own copy, made of two skill assets:
 2. If the project has a `package.json` without a `factory:board` script, add
    `"factory:board": "node tools/factory-board/board.ts ."` (keep the file's other keys
    and formatting). A project without `package.json` is launched with
-   `node tools/factory-board/board.ts`.
-3. Commit the copy with the rest of the work. Leave the board running only when the user
+   `node tools/factory-board/board.ts`. Node below 22.18 cannot run `.ts` files
+   directly; when the project pins such a Node and has `tsx`, use `tsx` in place of `node`.
+3. If the project runs its own linter or formatter over `tools/`, add
+   `tools/factory-board/**` to their ignore lists: the copy keeps this repository's style
+   and must stay byte-identical to the asset.
+4. Commit the copy with the rest of the work. Leave the board running only when the user
    asks.
 
 Launch it from the project root with `npm run factory:board` or
