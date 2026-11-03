@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Read-only Factory dashboard for one repository: `factory-dashboard [repo] [--port N]`.
-// Serves dashboard.html plus the repository's .factory/*.md files on 127.0.0.1. Built-ins only,
-// so it runs from the skill directory with nothing installed in the project.
+// Read-only Factory board for one repository: `node tools/factory-board/board.ts [repo] [--port N]`.
+// Serves the dashboard.html next to this file plus the repository's .factory/*.md files on
+// 127.0.0.1. Built-ins only. The Factory skill copies board.ts and dashboard.html into each
+// project (tools/factory-board/), so nothing outside the repository is needed to run it.
 import { createServer, type Server } from "node:http";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { realpathSync } from "node:fs";
@@ -111,7 +112,7 @@ export async function startDashboard(
   return { server, url: `http://127.0.0.1:${portOf(server)}/` };
 }
 
-// Run directly or through the `factory-dashboard` symlink; stay silent when imported by tests.
+// Run directly; stay silent when imported by tests.
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const flag = args.indexOf("--port");
@@ -119,12 +120,12 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
   const repo = resolve(args[0] ?? ".");
 
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    console.error("Usage: factory-dashboard [repo] [--port N]");
+    console.error("Usage: node board.ts [repo] [--port N]");
     process.exit(2);
   }
 
   startDashboard(repo, port).then(
-    ({ url }) => console.log(`Factory dashboard for ${repo}: ${url}`),
+    ({ url }) => console.log(`Factory board for ${repo}: ${url}`),
     (error: Error) => {
       console.error(error.message);
       process.exit(1);

@@ -140,8 +140,8 @@ export function App() {
             ) : (
               <p className="mt-2 text-muted-foreground">
                 Opening a folder needs a Chromium-based browser. Run{" "}
-                <code className="font-mono text-meta">factory-dashboard</code> in the repository to
-                serve this page instead.
+                <code className="font-mono text-meta">npm run factory:board</code> in the repository
+                to serve this page instead.
               </p>
             )}
             {state.error ? (

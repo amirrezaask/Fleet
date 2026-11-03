@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { request, type IncomingHttpHeaders } from "node:http";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { startDashboard } from "../skills/factory/assets/dashboard/server.ts";
+import { startDashboard } from "../skills/factory/assets/dashboard/board.ts";
 import { renderMarkdown } from "../skills/factory/assets/dashboard/src/markdown.ts";
 import {
   buildTasks,
@@ -312,5 +321,42 @@ test("a picked folder lists only task markdown, finds .factory below the reposit
     );
     assert.equal(listing.name, picked.name === ".factory" ? "" : "repo");
     assert.equal(await source.read("001-a/TASK.md"), "task");
+  }
+});
+
+test("a project copy of board.ts and dashboard.html runs on its own with plain node", async () => {
+  const project = mkdtempSync(join(tmpdir(), "factory project "));
+  const copy = join(project, "tools", "factory-board");
+  const asset = join(import.meta.dirname, "..", "skills", "factory", "assets", "dashboard");
+
+  mkdirSync(copy, { recursive: true });
+  mkdirSync(join(project, ".factory", "001-x"), { recursive: true });
+  writeFileSync(join(project, ".factory", "001-x", "TASK.md"), "---\ntitle: X\n---\n");
+  copyFileSync(join(asset, "board.ts"), join(copy, "board.ts"));
+  copyFileSync(join(asset, "dashboard.html"), join(copy, "dashboard.html"));
+
+  const child = spawn(process.execPath, [join(copy, "board.ts"), project], {
+    cwd: project,
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+
+  try {
+    const line = await new Promise<string>((done, fail) => {
+      child.stdout.once("data", (chunk) => done(String(chunk)));
+      child.once("error", fail);
+      child.once("exit", (code) => fail(new Error(`board exited early with ${code}`)));
+    });
+
+    const url = /http:\/\/\S+/.exec(line)?.[0] ?? "";
+    const listing = JSON.parse((await get(`${url}api/files`)).body);
+
+    assert.equal((await get(url)).status, 200);
+    assert.deepEqual(
+      listing.files.map((f: { path: string }) => f.path),
+      ["001-x/TASK.md"],
+    );
+  } finally {
+    child.kill();
+    rmSync(project, { recursive: true, force: true });
   }
 });
