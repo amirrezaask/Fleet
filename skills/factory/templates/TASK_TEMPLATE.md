@@ -2,7 +2,7 @@
 title: <Task title>
 created: "<YYYY-MM-DD>"
 updated: "<YYYY-MM-DD>"
-stage: <intent | design | plan | build | test | done>
+stage: <intent | design | plan | build | review | done>
 status: <backlog | inprogress | blocked | done>
 ---
 
@@ -18,7 +18,7 @@ status: <backlog | inprogress | blocked | done>
 
 ## Outcome
 
-<Link to `REPORT.md` once Test has run.>
+<Link to `REPORT.md` once Build has verified.>
 
 ## Depends on
 

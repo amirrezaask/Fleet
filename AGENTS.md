@@ -48,11 +48,11 @@ When the conversation is compacted, keep ADMIN's main goal: the request being wo
 ## Documentation workflow
 
 [Factory](skills/factory/SKILL.md) is an **opt-in** delivery pipeline:
-Intent → Design → Plan → Build → Test. It runs only when ADMIN types `/factory`, optionally with a
+Intent → Design → Plan → Build → Review. It runs only when ADMIN types `/factory`, optionally with a
 stage subcommand (`/factory intent`, `/factory design`, `/factory plan`, `/factory build`,
-`/factory test`); never start it from an inferred trigger. Without a command, handle
+`/factory review`); never start it from an inferred trigger. Without a command, handle
 software requests directly under these rules. Factory reads affected specs before
-intent and plan, and reconciles them with verified behavior in Test using its own
+intent and plan, and reconciles them with verified behavior in Review using its own
 specification guide. Research discussions do not authorize implementation.
 
 GLOBAL template filenames remain available through installer-managed symlinks;

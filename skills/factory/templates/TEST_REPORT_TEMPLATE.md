@@ -2,7 +2,7 @@
 
 # <Task title>: <Passed / Failed / Passed with limitations>
 
-Test report · task `<task-name>` · revision <sha> · created <YYYY-MM-DD HH:mm> · <agent> <llm model>
+Verification report · task `<task-name>` · revision <sha> · created <YYYY-MM-DD HH:mm> · <agent> <llm model>
 
 > <One or two sentences: is it done, what was proven, and anything the user must decide.>
 
@@ -18,12 +18,15 @@ Test report · task `<task-name>` · revision <sha> · created <YYYY-MM-DD HH:mm
 | --- | --- | --- | --- |
 | Regression | `<command>` | <counts> | <Pre-existing failures, reproduced on base revision> |
 | Acceptance | <procedure> | <result> | |
-| Review | Fresh-context bugs, security, compliance passes | <n Important, n Nit> | <Resolution> |
 | Heavy | `<command>` | <result> | |
 
-## Review findings
+## Review
 
-- <Pass · Important/Nit · finding · location · fixed in sha / accepted by the user / rejected because; or None.>
+_Added by `/factory review`._
+
+| Lens | Verdict | Findings |
+| --- | --- | --- |
+| Code / Security / UI / UX | <PASS / CHANGES / skipped, no UI> | <Important/Nit · finding · location · fixed in sha / accepted by the user / rejected because; or None.> |
 
 ## Limitations and follow-up
 

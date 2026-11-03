@@ -28,9 +28,9 @@ Reference preserved requirements with document-qualified IDs
 Keep proposed behavior in the intent and design; never present it as implemented in
 current-system documents.
 
-## After Test
+## At close
 
-When the gates pass, inspect the implementation and evidence, then update the
+When Review closes the task and the gates pass, inspect the implementation and evidence, then update the
 affected documents:
 
 > What observable behavior now differs? Which rules, contracts, relationships,

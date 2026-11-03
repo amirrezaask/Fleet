@@ -1,8 +1,11 @@
-# Build: implement the plan and keep its fast tests green
+# Build: implement the plan, then prove it
 
-Goal: the full planned scope implemented, every `fast` test in the plan passing,
-and a `DEBRIEF.md` that tells the next agent or engineer what they need to know.
-Build has no specification of its own; `PLAN.md` is the specification.
+Goal: the full planned scope implemented, every `fast` test passing, every
+requirement evidenced, the plan's `heavy` gates run once at the very end, and a
+`DEBRIEF.md` and `REPORT.md` for the people who read next. Build has no specification
+of its own; `PLAN.md` is the specification. Build and verification are one stage so
+development never waits on slow checks: **cheap checks run continuously, heavy gates
+run last.**
 
 ## Start
 
@@ -24,10 +27,10 @@ Give yourself a check for every change, and use it continuously:
    loosen a test to pass, and never weaken an assertion the plan defined.
 4. UI work closes the loop visually: implement, screenshot, compare with the
    `design/` mock, adjust. Two or three rounds is normal.
-5. Keep checks fast and scoped while iterating. Heavy suites wait for Test.
+5. Keep checks fast and scoped while iterating. Heavy suites wait for [Verify](#verify-last).
 
 Implement the whole plan before any extended qualification. A half-built scope proves
-nothing.
+nothing. Heavy gates are never run mid-build.
 
 ## Stay on the plan
 
@@ -44,11 +47,52 @@ Commit in coherent increments. Each message names the task and the plan steps
 With subtasks or independent plan steps, build in parallel only when the user authorized
 subagents or sessions. Follow [subtask graphs](subtasks.md): one worktree per writer,
 no two writers on the same files, pointers in and a short report out. Implementers
-run only their fast tests and never heavy gates.
+run only their fast tests and never heavy gates; only the managing agent runs Verify.
+
+## Verify last
+
+Only the managing agent runs this, once, on the whole task, after the scope is
+implemented and the debrief is written. Run in this order, stop at a failing gate, fix,
+and repeat the affected gates:
+
+1. **Regression (cheap).** The project's existing checks (`npm test`, lint, types, or
+   the project's equivalent) and every `fast` test in the plan. Separate pre-existing
+   failures (reproduce them on the base revision) from failures this change introduced.
+2. **Acceptance.** Map every intent requirement and design decision to observed
+   evidence: test output, screenshots matching the `design/` mock, command output,
+   or a manual procedure with its observed result. A green suite alone proves neither
+   coverage nor quality.
+3. **Heavy gates, last.** The plan's `heavy` tests and the quality checks that fit the
+   change: e2e and browser suites, visual comparison, accessibility, performance and
+   load, security scans, cross-platform runs. They are slow, so they run only after
+   everything cheaper is green. Use
+   [resource-bounded runs](../../resource-bounded-runs/SKILL.md) for large ones.
+
+Fix failures in the code. For a batch of fixes, one fresh implementer subagent may
+do the work; re-run the affected gates afterwards. When a fix changes the approach,
+revise `PLAN.md` in the same commit and add the incident to `DEBRIEF.md`.
+
+### Evidence rules
+
+Record command, revision, environment and the literal result for each gate. Never
+claim an unrun check passed; mark it Not run or Blocked with the reason. Keep raw
+output (json, logs, traces, png) in the task's gitignored `evidence/` folder; track
+only the Markdown report.
+
+### Report
+
+Write `REPORT.md` in the task directory, next to the debrief, from the
+[test report template](../templates/TEST_REPORT_TEMPLATE.md). First screen: the
+verdict, the requirement matrix (`R`/`D` → test → result), and anything the user must
+decide. Below that: gate results, limitations and out-of-scope findings. Link the
+report from `TASK.md`. The Review stage appends its findings to it.
+
+Then commit, set the stage to `review`, and continue with `/factory review` when
+`/factory` is running the pipeline. Build does not set the task to `done`; Review does.
 
 ## Debrief
 
-Before leaving Build, write `DEBRIEF.md` from the
+When the scope is implemented and the fast tests pass, write `DEBRIEF.md` from the
 [debrief template](../templates/DEBRIEF_TEMPLATE.md) in the task directory. Copy
 the template whole and fill its sections. It is for future agents and engineers; include what they could not learn from the diff:
 
@@ -61,6 +105,3 @@ the template whole and fill its sections. It is for future agents and engineers;
   only within this task's scope or when the user asks.
 - Out-of-scope findings with evidence and location (see the loop in the Factory skill).
 - Fast test results: command, revision, outcome.
-
-Then commit, set the stage to `test`, and continue with `/factory test` when `/factory`
-is running the pipeline.

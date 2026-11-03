@@ -1,6 +1,6 @@
 ---
 name: factory
-description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Test with committed Markdown task documents and the local task board. Run only when the user types /factory, optionally with a stage subcommand (/factory intent|design|plan|build|test); never start it from an inferred trigger.
+description: Opt-in software delivery pipeline Intent → Design → Plan → Build → Review with committed Markdown task documents and the local task board. Run only when the user types /factory, optionally with a stage subcommand (/factory intent|design|plan|build|review); never start it from an inferred trigger.
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,11 @@ Factory is one command, `/factory`, with an optional stage subcommand.
 | `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` (next free number) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
-| `/factory build [task]` | — | Follow [build](references/build.md); no heavy gates | The planned scope is implemented, every `fast` test passes, `DEBRIEF.md` is committed |
-| `/factory test [task]` | — | Managing agent only; follow [test](references/test.md) | `REPORT.md` and specs are committed with status `done`, or failures are fixed and re-verified, or status is `blocked` |
+| `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REPORT.md` are committed |
+| `/factory review [task]` | `REPORT.md` | Managing agent only; follow [review](references/review.md): four parallel reviewers (code, security, UI, UX) | Findings are resolved, `REPORT.md` has the review, specs are committed with status `done`, or status is `blocked` |
 
 The first word after `/factory` is a subcommand only when it is exactly `intent`,
-`design`, `plan`, `build` or `test`; anything else goes to the router. A subcommand
+`design`, `plan`, `build` or `review`; anything else goes to the router. A subcommand
 names the task by directory name, number or slug (`intent` may instead describe a new
 request); without one, use the only `inprogress` task, or ask. Running a subcommand
 records the acceptance of the previous artifact if missing, and sets
@@ -41,8 +41,8 @@ of the stage's artifact and tells the user the next command.
 | Intent | [intent](references/intent.md) | `INTENT.md` | The user: one screen | **The user approves the intent** |
 | Design | [design](references/design.md) | `DESIGN.md`, `design/` | The user reviews | **The user accepts the design**, or the intent says it is skipped |
 | Plan | [plan](references/plan.md) | `PLAN.md` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
-| Build | [build](references/build.md) | Code, tests, `DEBRIEF.md` | Future agents and engineers | Every fast test in the plan passes |
-| Test | [test](references/test.md) | `REPORT.md` | The user: verdict first | All gates pass and specs match the verified behavior |
+| Build | [build](references/build.md) | Code, tests, `DEBRIEF.md`, `REPORT.md` | Future agents; the user reads the verdict | Fast tests green, then regression, acceptance and heavy gates (last) pass |
+| Review | [review](references/review.md) | Review section of `REPORT.md` | The user: verdict first | Code, security, UI and UX reviewers pass and specs match the verified behavior |
 
 **Every stage ends with a commit** of its artifact, and the next stage starts by
 reading it. The commit chain is the audit trail: what was asked, what was decided,
@@ -55,8 +55,7 @@ stops at the two human gates and asks; it continues without stopping only when t
 user's message explicitly says so ("run the whole pipeline, don't stop after
 design"). Intent approval is never assumed: when the user gave a complete request
 and an explicit go-ahead in one message, record that message as the approval. The
-plan has no human gate, but the user may ask to review it. Nothing is implemented
-before a committed plan.
+plan has no human gate. Nothing is implemented before a committed plan.
 
 **Proportionality.** Every task gets an intent and a plan. Design is skipped when no
 product or architecture decision is open (an isolated bug fix, a mechanical change);
@@ -77,7 +76,7 @@ documents for agents are complete.
   interrogation. Verbosity helps here.
 - **`DEBRIEF.md`** (future agents and engineers): how the build went, deviations,
   abnormalities, traps and lessons. Factual and complete.
-- **Test report** (the user first, auditors after): verdict and requirement matrix on
+- **`REPORT.md`** (the user first, auditors after): verdict and requirement matrix on
   the first screen, evidence below.
 
 All documents are Markdown from the [templates](templates/); the user reviews any of
@@ -94,14 +93,14 @@ A task is one directory, `.factory/<NNN>-<task-name>/`, numbered `001`, `002`, .
 `subtasks/` folder. `.factory/` at the project root lists every task. `TASK.md`
 records the state in frontmatter: `status:` is `backlog`, `inprogress`,
 `blocked` or `done`, and `stage:` is
-`intent`, `design`, `plan`, `build`, `test` or `done`. Read
+`intent`, `design`, `plan`, `build`, `review` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 
 `/factory intent` creates `.factory/<NNN>-<name>/` (the next free number) with `TASK.md` from the
 [task template](templates/TASK_TEMPLATE.md), status `backlog`. **When an agent picks
 a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
 sets `backlog` when it stops between stages with no work in flight, `blocked` with the
-reason when a decision or dependency stops it, and `done` only when Test passes.
+reason when a decision or dependency stops it, and `done` only when Review passes.
 Nothing is renamed, so links and worktrees stay valid.
 
 **Requirements are a contract.** Agents may change the plan's steps, interfaces,
@@ -123,21 +122,22 @@ directory `<task>/subtasks/<NNN>-<subtask-name>/`, numbered within its parent, w
 and refines its parent: its intent needs no approval from the user ("Approval: not
 required, subtask of `<parent>`"), may add detail and `R` IDs, and never weakens a
 parent requirement. A parent becomes `done` only after every descendant is done and
-its own Test passes. Read [subtask graphs](references/subtasks.md) to cut vertical
+its own Review passes. Read [subtask graphs](references/subtasks.md) to cut vertical
 slices, record dependencies and build the ready subtasks in parallel.
 
 ## Validation budget
 
-Cheap checks run continuously while building; heavy gates run once, in Test, on the
-whole task. Subagents that implement part of a task run only the fast tests their
-plan names. Only the managing agent runs heavy gates, and only when it intends to
-close the task. Implement everything the plan specifies before spending time on
+Cheap checks run continuously while building; heavy gates run once, as the last step
+of Build, on the whole task, so development and building stay fast. Subagents that
+implement part of a task run only the fast tests their plan names. Only the managing
+agent runs heavy gates, and only when the scope is complete and it intends to close the
+task. Review re-runs a heavy gate only when a fix could have changed its result. Implement everything the plan specifies before spending time on
 validation.
 
 ## Specifications
 
 Read the project's specs under `docs/` before writing an intent, design or plan, and
-update them with verified behavior after Test. Follow
+update them with verified behavior when Review closes the task. Follow
 [keeping specifications true](references/specifications.md).
 
 ## Resume
@@ -145,5 +145,5 @@ update them with verified behavior after Test. Follow
 On resume, read `TASK.md`, the stage documents, the relevant specs and the actual
 Git diff, and continue from the recorded stage. Chat history alone is not enough.
 Keep status in `TASK.md`, decisions in the stage documents,
-and results in the debrief and report; create no parallel progress logs. The
+and results in the debrief and report (review findings included); create no parallel progress logs. The
 optional board changes task metadata only; it never starts agents.

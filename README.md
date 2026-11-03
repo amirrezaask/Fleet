@@ -1,7 +1,7 @@
 # Global agent instructions and skills
 
 `AGENTS.md` holds global conventions. Factory is an opt-in delivery pipeline,
-Intent → Design → Plan → Build → Test, started only by `/factory` or a stage
+Intent → Design → Plan → Build → Review, started only by `/factory` or a stage
 command. Every document agents write is Markdown; ADMIN reviews any of them rendered
 as Claude-styled HTML with `md <file.md>`.
 
@@ -25,8 +25,8 @@ goes to the gates.
 | Intent | `/factory intent` | `INTENT.md` | The user, one screen | The user approves |
 | Design | `/factory design` | `DESIGN.md` + `design/` mocks and diagrams | The user reviews | The user accepts (or skip recorded) |
 | Plan | `/factory plan` | `PLAN.md` with a fast/heavy test plan | Agents, verbose | Self-check, committed before code |
-| Build | `/factory build` | Code, tests, `DEBRIEF.md` | Future agents | Fast tests green |
-| Test | `/factory test` | `REPORT.md` in the task | The user, verdict first | Regression, acceptance, fresh review, heavy gates |
+| Build | `/factory build` | Code, tests, `DEBRIEF.md`, `REPORT.md` | Future agents; the user reads the verdict | Fast tests green, regression, acceptance, then heavy gates last |
+| Review | `/factory review` | Review section of `REPORT.md` | The user, verdict first | Four parallel reviewers (code, security, UI, UX) pass |
 
 Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
@@ -63,7 +63,7 @@ Run `/factory <request>` (or one stage command at a time). The task then lives i
   design/           # design artifacts: Mermaid pages, mocks, prototypes, images
   PLAN.md           # agent-facing plan, test plan, recorded revisions
   DEBRIEF.md        # build notes for future agents and engineers
-  REPORT.md         # test report, verdict first
+  REPORT.md         # verification report, verdict first; Review appends its findings
   evidence/         # raw test output (gitignored)
   subtasks/<NNN>-<subtask-name>/   # same files; no approval from the user needed
 ```
@@ -84,8 +84,8 @@ subtasks, at every depth, are done.
 
 Agents may revise the plan while preserving the intent, accepted design and
 existing area-spec requirements. Requirement changes need the user's explicit
-authorization. Test runs regression, acceptance, a fresh-context review, then heavy
-gates. Test reports live in their task directory; system specifications live directly under `docs/`, with area
+authorization. Build runs fast tests continuously, then regression, acceptance and heavy gates last; Review runs four
+independent reviewers (code, security, UI, UX). Reports live in their task directory; system specifications live directly under `docs/`, with area
 rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 `docs/specs/` files remain in place until an authorized migration.
 

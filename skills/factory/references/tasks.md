@@ -39,9 +39,9 @@ files with relative paths (`design/mock.html`, `REPORT.md`, `../DESIGN.md`).
 | `backlog` | Backlog | Captured; nobody is working on it (any stage before `done`) |
 | `inprogress` | In progress | An agent is working on it, in any stage |
 | `blocked` | Blocked | A recorded decision or dependency prevents progress |
-| `done` | Done | Test passed: requirements evidenced, debrief and report written, specs updated |
+| `done` | Done | Review passed: requirements evidenced, reviewers satisfied, debrief and report written, specs updated |
 
-`stage` is the pipeline position (`intent`, `design`, `plan`, `build`, `test`,
+`stage` is the pipeline position (`intent`, `design`, `plan`, `build`, `review`,
 `done`); `status` is whether anyone is working on it. A missing or unknown status
 reads as `backlog`. Change status by editing the key (or the board) and `updated`;
 the directory is never renamed or moved, so worktrees and links survive. Record
