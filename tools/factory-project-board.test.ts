@@ -6,12 +6,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { test } from "node:test";
 import { startDashboard } from "../skills/factory/assets/dashboard/board.ts";
 import { renderMarkdown } from "../skills/factory/assets/dashboard/src/markdown.ts";
@@ -63,9 +64,7 @@ async function withRepo(run: (url: string, repo: string) => Promise<void>) {
   const repo = join(base, "repo");
   const home = join(base, "home");
   const factory = join(home, "repo");
-  const previousHome = process.env.FACTORY_HOME;
-
-  process.env.FACTORY_HOME = home;
+  const restore = useFactoryEnv(base, home);
 
   mkdirSync(join(factory, "001-first", "evidence"), { recursive: true });
   mkdirSync(join(factory, "001-first", "worktree"), { recursive: true });
@@ -83,14 +82,24 @@ async function withRepo(run: (url: string, repo: string) => Promise<void>) {
     await run(url, repo);
   } finally {
     await new Promise((done) => server.close(done));
-    restoreFactoryHome(previousHome);
+    restore();
     rmSync(base, { recursive: true, force: true });
   }
 }
 
-function restoreFactoryHome(previous: string | undefined) {
-  if (previous === undefined) delete process.env.FACTORY_HOME;
-  else process.env.FACTORY_HOME = previous;
+// Point the store at a temporary home; the key is a checkout's path relative to `home`.
+function useFactoryEnv(home: string, factoryHome: string): () => void {
+  const previous = { HOME: process.env.HOME, FACTORY_HOME: process.env.FACTORY_HOME };
+
+  process.env.HOME = home;
+  process.env.FACTORY_HOME = factoryHome;
+
+  return () => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  };
 }
 
 test("lists only task markdown and serves it as plain text", () =>
@@ -148,29 +157,26 @@ test("serves a self-contained dashboard page with a restrictive content security
 
 test("fails clearly when the project has no task store", async () => {
   const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
-  const previous = process.env.FACTORY_HOME;
-
-  process.env.FACTORY_HOME = join(base, "home");
+  const restore = useFactoryEnv(base, join(base, "home"));
 
   try {
     await assert.rejects(startDashboard(base, 0), /No Factory tasks at/);
   } finally {
-    restoreFactoryHome(previous);
+    restore();
     rmSync(base, { recursive: true, force: true });
   }
 });
 
 test("the main checkout and its worktrees all read the same task store", async () => {
-  const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
+  const base = realpathSync(mkdtempSync(join(tmpdir(), "factory dashboard ")));
   const main = join(base, "my-project");
   const worktree = join(main, ".worktrees", "feat-x");
   const store = join(base, "home", "my-project");
-  const previous = process.env.FACTORY_HOME;
+  const restore = useFactoryEnv(base, join(base, "home"));
 
   const git = (...args: string[]) =>
     execFileSync("git", ["-C", main, ...args], { stdio: "ignore" });
 
-  process.env.FACTORY_HOME = join(base, "home");
   mkdirSync(main);
   mkdirSync(join(store, "001-live"), { recursive: true });
   git("init", "-q");
@@ -201,7 +207,35 @@ test("the main checkout and its worktrees all read the same task store", async (
       }
     }
   } finally {
-    restoreFactoryHome(previous);
+    restore();
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("two checkouts with the same directory name keep separate stores", async () => {
+  const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
+  const restore = useFactoryEnv(base, join(base, "home"));
+
+  mkdirSync(join(base, "home", "work", "app", "001-work"), { recursive: true });
+  mkdirSync(join(base, "home", "play", "app", "001-play"), { recursive: true });
+  writeFileSync(join(base, "home", "work", "app", "001-work", "TASK.md"), "---\ntitle: W\n---\n");
+  writeFileSync(join(base, "home", "play", "app", "001-play", "TASK.md"), "---\ntitle: P\n---\n");
+
+  try {
+    const { server, url } = await startDashboard(join(base, "work", "app"), 0);
+
+    try {
+      const listing = JSON.parse((await get(`${url}api/files`)).body);
+
+      assert.deepEqual(
+        listing.files.map((f: { path: string }) => f.path),
+        ["001-work/TASK.md"],
+      );
+    } finally {
+      await new Promise((done) => server.close(done));
+    }
+  } finally {
+    restore();
     rmSync(base, { recursive: true, force: true });
   }
 });
@@ -396,7 +430,7 @@ test("a project copy of board.ts and dashboard.html runs on its own with plain n
 
   const child = spawn(process.execPath, [join(copy, "board.ts"), project], {
     cwd: project,
-    env: { ...process.env, FACTORY_HOME: home },
+    env: { ...process.env, HOME: dirname(project), FACTORY_HOME: home },
     stdio: ["ignore", "pipe", "inherit"],
   });
 

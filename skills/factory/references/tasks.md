@@ -37,11 +37,12 @@ ignores it.
 Task documents do not live in the repository. Each project has one **task store**,
 shared by all its worktrees, all agents and the board, so a status change is visible
 everywhere the moment it is written. It is `~/.agents/factory/<project>/`, where
-`<project>` is the name of the main checkout (`$FACTORY_HOME` overrides the root).
-From any worktree:
+`<project>` is the main checkout's path relative to home, e.g. `dev/GameBox`
+(`$FACTORY_HOME` overrides the root). From any worktree:
 
 ```sh
-factory="${FACTORY_HOME:-$HOME/.agents/factory}/$(basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")"
+main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+factory=${FACTORY_HOME:-$HOME/.agents/factory}/${main#"$HOME"/}
 ```
 
 `<factory>` below means this directory; always write task documents there by absolute
@@ -52,7 +53,8 @@ The store is its own Git repository, which keeps the history of the documents. C
 only your task, so concurrent agents do not sweep up each other's edits, and retry if
 `index.lock` is held:
 `git -C <factory> add -- <task> && git -C <factory> commit -q -m "<message>" -- <task>`.
-Code is still committed in the worktree, in the project's own repository.
+Code is still committed in the worktree, in the project's own repository. After moving
+a checkout, `mv` its store to the new key.
 
 ## Creating a task: one lock, one commit
 
@@ -131,6 +133,10 @@ git -C <factory> add -A && git -C <factory> commit -q -m "import tasks from <pro
 
 and on a branch in the project `git rm -r .factory` and drop the `.factory/**` lines from
 `.gitignore`. Earlier document history stays in the project's own Git log.
+
+Before copying, take task documents that exist only on live branches into the store, and
+`git worktree move` any worktree inside `.factory/` to `.worktrees/`. A branch that still
+carries `.factory/` then conflicts when merged; resolve that with `git rm -rq .factory`.
 
 ## Per-repository board
 

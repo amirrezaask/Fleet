@@ -50,7 +50,8 @@ async function readMarkdown(root: string, requested: string): Promise<string | u
   }
 }
 
-// The task store every worktree of a checkout shares: <factory home>/<main checkout name>.
+// The task store every worktree of a checkout shares: <factory home>/<main checkout relative to home>.
+// Agents compute the same path in shell (skills/factory/references/tasks.md); keep them identical.
 function factoryStore(directory: string): string {
   let checkout = directory;
 
@@ -67,8 +68,9 @@ function factoryStore(directory: string): string {
   }
 
   const home = process.env.FACTORY_HOME ?? join(homedir(), ".agents", "factory");
+  const prefix = `${homedir()}/`;
 
-  return join(home, basename(checkout));
+  return join(home, checkout.startsWith(prefix) ? checkout.slice(prefix.length) : checkout);
 }
 
 const allowedHosts = (port: number) =>

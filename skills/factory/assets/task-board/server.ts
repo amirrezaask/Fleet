@@ -49,8 +49,9 @@ const registered: string[] = await readFile(registryFile, "utf8").then(
 
 const projectId = (path: string) => createHash("sha1").update(path).digest("hex").slice(0, 10);
 
-// Tasks live outside the repository, so every worktree of a project shares one store named
-// after its main checkout. A registered worktree therefore shows the same tasks.
+// Tasks live outside the repository, so every worktree of a project shares one store keyed by
+// its main checkout's path relative to home. A registered worktree therefore shows the same tasks.
+// Agents compute the same path in shell (skills/factory/references/tasks.md); keep them identical.
 function tasksOf(directory: string): string {
   let checkout = directory;
 
@@ -66,7 +67,9 @@ function tasksOf(directory: string): string {
     // Not a repository: the directory itself names the project.
   }
 
-  return join(factoryHome, basename(checkout));
+  const prefix = `${homedir()}/`;
+
+  return join(factoryHome, checkout.startsWith(prefix) ? checkout.slice(prefix.length) : checkout);
 }
 
 async function saveRegistry(): Promise<void> {
