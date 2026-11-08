@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 
 // Claude Code hook installed by tools/install.ts for SessionStart, PreToolUse
 // and Stop. It keeps ADMIN's autonomous sessions on the rules in AGENTS.md: one
@@ -250,7 +250,7 @@ function openTasks(text: string): string[] {
   ].map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
   const documents = new RegExp(
-    `(?:${prefixes.join("|")})/([^/"\\n]+/(?:[\\w.-]+/)+(?:PLAN|TASK|BRIEF|INTENT)\\.(?:html|md))`,
+    `(?:${prefixes.join("|")})/((?:[\\w.-]+/)+(?:PLAN|TASK|BRIEF|INTENT)\\.(?:html|md))`,
     "g",
   );
 
@@ -263,7 +263,8 @@ function openTasks(text: string): string[] {
   return [...tasks].filter((task) => existsSync(task) && !escalated(task));
 }
 
-// The task store every worktree of a checkout shares: <factory home>/<main checkout name>.
+// The task store every worktree of a checkout shares: <factory home>/<main checkout relative to home>.
+// Agents compute the same path in shell (skills/factory/references/tasks.md); keep them identical.
 function factoryStore(directory: string): string {
   let checkout = directory;
 
@@ -279,7 +280,9 @@ function factoryStore(directory: string): string {
     // Not a repository: the directory itself names the project.
   }
 
-  return join(factoryHome, basename(checkout));
+  const prefix = `${homedir()}/`;
+
+  return join(factoryHome, checkout.startsWith(prefix) ? checkout.slice(prefix.length) : checkout);
 }
 
 // In-progress task directories directly under `directory`.

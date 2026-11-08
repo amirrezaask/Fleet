@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -469,6 +469,7 @@ interface ToolArgs {
 }
 
 interface HookPayload {
+  cwd?: string;
   hook_event_name?: string;
   transcript_path?: string;
   tool_name?: string;
@@ -511,6 +512,7 @@ function hookSession(
       const result = spawnSync(process.execPath, [join(root, "tools", budgetHook)], {
         env: {
           ...process.env,
+          HOME: home,
           FACTORY_HOME: join(home, "factory"),
           ...env,
         },
@@ -600,7 +602,7 @@ test("PreToolUse denies questions to ADMIN and unchecked or forked sessions", ()
 
 test("Stop blocks questions to ADMIN while a touched task is in progress, with a loop guard", () =>
   hookSession((hook, home) => {
-    const task = join(home, "factory", "some project", "epic", "subtasks", "leaf");
+    const task = join(home, "factory", "some-project", "epic", "subtasks", "leaf");
 
     mkdirSync(task, { recursive: true });
     writeFileSync(join(task, "TASK.md"), "status: inprogress\n## Blocker\nNone\n");
@@ -671,8 +673,10 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
 
 test("SessionStart lists in-progress leaf tasks and re-grounds after compaction", () =>
   hookSession((hook, home) => {
-    assert.equal(hook({ hook_event_name: "SessionStart", source: "startup" }), "");
-    const tasks = join(home, "factory", basename(home));
+    const cwd = join(home, "dev", "app");
+
+    assert.equal(hook({ hook_event_name: "SessionStart", source: "startup", cwd }), "");
+    const tasks = join(home, "factory", "dev", "app");
 
     const status = (name: string, value: string) => {
       mkdirSync(join(tasks, name), { recursive: true });
@@ -688,7 +692,7 @@ test("SessionStart lists in-progress leaf tasks and re-grounds after compaction"
     status("idle/subtasks/child", "inprogress");
 
     const start = JSON.parse(
-      hook({ hook_event_name: "SessionStart", source: "startup" }),
+      hook({ hook_event_name: "SessionStart", source: "startup", cwd }),
     ).hookSpecificOutput;
 
     assert.equal(start.hookEventName, "SessionStart");
@@ -698,5 +702,8 @@ test("SessionStart lists in-progress leaf tasks and re-grounds after compaction"
       join(tasks, "epic/subtasks/leaf"),
       join(tasks, "solo"),
     ]);
-    assert.match(hook({ hook_event_name: "SessionStart", source: "compact" }), /re-read the task/);
+    assert.match(
+      hook({ hook_event_name: "SessionStart", source: "compact", cwd }),
+      /re-read the task/,
+    );
   }));

@@ -53,7 +53,7 @@ browser. The installer links it onto PATH as `~/.local/bin/md`.
 
 ## Factory tasks
 
-Run `/factory <request>` (or one stage command at a time). Tasks live outside the repository, so every worktree, agent and the board see one live copy. The store is its own Git repository, named after the project's main checkout (`$FACTORY_HOME` overrides the root). The task then lives in:
+Run `/factory <request>` (or one stage command at a time). Tasks live outside the repository, so every worktree, agent and the board see one live copy. The store is its own Git repository, keyed by the main checkout's path relative to home, e.g. `dev/GameBox` (`$FACTORY_HOME` overrides the root). The task then lives in:
 
 ```text
 ~/.agents/factory/<project>/<NNN>-<task-name>/         # 001, 002, ... in creation order; name never changes

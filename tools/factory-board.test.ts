@@ -41,7 +41,12 @@ async function fixture(run: (base: string, tasks: string) => Promise<void>): Pro
   const port = await freePort();
 
   const child = spawn(process.execPath, [source, directory], {
-    env: { ...process.env, PORT: String(port), FACTORY_HOME: join(directory, "home") },
+    env: {
+      ...process.env,
+      HOME: tmpdir(),
+      PORT: String(port),
+      FACTORY_HOME: join(directory, "home"),
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
