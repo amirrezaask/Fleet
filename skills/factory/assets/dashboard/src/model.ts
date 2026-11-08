@@ -1,4 +1,4 @@
-// Pure model of a repository's .factory/ directory. No DOM, so tests import it directly.
+// Pure model of a project's task store. No DOM, so tests import it directly.
 export const STATUSES = ["backlog", "inprogress", "blocked", "done"] as const;
 
 export type Status = (typeof STATUSES)[number];

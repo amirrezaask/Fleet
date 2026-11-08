@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // Read-only Factory board for one repository: `node tools/factory-board/board.ts [repo] [--port N]`.
-// Serves the dashboard.html next to this file plus the repository's .factory/*.md files on
-// 127.0.0.1. Built-ins only. The Factory skill copies board.ts and dashboard.html into each
+// Serves the dashboard.html next to this file plus the project's task store, Markdown files in
+// ~/.agents/factory/<project>/, on 127.0.0.1. Built-ins only. The Factory skill copies board.ts and dashboard.html into each
 // project (tools/factory-board/), so nothing outside the repository is needed to run it.
+import { execFileSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { realpathSync } from "node:fs";
 import type { AddressInfo } from "node:net";
-import { basename, join, resolve, sep } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
@@ -48,6 +50,27 @@ async function readMarkdown(root: string, requested: string): Promise<string | u
   }
 }
 
+// The task store every worktree of a checkout shares: <factory home>/<main checkout name>.
+function factoryStore(directory: string): string {
+  let checkout = directory;
+
+  try {
+    checkout = dirname(
+      execFileSync(
+        "git",
+        ["-C", directory, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim(),
+    );
+  } catch {
+    // Not a repository: the directory itself names the project.
+  }
+
+  const home = process.env.FACTORY_HOME ?? join(homedir(), ".agents", "factory");
+
+  return join(home, basename(checkout));
+}
+
 const allowedHosts = (port: number) =>
   new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
 
@@ -60,12 +83,15 @@ export async function startDashboard(
   repo: string,
   port = 0,
 ): Promise<{ server: Server; url: string }> {
-  const root = await realpath(join(repo, ".factory")).catch(() => {
-    throw new Error(`No .factory directory in ${resolve(repo)}`);
+  const store = factoryStore(resolve(repo));
+
+  const root = await realpath(store).catch(() => {
+    throw new Error(`No Factory tasks at ${store}`);
   });
 
-  const name = basename(await realpath(repo));
+  const name = basename(root);
   const escaped = name.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+
   const page = (await readFile(join(here, "dashboard.html")))
     .toString("utf8")
     .replace("<title>Factory dashboard</title>", () => `<title>${escaped}</title>`);

@@ -1,6 +1,6 @@
 # Backlog: requests waiting for a task
 
-`.factory/backlog.md` is a plain queue the user fills by hand, and agents append
+`<factory>/backlog.md` is a plain queue the user fills by hand, and agents append
 out-of-scope findings to. A line costs nothing: no task directory, no intent, no number.
 Work starts only when `/factory next` runs, for example when resources allow.
 
@@ -22,13 +22,13 @@ Work starts only when `/factory next` runs, for example when resources allow.
 
 ## `/factory next`
 
-1. Take the lock of [Creating a task](tasks.md#creating-a-task-one-lock-one-commit),
-   check that `<main>` is on `master`, and read `<main>/.factory/backlog.md`. If it is
+1. Take the lock of [Creating a task](tasks.md#creating-a-task-one-lock-one-commit)
+   and read `<factory>/backlog.md`. If it is
    missing or has no `- [ ]` line, release the lock, say so and stop; create no file
    and no task.
 2. Take the first `- [ ]` line and pick the task name from the item. In the shared
    claim commit, replace exactly that line with `- [x] <item> → <NNN>-<slug>` and
-   include `.factory/backlog.md` among the committed paths, so the claim and the new
+   include `backlog.md` among the committed paths, so the claim and the new
    task land together.
 3. Continue from the worktree of that task: run `/factory intent` on it with the item
    and its indented context as the request. The pipeline is unchanged: the user's

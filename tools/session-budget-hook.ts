@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   closeSync,
   existsSync,
@@ -8,8 +9,8 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 
 // Claude Code hook installed by tools/install.ts for SessionStart, PreToolUse
 // and Stop. It keeps ADMIN's autonomous sessions on the rules in AGENTS.md: one
@@ -20,6 +21,7 @@ import { dirname, join, relative, resolve } from "node:path";
 const env = process.env;
 const autonomous = env.SESSION_AUTONOMY !== "off";
 const maxStopBlocks = Number(env.SESSION_STOP_BLOCKS ?? 5);
+const factoryHome = env.FACTORY_HOME ?? join(homedir(), ".agents", "factory");
 
 const listSessions = "mcp__ccd_session_mgmt__list_sessions";
 const startSession = "mcp__ccd_session__start_session";
@@ -238,34 +240,46 @@ function inProgress(task: string): boolean {
 }
 
 // In-progress, unescalated Factory tasks whose documents this session touched.
-function openTasks(text: string, cwd: string): string[] {
+function openTasks(text: string): string[] {
   const tasks = new Set<string>();
 
-  const documents = /\.factory\/(?:[\w.-]+\/)+(?:PLAN|TASK|BRIEF|INTENT)\.(?:html|md)/g;
+  const prefixes = [
+    factoryHome,
+    factoryHome.replace(homedir(), "~"),
+    factoryHome.replace(homedir(), "$HOME"),
+  ].map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  const documents = new RegExp(
+    `(?:${prefixes.join("|")})/([^/"\\n]+/(?:[\\w.-]+/)+(?:PLAN|TASK|BRIEF|INTENT)\\.(?:html|md))`,
+    "g",
+  );
 
   for (const match of text.matchAll(documents)) {
-    // The root is the session's cwd, or an absolute prefix (which may contain
-    // spaces) written before the path in the same string.
-    const before = text.slice(Math.max(0, match.index - 512), match.index);
+    const task = dirname(join(factoryHome, match[1] ?? ""));
 
-    const segment =
-      before
-        .slice(before.lastIndexOf('"') + 1)
-        .split("\n")
-        .at(-1) ?? "";
-
-    const slash = segment.indexOf("/");
-
-    const roots = slash >= 0 && segment.endsWith("/") ? [cwd, segment.slice(slash)] : [cwd];
-
-    for (const root of roots) {
-      const task = dirname(resolve(root, match[0]));
-
-      if (inProgress(task)) tasks.add(task);
-    }
+    if (inProgress(task)) tasks.add(task);
   }
 
   return [...tasks].filter((task) => existsSync(task) && !escalated(task));
+}
+
+// The task store every worktree of a checkout shares: <factory home>/<main checkout name>.
+function factoryStore(directory: string): string {
+  let checkout = directory;
+
+  try {
+    checkout = dirname(
+      execFileSync(
+        "git",
+        ["-C", directory, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim(),
+    );
+  } catch {
+    // Not a repository: the directory itself names the project.
+  }
+
+  return join(factoryHome, basename(checkout));
 }
 
 // In-progress task directories directly under `directory`.
@@ -279,7 +293,7 @@ function inProgressChildren(directory: string): string[] {
 }
 
 // In-progress leaf tasks: in-progress tasks with no in-progress subtask.
-function inProgressTasks(root: string): string[] {
+function inProgressTasks(store: string): string[] {
   const found: string[] = [];
 
   const walk = (tasks: string[]) => {
@@ -291,16 +305,16 @@ function inProgressTasks(root: string): string[] {
     }
   };
 
-  walk(inProgressChildren(join(root, ".factory")));
+  walk(inProgressChildren(store));
 
   return found;
 }
 
 function sessionStart(input: HookInput): void {
-  const cwd = input.cwd ?? process.cwd();
+  const store = factoryStore(input.cwd ?? process.cwd());
 
-  if (input.agent_id || !autonomous || !existsSync(join(cwd, ".factory"))) return;
-  const tasks = inProgressTasks(cwd).map((task) => relative(cwd, task));
+  if (input.agent_id || !autonomous || !existsSync(store)) return;
+  const tasks = inProgressTasks(store);
 
   const resumed =
     input.source === "compact" || input.source === "resume"
@@ -402,8 +416,7 @@ function stop(input: HookInput): void {
 
   if (!asksAdmin(message)) return;
   const text = transcript(input);
-  const cwd = input.cwd ?? process.cwd();
-  const open = openTasks(text, cwd);
+  const open = openTasks(text);
 
   if (!open.length) return;
   const state = loadState(input);
@@ -425,7 +438,7 @@ function stop(input: HookInput): void {
 
   emit({
     decision: "block",
-    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.map((task) => relative(cwd, task) || task).join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.md, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.md, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
+    reason: `Your reply ends by asking ADMIN or waiting on ADMIN, but ${open.join(", ")} is still in progress and ADMIN will not answer. Decide yourself, record the decision in PLAN.md, and continue with the next step. If the decision needs a change to an approved BRIEF requirement or an action outside the repository and sessions, write it as the Blocker in TASK.md, continue any other in-scope work, and end with a statement. If another live session owns the remaining work, end with a statement saying which. Do not end with a question.`,
   });
 }
 

@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -511,6 +511,7 @@ function hookSession(
       const result = spawnSync(process.execPath, [join(root, "tools", budgetHook)], {
         env: {
           ...process.env,
+          FACTORY_HOME: join(home, "factory"),
           ...env,
         },
         input: JSON.stringify({ session_id: sessionId, cwd: home, ...input }),
@@ -599,7 +600,7 @@ test("PreToolUse denies questions to ADMIN and unchecked or forked sessions", ()
 
 test("Stop blocks questions to ADMIN while a touched task is in progress, with a loop guard", () =>
   hookSession((hook, home) => {
-    const task = join(home, ".factory", "epic", "subtasks", "leaf");
+    const task = join(home, "factory", "some project", "epic", "subtasks", "leaf");
 
     mkdirSync(task, { recursive: true });
     writeFileSync(join(task, "TASK.md"), "status: inprogress\n## Blocker\nNone\n");
@@ -622,7 +623,7 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     assert.equal(stop("Committed M3. Next I start M4."), "");
     const blocked = JSON.parse(stop("M3 is done.\n\nStart the continuation session?"));
     assert.equal(blocked.decision, "block");
-    assert.match(blocked.reason, /\.factory\/epic\/subtasks\/leaf/);
+    assert.ok(blocked.reason.includes(task));
     assert.equal(
       stop("Waiting on you for the branch name.", { stop_hook_active: true }),
       "",
@@ -664,14 +665,14 @@ test("Stop blocks questions to ADMIN while a touched task is in progress, with a
     writeFileSync(join(task, "TASK.html"), html("None", "done"));
     assert.equal(stop("Anything else?"), "", "a task moved to another status may end");
 
-    rmSync(join(home, ".factory"), { recursive: true });
+    rmSync(join(home, "factory"), { recursive: true });
     assert.equal(stop("Anything else?"), "", "a finished or moved task may end");
   }));
 
 test("SessionStart lists in-progress leaf tasks and re-grounds after compaction", () =>
   hookSession((hook, home) => {
     assert.equal(hook({ hook_event_name: "SessionStart", source: "startup" }), "");
-    const tasks = join(home, ".factory");
+    const tasks = join(home, "factory", basename(home));
 
     const status = (name: string, value: string) => {
       mkdirSync(join(tasks, name), { recursive: true });
@@ -693,6 +694,9 @@ test("SessionStart lists in-progress leaf tasks and re-grounds after compaction"
     assert.equal(start.hookEventName, "SessionStart");
     assert.match(start.additionalContext, /list_sessions/);
     const listed = /In-progress leaf tasks here: (.*)\./.exec(start.additionalContext)?.[1];
-    assert.deepEqual(listed?.split(", ").sort(), [".factory/epic/subtasks/leaf", ".factory/solo"]);
+    assert.deepEqual(listed?.split(", ").sort(), [
+      join(tasks, "epic/subtasks/leaf"),
+      join(tasks, "solo"),
+    ]);
     assert.match(hook({ hook_event_name: "SessionStart", source: "compact" }), /re-read the task/);
   }));

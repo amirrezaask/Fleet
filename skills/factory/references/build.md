@@ -10,8 +10,8 @@ run last.**
 ## Start
 
 Set the task status to `inprogress` and the stage to `build`. Work in a worktree
-under the task directory, `.factory/<task>/worktree/<branch>/` (gitignored). Status
-changes never move the directory, so the worktree stays valid. Read `INTENT.md`, `DESIGN.md`, `PLAN.md` and the project's agent
+of the project at `<main>/.worktrees/<branch>/`; task documents stay in the
+[task store](tasks.md#the-task-store). Read `INTENT.md`, `DESIGN.md`, `PLAN.md` and the project's agent
 memory (`AGENTS.md`/`CLAUDE.md`).
 
 ## The feedback loop
@@ -35,7 +35,7 @@ nothing. Heavy gates are never run mid-build.
 ## Stay on the plan
 
 Follow the plan's order and contracts. When reality departs from it, update
-`PLAN.md` **in the same commit** as the departing code (date, reason, affected IDs,
+`PLAN.md` **before committing** the departing code (date, reason, affected IDs,
 impact). Requirement or design conflicts stop for the user; record the reason in
 `TASK.md` as `blocker:` and set the status to `blocked`.
 
@@ -70,7 +70,7 @@ and repeat the affected gates:
 
 Fix failures in the code. For a batch of fixes, one fresh implementer subagent may
 do the work; re-run the affected gates afterwards. When a fix changes the approach,
-revise `PLAN.md` in the same commit and add the incident to `DEBRIEF.md`.
+revise `PLAN.md` with the fix and add the incident to `DEBRIEF.md`.
 
 ### Evidence rules
 

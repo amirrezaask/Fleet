@@ -2,17 +2,16 @@
 
 ## Layout
 
-`.factory/` at the project root lists every task. Each task is one directory named
+[`<factory>/`](#the-task-store), outside the repository, lists every task. Each task is one directory named
 `<NNN>-<task-name>`, and the name never changes:
 
 ```text
-.factory/
+~/.agents/factory/<project>/
   001-account-recovery/
     TASK.md  INTENT.md  DESIGN.md  PLAN.md  DEBRIEF.md  REVIEW.md
     design/                                                   # design artifacts
       flow.md  mock.html  states.png
     evidence/                                                 # raw test output, gitignored
-    worktree/                                                 # task worktrees, gitignored
     subtasks/
       001-email-token/                                        # subtask, same layout
       002-rate-limit/
@@ -21,42 +20,62 @@
 
 `<NNN>` is a three-digit, zero-padded sequence number (`001`, `002`, ...) so the
 directories always list in creation order: a new task takes one more than the highest
-number among its siblings in `.factory/` (or in the parent's `subtasks/`), starting at
+number among its siblings in `<factory>/` (or in the parent's `subtasks/`), starting at
 `001`; numbers are never reused or renumbered. The rest of the name is lowercase ASCII
 letters and numbers separated by single hyphens, unique among its siblings. Commands
 may name a task by its full directory name, its number or its slug. Reuse existing tasks; never overwrite another task to resolve a
-collision. Only directories inside `subtasks/` are subtasks, so `design/`,
-`evidence/` and `worktree/` are never mistaken for them. Link between a task's own
+collision. Only directories inside `subtasks/` are subtasks, so `design/`
+and `evidence/` are never mistaken for them. Link between a task's own
 files with relative paths (`design/mock.html`, `REVIEW.md`, `../DESIGN.md`).
 
 A task starts from a request. Requests without a task yet wait in
-[`.factory/backlog.md`](backlog.md), which is a file, not a directory, and the board
+[`<factory>/backlog.md`](backlog.md), which is a file, not a directory, and the board
 ignores it.
+
+## The task store
+
+Task documents do not live in the repository. Each project has one **task store**,
+shared by all its worktrees, all agents and the board, so a status change is visible
+everywhere the moment it is written. It is `~/.agents/factory/<project>/`, where
+`<project>` is the name of the main checkout (`$FACTORY_HOME` overrides the root).
+From any worktree:
+
+```sh
+factory="${FACTORY_HOME:-$HOME/.agents/factory}/$(basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")"
+```
+
+`<factory>` below means this directory; always write task documents there by absolute
+path and never into a worktree. On first use, `mkdir -p <factory>`, and if it has no
+`.git`, run `git -C <factory> init -q` and write `evidence/` to `<factory>/.gitignore`.
+
+The store is its own Git repository, which keeps the history of the documents. Commit
+only your task, so concurrent agents do not sweep up each other's edits, and retry if
+`index.lock` is held:
+`git -C <factory> add -- <task> && git -C <factory> commit -q -m "<message>" -- <task>`.
+Code is still committed in the worktree, in the project's own repository.
 
 ## Creating a task: one lock, one commit
 
-Sessions run in separate worktrees and cannot see each other's new directories, so
-every new top-level task (from `/factory intent` or `/factory next`) takes its number
-on `master` in the main checkout, under a lock all sessions share. The main checkout is
-the directory that holds the git common dir
+Every session sees the same store, so a new task is visible to all of them as soon as
+it is written; only the number needs protecting. Every new top-level task (from
+`/factory intent` or `/factory next`) takes its number under a lock all sessions share.
+The main checkout is the directory that holds the git common dir
 (`dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`); call it `<main>`.
 
-1. **Lock.** `mkdir <main>/.git/factory-claim.lock` (no `-p`; the directory is
-   untracked). If it exists, wait a few seconds and retry; if it is older than ten
-   minutes, a session crashed: remove it and retry. Always `rmdir` it when step 3 ends,
-   including on failure.
-2. **Check.** `<main>` must be on `master`; if not, release the lock and tell the user.
-3. **Number and commit.** Pick `<NNN>-<slug>` (next free number in `<main>/.factory/`),
-   create `<main>/.factory/<NNN>-<slug>/TASK.md` from the
+1. **Lock.** Set up [the store](#the-task-store) if needed, then
+   `mkdir <factory>/.git/factory-claim.lock` (no `-p`). If it exists, wait a few seconds
+   and retry; if it is older than ten minutes, a session crashed: remove it and retry.
+   Always `rmdir` it when step 2 ends, including on failure.
+2. **Number and commit.** Pick `<NNN>-<slug>` (next free number in `<factory>/`), create
+   `<factory>/<NNN>-<slug>/TASK.md` from the
    [task template](../templates/TASK_TEMPLATE.md) with status `backlog` and stage
    `intent`, plus any other path the caller names (the backlog claim), and commit only
-   those paths (`git -C <main> commit -m "factory(<task>): create" -- <paths>`), which
-   leaves other changes in the main checkout alone. Release the lock.
-4. Create the task's worktree from `master`, which now holds the task, and continue
+   those paths in the store. Release the lock.
+3. Create the task's worktree at `<main>/.worktrees/<branch>/` from `master` and continue
    there.
 
 Two sessions never get the same number: the second waits on the lock, then reads the
-first one's committed directory. Subtasks need no lock; their parent's managing agent
+first one's directory. Subtasks need no lock; their parent's managing agent
 is the only writer of its `subtasks/` folder.
 
 ## Metadata and status
@@ -81,7 +100,7 @@ the directory is never renamed or moved, so worktrees and links survive. Record
 the blocker in `blocker:`. A status change is bookkeeping: it does not
 approve work, run plans, prove completion or start sessions. Because state lives in
 the file, browse it with the board or
-`grep -r '^status:' .factory --include=TASK.md`.
+`grep -r '^status:' <factory> --include=TASK.md`.
 
 ## Subtasks
 
@@ -96,21 +115,33 @@ siblings live in `TASK.md` as `depends_on`; see [subtask graphs](subtasks.md).
 
 Tasks named `<name>-<status>/`, `<status>/<name>/` or kept in `docs/tasks/` are not
 read by the board or hook. Migrate each: drop the status suffix from the directory
-name (`git mv .factory/export-csv-done .factory/export-csv`), add the status as
+name (`mv <factory>/export-csv-done <factory>/export-csv`), add the status as
 `<meta name="status">` (legacy TASK.html) or a `status:` frontmatter key (TASK.md), and
 move nested subtasks into `subtasks/`. Moved files keep their format; new documents,
 debriefs and reports are always Markdown.
 
+A project whose tasks are still in `.factory/` in the repository is invisible to the
+board and hook until moved to the store. With no agent working in it, set up the store,
+then:
+
+```sh
+rsync -a --exclude worktree/ "<main>/.factory/" "<factory>/"
+git -C <factory> add -A && git -C <factory> commit -q -m "import tasks from <project>"
+```
+
+and on a branch in the project `git rm -r .factory` and drop the `.factory/**` lines from
+`.gitignore`. Earlier document history stays in the project's own Git log.
+
 ## Per-repository board
 
-A read-only view of one repository's `.factory/`: kanban columns by `status`, the
-`.factory/backlog.md` queue, and a drawer with each task's Markdown documents. It
+A read-only view of one project's task store: kanban columns by `status`, the
+`backlog.md` queue, and a drawer with each task's Markdown documents. It
 changes nothing and starts no agents; the commands stay in the chat. Every project
 carries its own copy, made of two skill assets:
 
 - `skills/factory/assets/dashboard/board.ts`: the tiny server (Node.js 24+, built-ins
   only). It binds to `127.0.0.1` on a free port and prints the URL, serves only `.md`
-  files under `.factory/` (no symlinks, `evidence/` or `worktree/`), checks the `Host`
+  files under the store (no symlinks, `evidence/`, `worktree/` or `.git`), checks the `Host`
   header and refuses everything but GET.
 - `skills/factory/assets/dashboard/dashboard.html`: the page it serves, read from the
   directory beside `board.ts`. It polls every 2 seconds.
@@ -134,8 +165,8 @@ carries its own copy, made of two skill assets:
 
 Launch it from the project root with `npm run factory:board` or
 `node tools/factory-board/board.ts [repo] [--port N]`. Without a server, `dashboard.html`
-also opens straight from disk in a Chromium browser: pick the repository or its
-`.factory` folder once and the browser remembers it.
+also opens straight from disk in a Chromium browser: pick the project's folder in
+`~/.agents/factory` once and the browser remembers it.
 
 The page is React, shadcn-style components and Tailwind in the Claude look (light, dark
 or system theme), bundled with its fonts into that one file, so it needs no network.
@@ -154,7 +185,7 @@ A single board serves every project; projects do not carry a copy. Run it with
 `skills/factory/assets/task-board/` after `npm install` there, then run
 `amirreza-factory`). Node.js 24+ is required. Listed directories are registered;
 with none given and an empty registry the current directory is adopted if it has
-`.factory/` . Registered projects persist in `~/.factory/projects.json`
+a task store. Registered projects persist in `~/.agents/factory/projects.json`
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
 reports the URL. Leave a preview running only when the user asks to use it. Never

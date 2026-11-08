@@ -126,12 +126,13 @@ export function App() {
         ) : (
           <Card className="rise p-8 text-center">
             <FolderOpen className="mx-auto size-8 text-clay" aria-hidden />
-            <h2 className="mt-4 font-serif text-2xl font-normal">Open a repository</h2>
+            <h2 className="mt-4 font-serif text-2xl font-normal">Open a project</h2>
             {state.supported ? (
               <>
                 <p className="mt-2 text-muted-foreground">
-                  Pick the repository or its <code className="font-mono text-meta">.factory</code>{" "}
-                  folder. Nothing is uploaded or written; the browser only asks to read it.
+                  Pick the project's folder in{" "}
+                  <code className="font-mono text-meta">~/.agents/factory</code>. Nothing is
+                  uploaded or written; the browser only asks to read it.
                 </p>
                 <Button className="mt-6" onClick={() => void pick()}>
                   {state.saved ? `Reopen ${state.saved.name}` : "Choose folder"}

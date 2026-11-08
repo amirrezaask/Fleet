@@ -772,9 +772,9 @@ function crumbs(ancestors: Task[], expanded: boolean): Crumb[] {
   return [all[0], { kind: "gap", key: "gap" }, ...all.slice(-2)];
 }
 
-// The server reports each task document path relative to the project.
+// The server reports each task document's absolute path in the task store.
 function taskFilePath(trail: Task[]) {
-  return trail.at(-1)?.file ?? ".factory/";
+  return trail.at(-1)?.file ?? "";
 }
 
 function sendTargets(file: string) {
@@ -1470,8 +1470,8 @@ function EmptyProjects({
     <section className="mx-auto mt-16 max-w-md rounded-2xl bg-sunken p-10 text-center">
       <h2 className="font-serif text-title font-normal">Watch a project</h2>
       <p className="mt-3 text-muted-foreground">
-        Factory reads <code className="font-mono text-meta">.factory/</code> from any folder you
-        add.
+        Factory shows each project's tasks from{" "}
+        <code className="font-mono text-meta">~/.agents/factory/</code>.
       </p>
       <div className="mt-6 flex justify-center">
         {picking ? (

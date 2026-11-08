@@ -65,11 +65,8 @@ async function walk(dir: DirectoryLike, prefix: string, out: FileEntry[]): Promi
   }
 }
 
-// Accepts the repository or its .factory folder.
-export async function folderSource(picked: DirectoryLike): Promise<Source> {
-  const root = await picked.getDirectoryHandle(".factory").catch(() => picked);
-  const name = picked.name === ".factory" ? "" : picked.name;
-
+// The picked folder is the project's task store, ~/.agents/factory/<project>.
+export async function folderSource(root: DirectoryLike): Promise<Source> {
   return {
     label: "folder",
     async list() {
@@ -77,7 +74,7 @@ export async function folderSource(picked: DirectoryLike): Promise<Source> {
 
       await walk(root, "", files);
 
-      return { name, files: files.sort((a, b) => a.path.localeCompare(b.path)) };
+      return { name: root.name, files: files.sort((a, b) => a.path.localeCompare(b.path)) };
     },
     async read(path) {
       const parts = path.split("/");

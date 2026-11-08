@@ -60,6 +60,6 @@ _Decided before code. Every R and D has a test. `fast` tests run during build an
 
 ## Revisions
 
-_Revise in the same commit as the code that departs from the plan. Intent requirements and accepted design decisions stay binding._
+_Revise before committing the code that departs from the plan. Intent requirements and accepted design decisions stay binding._
 
 - <YYYY-MM-DD: reason, affected IDs, impact; or None.>
