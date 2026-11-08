@@ -6,5 +6,3 @@ docs/reports/**/*.json
 docs/reports/**/*.log
 docs/reports/**/*.png
 .server.mjs
-.factory/**/evidence/
-.factory/**/worktree/

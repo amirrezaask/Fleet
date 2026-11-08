@@ -11,6 +11,12 @@ Factory is an **opt-in** delivery pipeline. It runs only when the user types
 and create no Factory task. Research discussions, status questions and document
 viewing never authorize implementation.
 
+## The task store
+
+`<factory>` is the project's task store, `~/.agents/factory/<project>/`: outside the
+repository, one live copy shared by every worktree, agent and the board. Task documents
+are written only there; read [the task store](references/tasks.md#the-task-store) first.
+
 ## Commands
 
 Factory is one command, `/factory`, with an optional stage subcommand.
@@ -18,8 +24,8 @@ Factory is one command, `/factory`, with an optional stage subcommand.
 | Command | Accepts on entry | Does | Ends when |
 | --- | --- | --- | --- |
 | `/factory [request or task]` | — | Router: find or create the task, report its stage, run stages forward | It stops at each human gate |
-| `/factory next` | `.factory/backlog.md` | Take the first open backlog line, claim it, and run `/factory intent` on it; see [backlog](references/backlog.md) | The intent stops at its approval gate |
-| `/factory intent [request]` | — | Create `.factory/<NNN>-<name>/` under the [shared lock](references/tasks.md#creating-a-task-one-lock-one-commit) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
+| `/factory next` | `<factory>/backlog.md` | Take the first open backlog line, claim it, and run `/factory intent` on it; see [backlog](references/backlog.md) | The intent stops at its approval gate |
+| `/factory intent [request]` | — | Create `<factory>/<NNN>-<name>/` under the [shared lock](references/tasks.md#creating-a-task-one-lock-one-commit) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
 | `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |
@@ -45,7 +51,7 @@ of the stage's artifact and tells the user the next command.
 | Build | [build](references/build.md) | Code, tests, `DEBRIEF.md`, `REVIEW.md` | Future agents; the user reads the verdict | Fast tests green, then regression, acceptance and heavy gates (last) pass |
 | Review | [review](references/review.md) | Review section of `REVIEW.md` | The user: verdict first | Code, security, UI and UX reviewers pass and specs match the verified behavior |
 
-**Every stage ends with a commit** of its artifact, and the next stage starts by
+**Every stage ends with a commit** of its artifact in the task store, and the next stage starts by
 reading it. The commit chain is the audit trail: what was asked, what was decided,
 what was built, and what was proven. Commit messages name the task and stage
 (`factory(<task>): design`) and reference `INTENT.md` and `PLAN.md` once they exist.
@@ -89,15 +95,15 @@ debrief template, including one for work done without the pipeline.
 
 ## Tasks
 
-A task is one directory, `.factory/<NNN>-<task-name>/`, numbered `001`, `002`, ... in creation order, whose name never changes. It holds
+A task is one directory, `<factory>/<NNN>-<task-name>/`, numbered `001`, `002`, ... in creation order, whose name never changes. It holds
 `TASK.md`, its stage documents and `REVIEW.md` (older tasks: `REPORT.md`), its `design/` folder and its
-`subtasks/` folder. `.factory/` at the project root lists every task. `TASK.md`
+`subtasks/` folder. `<factory>/` lists every task. `TASK.md`
 records the state in frontmatter: `status:` is `backlog`, `inprogress`,
 `blocked` or `done`, and `stage:` is
 `intent`, `design`, `plan`, `build`, `review` or `done`. Read
 [task layout and board](references/tasks.md) for naming, metadata and the board.
 
-`/factory intent` creates `.factory/<NNN>-<name>/` (the next free number) with `TASK.md` from the
+`/factory intent` creates `<factory>/<NNN>-<name>/` (the next free number) with `TASK.md` from the
 [task template](templates/TASK_TEMPLATE.md), status `backlog`. **When an agent picks
 a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
 sets `backlog` when it stops between stages with no work in flight, `blocked` with the
@@ -111,13 +117,13 @@ remove, weaken or reinterpret a requirement or an accepted design decision. A
 conflict needs the user's explicit authorization, recorded as an amendment entry in
 the affected document, with the earlier text kept in Git.
 
-**The backlog.** `.factory/backlog.md` is the user's queue of requests that have no task
+**The backlog.** `<factory>/backlog.md` is the user's queue of requests that have no task
 yet: one line each, no ceremony. `/factory next` turns the first open line into a task
 and the pipeline runs as usual. Read [backlog](references/backlog.md).
 
 **The loop.** A finding outside the task's scope (a bug, a risk, a debt) is not fixed
 silently. Record it in the debrief or report, and when it deserves work, append it as
-an open line to `.factory/backlog.md`. It enters the pipeline when `/factory next`
+an open line to `<factory>/backlog.md`. It enters the pipeline when `/factory next`
 reaches it or the user runs `/factory intent` on it.
 
 ## Subtasks

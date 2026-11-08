@@ -67,7 +67,7 @@ intent's outcome is actually reachable and discoverable.
 2. Fix each verified `Important` finding in the code (one fresh implementer subagent
    may do a batch); a finding that conflicts with a requirement or accepted design
    decision stops for the user. Fix or consciously accept `Nit`s. When a fix changes the
-   approach, revise `PLAN.md` in the same commit and add the incident to `DEBRIEF.md`.
+   approach, revise `PLAN.md` with the fix and add the incident to `DEBRIEF.md`.
 3. Re-run the affected fast tests, and the heavy gates a fix could have changed, then
    run the reviewers that raised `Important` findings again as the next round. Repeat
    until all started reviewers return `VERDICT: PASS` or the user accepts the
@@ -91,10 +91,10 @@ rejected because), or "Skipped: <reason>". Then:
 
 1. Update the affected specs from the verified behavior
    ([specification integration](specifications.md)).
-2. Out-of-scope findings worth doing are appended to `.factory/backlog.md`.
+2. Out-of-scope findings worth doing are appended to `<factory>/backlog.md`.
 3. A memory candidate from the debrief that recurred here is proposed to the user as a
    concrete `AGENTS.md`/`CLAUDE.md` or skill edit.
-4. Remove the task's `worktree/` contents with `git worktree remove`, set the status to
+4. Remove the task's worktrees with `git worktree remove`, set the status to
    `done`, the stage to `done`, update `updated`, and commit.
 
 Status `done` requires: all requirements evidenced, every gate passed or explicitly

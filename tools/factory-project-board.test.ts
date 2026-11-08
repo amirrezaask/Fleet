@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { request, type IncomingHttpHeaders } from "node:http";
 import {
   copyFileSync,
@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { test } from "node:test";
 import { startDashboard } from "../skills/factory/assets/dashboard/board.ts";
 import { renderMarkdown } from "../skills/factory/assets/dashboard/src/markdown.ts";
@@ -61,7 +61,11 @@ function get(url: string, options: { method?: string; host?: string } = {}) {
 async function withRepo(run: (url: string, repo: string) => Promise<void>) {
   const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
   const repo = join(base, "repo");
-  const factory = join(repo, ".factory");
+  const home = join(base, "home");
+  const factory = join(home, "repo");
+  const previousHome = process.env.FACTORY_HOME;
+
+  process.env.FACTORY_HOME = home;
 
   mkdirSync(join(factory, "001-first", "evidence"), { recursive: true });
   mkdirSync(join(factory, "001-first", "worktree"), { recursive: true });
@@ -69,9 +73,9 @@ async function withRepo(run: (url: string, repo: string) => Promise<void>) {
   writeFileSync(join(factory, "001-first", "evidence", "raw.md"), "evidence");
   writeFileSync(join(factory, "001-first", "worktree", "x.md"), "worktree");
   writeFileSync(join(factory, "001-first", "notes.txt"), "not markdown");
-  writeFileSync(join(base, "secret.md"), "outside the factory");
-  symlinkSync(join(base, "secret.md"), join(factory, "link.md"));
-  symlinkSync(base, join(factory, "linked-dir"));
+  writeFileSync(join(home, "secret.md"), "outside the factory");
+  symlinkSync(join(home, "secret.md"), join(factory, "link.md"));
+  symlinkSync(home, join(factory, "linked-dir"));
 
   const { server, url } = await startDashboard(repo, 0);
 
@@ -79,8 +83,14 @@ async function withRepo(run: (url: string, repo: string) => Promise<void>) {
     await run(url, repo);
   } finally {
     await new Promise((done) => server.close(done));
+    restoreFactoryHome(previousHome);
     rmSync(base, { recursive: true, force: true });
   }
+}
+
+function restoreFactoryHome(previous: string | undefined) {
+  if (previous === undefined) delete process.env.FACTORY_HOME;
+  else process.env.FACTORY_HOME = previous;
 }
 
 test("lists only task markdown and serves it as plain text", () =>
@@ -136,12 +146,62 @@ test("serves a self-contained dashboard page with a restrictive content security
     assert.doesNotMatch(page.body, /<script[^>]+src=|<link[^>]+href=|https?:\/\/cdn/i);
   }));
 
-test("fails clearly when the repository has no .factory directory", async () => {
+test("fails clearly when the project has no task store", async () => {
   const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
+  const previous = process.env.FACTORY_HOME;
+
+  process.env.FACTORY_HOME = join(base, "home");
 
   try {
-    await assert.rejects(startDashboard(base, 0), /No \.factory directory/);
+    await assert.rejects(startDashboard(base, 0), /No Factory tasks at/);
   } finally {
+    restoreFactoryHome(previous);
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("the main checkout and its worktrees all read the same task store", async () => {
+  const base = mkdtempSync(join(tmpdir(), "factory dashboard "));
+  const main = join(base, "my-project");
+  const worktree = join(main, ".worktrees", "feat-x");
+  const store = join(base, "home", "my-project");
+  const previous = process.env.FACTORY_HOME;
+
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", main, ...args], { stdio: "ignore" });
+
+  process.env.FACTORY_HOME = join(base, "home");
+  mkdirSync(main);
+  mkdirSync(join(store, "001-live"), { recursive: true });
+  git("init", "-q");
+  git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "base");
+  git("worktree", "add", "-q", "-b", "feat-x", worktree);
+
+  try {
+    for (const directory of [main, worktree, join(worktree, "tools")]) {
+      mkdirSync(directory, { recursive: true });
+
+      const { server, url } = await startDashboard(directory, 0);
+
+      try {
+        writeFileSync(
+          join(store, "001-live", "TASK.md"),
+          "---\ntitle: Live\nstatus: inprogress\n---\n",
+        );
+
+        const listing = JSON.parse((await get(`${url}api/files`)).body);
+
+        assert.equal(listing.name, "my-project");
+        assert.deepEqual(
+          listing.files.map((f: { path: string }) => f.path),
+          ["001-live/TASK.md"],
+        );
+      } finally {
+        await new Promise((done) => server.close(done));
+      }
+    }
+  } finally {
+    restoreFactoryHome(previous);
     rmSync(base, { recursive: true, force: true });
   }
 });
@@ -297,7 +357,7 @@ function fakeDirectory(name: string, node: DirNode): DirectoryLike {
   };
 }
 
-test("a picked folder lists only task markdown, finds .factory below the repository root and reads files", async () => {
+test("a picked task store lists only task markdown and reads files", async () => {
   const factory = dir({
     "001-a": dir({
       "TASK.md": file("task"),
@@ -306,22 +366,18 @@ test("a picked folder lists only task markdown, finds .factory below the reposit
     }),
     "backlog.md": file("- [ ] item"),
     "notes.txt": file("skip"),
+    ".git": dir({ "HEAD.md": file("skip") }),
   });
 
-  for (const picked of [
-    fakeDirectory("repo", dir({ ".factory": factory, "README.md": file("outside") })),
-    fakeDirectory(".factory", factory),
-  ]) {
-    const source = await folderSource(picked);
-    const listing = await source.list();
+  const source = await folderSource(fakeDirectory("my-project", factory));
+  const listing = await source.list();
 
-    assert.deepEqual(
-      listing.files.map((f) => f.path),
-      ["001-a/TASK.md", "backlog.md"],
-    );
-    assert.equal(listing.name, picked.name === ".factory" ? "" : "repo");
-    assert.equal(await source.read("001-a/TASK.md"), "task");
-  }
+  assert.deepEqual(
+    listing.files.map((f) => f.path),
+    ["001-a/TASK.md", "backlog.md"],
+  );
+  assert.equal(listing.name, "my-project");
+  assert.equal(await source.read("001-a/TASK.md"), "task");
 });
 
 test("a project copy of board.ts and dashboard.html runs on its own with plain node", async () => {
@@ -330,13 +386,17 @@ test("a project copy of board.ts and dashboard.html runs on its own with plain n
   const asset = join(import.meta.dirname, "..", "skills", "factory", "assets", "dashboard");
 
   mkdirSync(copy, { recursive: true });
-  mkdirSync(join(project, ".factory", "001-x"), { recursive: true });
-  writeFileSync(join(project, ".factory", "001-x", "TASK.md"), "---\ntitle: X\n---\n");
+  const home = join(project, "home");
+  const store = join(home, basename(project));
+
+  mkdirSync(join(store, "001-x"), { recursive: true });
+  writeFileSync(join(store, "001-x", "TASK.md"), "---\ntitle: X\n---\n");
   copyFileSync(join(asset, "board.ts"), join(copy, "board.ts"));
   copyFileSync(join(asset, "dashboard.html"), join(copy, "dashboard.html"));
 
   const child = spawn(process.execPath, [join(copy, "board.ts"), project], {
     cwd: project,
+    env: { ...process.env, FACTORY_HOME: home },
     stdio: ["ignore", "pipe", "inherit"],
   });
 

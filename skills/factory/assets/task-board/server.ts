@@ -1,10 +1,10 @@
 import type { AddressInfo } from "node:net";
-import { execFile, type ChildProcess } from "node:child_process";
+import { execFile, execFileSync, type ChildProcess } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { constants, watch, type FSWatcher } from "node:fs";
+import { constants, mkdirSync, watch, type FSWatcher } from "node:fs";
 import { lstat, mkdir, open, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 import { Effect, Option, Schema } from "effect";
@@ -37,8 +37,10 @@ async function projectName(project: string): Promise<string> {
   }
 }
 
+const factoryHome = process.env.FACTORY_HOME ?? join(homedir(), ".agents", "factory");
+
 // Watched projects live in one registry file so every board session shows the same set.
-const registryFile = join(process.env.FACTORY_HOME ?? join(homedir(), ".factory"), "projects.json");
+const registryFile = join(factoryHome, "projects.json");
 
 const registered: string[] = await readFile(registryFile, "utf8").then(
   (text) => Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(text)).slice(),
@@ -47,8 +49,25 @@ const registered: string[] = await readFile(registryFile, "utf8").then(
 
 const projectId = (path: string) => createHash("sha1").update(path).digest("hex").slice(0, 10);
 
-// Tasks live in <project>/.factory/.
-const tasksOf = (project: string) => join(project, ".factory");
+// Tasks live outside the repository, so every worktree of a project shares one store named
+// after its main checkout. A registered worktree therefore shows the same tasks.
+function tasksOf(directory: string): string {
+  let checkout = directory;
+
+  try {
+    checkout = dirname(
+      execFileSync(
+        "git",
+        ["-C", directory, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim(),
+    );
+  } catch {
+    // Not a repository: the directory itself names the project.
+  }
+
+  return join(factoryHome, basename(checkout));
+}
 
 async function saveRegistry(): Promise<void> {
   await mkdir(dirname(registryFile), { recursive: true });
@@ -197,7 +216,7 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-// Tasks live at .factory/<name>/ and subtasks at <task>/subtasks/<name>/. Names never change;
+// Tasks live at <store>/<name>/ and subtasks at <task>/subtasks/<name>/. Names never change;
 // the status is a field of TASK.md frontmatter (or a legacy TASK.html meta tag), so a move edits one file.
 type Location = { directory: string };
 
@@ -341,10 +360,6 @@ async function readTask(root: string, id: string) {
   return { name, ...decodeTask(await readDocument(root, id, name), name) };
 }
 
-// The task document path relative to the project, e.g. .factory/<name>/TASK.md.
-const projectFile = (root: string, directory: string, name: string) =>
-  join(".factory", relative(root, join(directory, name)));
-
 // The status of the task in `directory`; an unreadable TASK file counts as backlog.
 async function childStatus(directory: string): Promise<(typeof statuses)[number]> {
   for (const name of ["TASK.md", "TASK.html"]) {
@@ -376,7 +391,7 @@ async function summary(root: string, id: string): Promise<TaskSummary> {
 
   return {
     id,
-    file: projectFile(root, directory, name),
+    file: join(directory, name),
     subtasks: await countSubtasks(directory),
     ...data,
   };
@@ -395,7 +410,7 @@ async function listSubtasks(root: string, id: string) {
       subtasks.push({
         id: childId,
         status: "backlog",
-        file: projectFile(root, child.directory, "TASK.md"),
+        file: join(child.directory, "TASK.md"),
         subtasks: { total: 0, done: 0 },
         title: child.name,
         created: "",
@@ -412,12 +427,12 @@ async function listTasks(root: string) {
   const errors: string[] = [];
 
   if (!(await realDirectory(root)))
-    return { tasks, errors: ["No .factory directory in this project yet."] };
+    return { tasks, errors: ["No Factory tasks in this project yet."] };
 
   for (const entry of (await readdir(root, { withFileTypes: true })).sort((left, right) =>
     left.name.localeCompare(right.name),
   )) {
-    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+    if (entry.name.startsWith(".") || (!entry.isDirectory() && !entry.isSymbolicLink())) continue;
 
     if (!slug.test(entry.name)) {
       errors.push(
@@ -566,7 +581,7 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
 
     return {
       id,
-      file: projectFile(root, current.directory, name),
+      file: join(current.directory, name),
       subtasks: await countSubtasks(current.directory),
       ...decodeTask(written, name).data,
     };
@@ -658,6 +673,8 @@ function watchProject(project: string) {
   if (watchers.has(project)) return;
 
   try {
+    // The store may not exist until the project's first task; watch it from the start.
+    mkdirSync(tasksOf(project), { recursive: true });
     const watcher = watch(tasksOf(project), { recursive: true }, () => notifyChange(project));
     watcher.on("error", () => undefined);
     watchers.set(project, watcher);

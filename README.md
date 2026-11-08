@@ -32,7 +32,7 @@ Skills use `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
 them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
-method. Tasks live in `.factory/<task>/` with their status in `TASK.md`; the optional board shows the
+method. Tasks live in `~/.agents/factory/<project>/<task>/` with their status in `TASK.md`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
 
 ## Markdown documents and `md`
@@ -41,7 +41,7 @@ Specs, intents, designs, plans, debriefs and reports are Markdown (see `AGENTS.m
 so agents read and edit them cheaply and Git diffs stay readable. To review one:
 
 ```sh
-md .factory/<task>/PLAN.md
+md ~/.agents/factory/<project>/<task>/PLAN.md
 md docs/areas/identity.md --out /tmp/review --no-open
 ```
 
@@ -53,10 +53,10 @@ browser. The installer links it onto PATH as `~/.local/bin/md`.
 
 ## Factory tasks
 
-Run `/factory <request>` (or one stage command at a time). The task then lives in:
+Run `/factory <request>` (or one stage command at a time). Tasks live outside the repository, so every worktree, agent and the board see one live copy. The store is its own Git repository, named after the project's main checkout (`$FACTORY_HOME` overrides the root). The task then lives in:
 
 ```text
-.factory/<NNN>-<task-name>/         # 001, 002, ... in creation order; name never changes
+~/.agents/factory/<project>/<NNN>-<task-name>/         # 001, 002, ... in creation order; name never changes
   TASK.md           # frontmatter: title, dates, status (backlog | inprogress | blocked | done), stage; blocker, report link
   INTENT.md         # approved requirements (one screen, for the user)
   DESIGN.md         # flagged concerns, decisions, links into design/
@@ -95,7 +95,7 @@ Tailwind. Cards show the task's stage and open a modal with rendered Intent, Des
 `TASK.md` (or a legacy `TASK.html`); they never launch sessions or prove that work is complete.
 One board watches all your projects: run `npx amirreza-factory [project-dir...]`
 (see the [board instructions](skills/factory/references/tasks.md)); add or remove projects from
-the header or by passing directories. Projects are remembered in `~/.factory/projects.json`. The
+the header or by passing directories. Projects are remembered in `~/.agents/factory/projects.json`. The
 server prepares local React/Tailwind assets at startup; no separate build command or database is needed.
 Card moves, modal opening, and tab changes update React state without navigation.
 Historical briefs, plans and debriefs are not automatically moved.

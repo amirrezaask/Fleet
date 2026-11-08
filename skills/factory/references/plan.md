@@ -65,8 +65,8 @@ interfaces and the fast tests it owns.
 
 ## Revisions
 
-The plan is mutable. When building reveals a better route, revise the plan **in the
-same commit** as the code that departs from it, recording date, reason, affected IDs
+The plan is mutable. When building reveals a better route, revise the plan **before
+committing** the code that departs from it, recording date, reason, affected IDs
 and impact. Recheck coverage after revising. Requirement or design conflicts need
 the user's authorization; implementation freedom does not cover the contract.
 

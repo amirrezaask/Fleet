@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promis
 import { createServer } from "node:net";
 import { Schema } from "effect";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
@@ -31,7 +31,7 @@ async function freePort(): Promise<number> {
 
 async function fixture(run: (base: string, tasks: string) => Promise<void>): Promise<void> {
   const directory = await mkdtemp(join(tmpdir(), "factory board "));
-  const tasks = join(directory, ".factory");
+  const tasks = join(directory, "home", basename(directory));
   await mkdir(tasks, { recursive: true });
 
   await writeFile(
@@ -487,8 +487,8 @@ test("tasks are listed with their metadata status, misnamed directories are repo
     assert.deepEqual(
       listed.tasks.map((item) => [item.id, item.status, item.file]),
       [
-        ["done-backlog", "blocked", ".factory/done-backlog/TASK.md"],
-        ["parent-task", "inprogress", ".factory/parent-task/TASK.md"],
+        ["done-backlog", "blocked", join(tasks, "done-backlog/TASK.md")],
+        ["parent-task", "inprogress", join(tasks, "parent-task/TASK.md")],
       ],
     );
     assert.deepEqual(listed.tasks[1]?.subtasks, { total: 3, done: 2 });
@@ -506,7 +506,7 @@ test("moving edits the status in TASK and leaves the directory and subtasks in p
     assert.equal(response.status, 200);
     assert.equal(
       Schema.decodeUnknownSync(Schema.Struct({ file: Schema.String }))(await response.json()).file,
-      ".factory/parent-task/TASK.md",
+      join(tasks, "parent-task/TASK.md"),
     );
     assert.match(await readFile(join(parent, "TASK.md"), "utf8"), /^status: done$/m);
     assert.match(
@@ -537,7 +537,7 @@ test("task detail lists nested subtasks and serves their documents by path", asy
 
     assert.deepEqual(
       detail.subtasks.map((item) => [item.id, item.status, item.file]),
-      [["parent-task/first-step", "done", ".factory/parent-task/subtasks/first-step/TASK.md"]],
+      [["parent-task/first-step", "done", join(tasks, "parent-task/subtasks/first-step/TASK.md")]],
     );
     assert.equal((await fetch(`${base}/api/tasks/parent-task/first-step`)).status, 200);
     assert.equal((await fetch(`${base}/api/tasks/parent-task/first-step/deep-step`)).status, 200);
@@ -572,7 +572,7 @@ test("projects can be added, scoped by id, and removed at runtime", async () => 
     const other = await mkdtemp(join(tmpdir(), "factory other "));
 
     try {
-      await task(join(other, ".factory"), "second-task");
+      await task(join(dirname(tasks), basename(other)), "second-task");
       const first = await board(base);
       const form = { "Content-Type": "application/x-www-form-urlencoded", Origin: base };
 
