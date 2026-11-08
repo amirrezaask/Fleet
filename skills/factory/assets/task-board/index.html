@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Project tasks</title>
+  <title>Factory</title>
   <meta name="color-scheme" content="light dark" />
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/app.css" />
@@ -1602,7 +1602,7 @@ function App() {
           setError("");
 
           activeProject = data.projectId;
-          document.title = (data.project || "Factory") + " — Tasks";
+          document.title = "Factory: " + (data.project || "Tasks");
         }
       })
       .catch(() => {
