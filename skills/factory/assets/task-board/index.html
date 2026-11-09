@@ -75,6 +75,12 @@
     }
     body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;-webkit-font-smoothing:antialiased}
     ::selection{background:var(--selection)}
+    *{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+    html,body{height:100%}
+    .view-in{animation:view-in 160ms var(--ease)}
+    @keyframes view-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .task-ping{animation:task-ping 2.4s ease-in-out infinite}
+    @keyframes task-ping{0%,100%{opacity:1}50%{opacity:.55}}
     :focus-visible{outline:2px solid var(--ring);outline-offset:3px;border-radius:var(--radius-md)}
     .reader{overflow-wrap:anywhere;font-size:16px;line-height:1.7;color:var(--foreground)}
     .reader>*{max-width:72ch}
@@ -125,22 +131,36 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
+  ChartGantt,
+  Check,
   ChevronDown,
   ChevronRight,
   CircleAlert,
+  Columns3,
+  Crosshair,
   FolderPlus,
   GripVertical,
+  LayoutGrid,
   ListTree,
   LoaderCircle,
   Menu,
   Monitor,
   Moon,
+  Mountain,
   PanelLeftClose,
   PanelLeftOpen,
+  Pause,
+  Play,
+  RotateCcw,
+  Search,
   Send,
   Sun,
+  Table2,
+  Workflow,
   X,
 } from "lucide-react";
 import { Schema } from "effect";
@@ -256,6 +276,8 @@ function Alert({ children, onRetry }: { children: React.ReactNode; onRetry?: () 
 
 const statusSchema = Schema.Literals(["backlog", "inprogress", "blocked", "done"]);
 
+const stages = ["intent", "design", "plan", "build", "review", "done"] as const;
+
 const taskSchema = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
@@ -264,7 +286,7 @@ const taskSchema = Schema.Struct({
   subtasks: Schema.Struct({ total: Schema.Number, done: Schema.Number }),
   created: Schema.String,
   updated: Schema.String,
-  stage: Schema.optional(Schema.Literals(["intent", "design", "plan", "build", "review", "done"])),
+  stage: Schema.optional(Schema.Literals(stages)),
 });
 
 const boardSchema = Schema.Struct({
@@ -305,6 +327,141 @@ function statusLabel(status: Status) {
   return columns.find((column) => column.id === status)?.label ?? status;
 }
 
+type Stage = (typeof stages)[number];
+
+const defaultOrder: readonly Status[] = columns.map((column) => column.id);
+
+// Browser settings are conveniences: every reader and writer tolerates blocked storage.
+function readSetting(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSetting(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // The choice still applies to this page load.
+  }
+}
+
+function readColumnOrder(): readonly Status[] {
+  const saved = (readSetting("factory-columns") ?? "").split(",");
+  const order = saved.flatMap((part) => defaultOrder.filter((status) => status === part));
+
+  return new Set(order).size === defaultOrder.length && order.length === defaultOrder.length
+    ? order
+    : defaultOrder;
+}
+
+function place(order: readonly Status[], id: Status, slot: number): readonly Status[] {
+  const rest = order.filter((status) => status !== id);
+
+  return [...rest.slice(0, slot), id, ...rest.slice(slot)];
+}
+
+const views = [
+  { id: "board", label: "Board", icon: Columns3 },
+  { id: "pipeline", label: "Pipeline", icon: Workflow },
+  { id: "focus", label: "Focus", icon: Crosshair },
+  { id: "hill", label: "Hill", icon: Mountain },
+  { id: "timeline", label: "Timeline", icon: ChartGantt },
+  { id: "table", label: "Table", icon: Table2 },
+  { id: "portfolio", label: "Portfolio", icon: LayoutGrid },
+] as const;
+
+type View = (typeof views)[number]["id"];
+
+function readView(): View {
+  const saved = readSetting("factory-view");
+
+  return views.find((view) => view.id === saved)?.id ?? "board";
+}
+
+const dayMs = 86_400_000;
+
+// Task dates are calendar days, so all arithmetic happens on whole UTC day numbers.
+function dayNumber(date: string): number | null {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+
+  if (!parts) return null;
+
+  return Math.floor(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) / dayMs);
+}
+
+function today() {
+  const now = new Date();
+
+  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / dayMs);
+}
+
+function daysSince(date: string): number | null {
+  const day = dayNumber(date);
+
+  return day === null ? null : today() - day;
+}
+
+function ago(date: string) {
+  const days = daysSince(date);
+
+  if (days === null) return "no date";
+
+  if (days <= 0) return "today";
+
+  if (days === 1) return "yesterday";
+
+  if (days < 60) return `${days}d ago`;
+
+  return `${Math.round(days / 30)}mo ago`;
+}
+
+function shortDay(day: number) {
+  return new Date(day * dayMs).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function taskNumber(task: Task) {
+  return /^(\d+)-/.exec(task.id)?.[1] ?? "";
+}
+
+// A finished task has left the line, whatever stage its metadata last recorded.
+function stageOf(task: Task): Stage | undefined {
+  return task.status === "done" ? "done" : task.stage;
+}
+
+function matches(task: Task, query: string) {
+  const haystack =
+    `${task.id} ${task.title} ${statusLabel(task.status)} ${task.stage ?? ""}`.toLowerCase();
+
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .every((word) => haystack.includes(word));
+}
+
+const statusFill: Record<Status, string> = {
+  backlog: "bg-st-backlog",
+  inprogress: "bg-st-progress",
+  blocked: "bg-st-blocked",
+  done: "bg-st-done",
+};
+
+const statusRing: Record<Status, string> = {
+  backlog: "border-st-backlog text-st-backlog-ink",
+  inprogress: "border-st-progress text-st-progress-ink",
+  blocked: "border-st-blocked text-st-blocked-ink",
+  done: "border-st-done text-st-done-ink",
+};
+
+const attentionOrder: readonly Status[] = ["blocked", "inprogress", "backlog", "done"];
+
 type Picked = { id: string; target: Status; keyboard: boolean };
 
 type Gesture = {
@@ -340,14 +497,15 @@ async function request(path: string, init?: RequestInit) {
 function useMediaQuery(query: string) {
   return React.useSyncExternalStore(
     (notify) => {
-      if (typeof window.matchMedia !== "function") return () => {};
+      if (!("matchMedia" in window)) return () => {};
+
       const list = window.matchMedia(query);
 
       list.addEventListener("change", notify);
 
       return () => list.removeEventListener("change", notify);
     },
-    () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
+    () => "matchMedia" in window && window.matchMedia(query).matches,
     () => false,
   );
 }
@@ -473,8 +631,28 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   );
 }
 
+function StageRail({ task }: { task: Task }) {
+  const stage = stageOf(task);
+  const at = stage ? stages.indexOf(stage) : -1;
+
+  return (
+    <span className="inline-flex items-center gap-[3px]" aria-hidden>
+      {stages.map((name, index) => (
+        <span
+          key={name}
+          className={cn(
+            "h-[5px] w-2.5 rounded-[2px] transition-colors duration-200",
+            index <= at ? statusFill[task.status] : "bg-muted",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
 function TaskCard({
   task,
+  order,
   picked,
   pending,
   onOpen,
@@ -485,6 +663,7 @@ function TaskCard({
   boardRef,
 }: {
   task: Task;
+  order: readonly Status[];
   picked: Picked | null;
   pending: boolean;
   onOpen: (task: Task) => void;
@@ -509,17 +688,19 @@ function TaskCard({
       event.preventDefault();
       onPick({ id: task.id, target: task.status, keyboard: true });
     } else if (picked?.id === task.id && picked.keyboard) {
-      const index = columns.findIndex((column) => column.id === picked.target);
+      const index = order.indexOf(picked.target);
 
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
 
         const next =
-          columns[Math.max(0, Math.min(3, index + (event.key === "ArrowRight" ? 1 : -1)))];
+          order[
+            Math.max(0, Math.min(order.length - 1, index + (event.key === "ArrowRight" ? 1 : -1)))
+          ];
 
-        onTarget(next.id);
+        onTarget(next);
         boardRef.current
-          ?.querySelector(`[data-status="${next.id}"]`)
+          ?.querySelector(`[data-status="${next}"]`)
           ?.scrollIntoView({ block: "nearest", inline: "nearest" });
       } else if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -539,7 +720,7 @@ function TaskCard({
       aria-describedby="move-instructions"
       aria-disabled={pending}
       className={cn(
-        "group relative cursor-grab p-4 shadow-card transition-[box-shadow,border-color,opacity] duration-150 ease-[var(--ease)] hover:border-border-strong hover:shadow-lift focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sunken focus-visible:outline-none",
+        "group relative cursor-grab p-3.5 transition-[box-shadow,border-color,opacity,translate] duration-150 ease-[var(--ease)] hover:-translate-y-px hover:border-border-strong hover:shadow-lift focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sunken focus-visible:outline-none",
         mine && !picked.keyboard && "border-dashed opacity-50 shadow-none",
         mine && picked.keyboard && "ring-2 ring-clay ring-offset-2 ring-offset-sunken",
         pending && "pointer-events-none opacity-60",
@@ -638,27 +819,38 @@ function TaskCard({
       >
         <GripVertical data-icon="inline-start" />
       </Button>
+      {taskNumber(task) ? (
+        <span className="mb-1 block text-micro text-muted-foreground tabular-nums">
+          #{taskNumber(task)}
+        </span>
+      ) : null}
       <button
         type="button"
         data-open-task={task.id}
-        className="block w-full cursor-pointer pr-8 text-left text-body leading-snug font-medium text-foreground decoration-clay/40 underline-offset-4 line-clamp-3 hover:underline"
+        className={cn(
+          "block w-full cursor-pointer pr-7 text-left text-body leading-snug font-medium decoration-clay/40 underline-offset-4 line-clamp-3 hover:underline",
+          task.status === "done" ? "text-muted-foreground" : "text-foreground",
+        )}
         onClick={() => {
           if (performance.now() >= suppressClick.current) onOpen(task);
         }}
       >
         {task.title}
       </button>
-      <div className="mt-3 flex items-center gap-3 text-micro text-muted-foreground">
-        <span>Updated {task.updated}</span>
-        {task.stage ? (
-          <span
-            data-stage={task.stage}
-            className="rounded-full bg-muted px-1.5 py-0.5 capitalize"
-            aria-label={`Stage: ${task.stage}`}
-          >
-            {task.stage}
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-micro text-muted-foreground">
+        {stageOf(task) ? (
+          <span className="inline-flex items-center gap-1.5">
+            <StageRail task={task} />
+            <span
+              data-stage={stageOf(task)}
+              className="capitalize"
+              aria-label={`Stage: ${stageOf(task)}`}
+            >
+              {stageOf(task)}
+            </span>
           </span>
         ) : null}
+        <span title={`Updated ${task.updated}`}>{ago(task.updated)}</span>
         {task.subtasks.total ? (
           <SubtaskMeter done={task.subtasks.done} total={task.subtasks.total} className="ml-auto" />
         ) : null}
@@ -779,6 +971,7 @@ function taskFilePath(trail: Task[]) {
 
 function sendTargets(file: string) {
   const prompt = encodeURIComponent(`Implement factory task ${file}`);
+
   return [
     { name: "Claude", href: `claude://code/new?q=${prompt}` },
     { name: "Codex", href: `codex://new?prompt=${prompt}` },
@@ -1275,7 +1468,10 @@ function ProjectSidebar({
               Projects
             </h2>
           )}
-          <nav aria-label="Projects" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2.5 pb-2">
+          <nav
+            aria-label="Projects"
+            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2.5 pb-2"
+          >
             <ul className="flex flex-col gap-0.5">
               {!board
                 ? [0, 1, 2].map((n) => (
@@ -1318,9 +1514,7 @@ function ProjectSidebar({
                           }}
                           className={cn(
                             "flex w-full min-w-0 rounded-lg text-left transition-colors duration-150",
-                            rail
-                              ? "h-9 items-center justify-center"
-                              : "flex-col px-3 py-2 pr-9",
+                            rail ? "h-9 items-center justify-center" : "flex-col px-3 py-2 pr-9",
                             current ? "bg-card shadow-card ring-1 ring-border" : "hover:bg-muted",
                           )}
                         >
@@ -1377,7 +1571,12 @@ function ProjectSidebar({
               })}
             </ul>
           </nav>
-          <div className={cn("shrink-0 border-t border-border p-2.5", rail && "flex flex-col items-center gap-1")}>
+          <div
+            className={cn(
+              "shrink-0 border-t border-border p-2.5",
+              rail && "flex flex-col items-center gap-1",
+            )}
+          >
             {rail ? (
               <Button
                 variant="ghost"
@@ -1489,6 +1688,1496 @@ function EmptyProjects({
   );
 }
 
+function OpenTask({
+  task,
+  onOpen,
+  className,
+}: {
+  task: Task;
+  onOpen: (task: Task) => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-open-task={task.id}
+      title={task.title}
+      onClick={() => onOpen(task)}
+      className={cn(
+        "min-w-0 cursor-pointer text-left decoration-clay/40 underline-offset-4 hover:underline",
+        className,
+      )}
+    >
+      {task.title}
+    </button>
+  );
+}
+
+function Nothing({ query, onClear }: { query: string; onClear: () => void }) {
+  return (
+    <div className="mx-auto mt-16 max-w-md rounded-2xl bg-sunken px-8 py-10 text-center">
+      <p className="font-serif text-xl">
+        {query ? `No tasks match “${query}”` : "No tasks to show here"}
+      </p>
+      {query ? (
+        <Button variant="outline" size="sm" className="mt-5" onClick={onClear}>
+          Clear filter
+        </Button>
+      ) : (
+        <p className="mt-2 text-meta text-muted-foreground">
+          Start one with <code className="font-mono text-micro">/factory intent</code> in any agent
+          session, and it appears here as soon as its files land.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <div role="status" aria-label="Loading tasks" className="space-y-2 pt-2">
+      {["72%", "88%", "64%", "80%", "58%"].map((width) => (
+        <div key={width} className="h-11 animate-pulse rounded-lg bg-sunken" style={{ width }} />
+      ))}
+    </div>
+  );
+}
+
+type TaskViewProps = {
+  tasks: readonly Task[];
+  onOpen: (task: Task) => void;
+};
+
+type Lifted = { id: Status; keyboard: boolean };
+
+type ColumnGesture = {
+  id: Status;
+  pointer: number;
+  startX: number;
+  clientX: number;
+  grab: number;
+  moved: boolean;
+  onGrip: boolean;
+};
+
+const liftEase = "cubic-bezier(.165,.84,.44,1)";
+
+function BoardView({
+  board,
+  tasks,
+  stale,
+  busy,
+  order,
+  picked,
+  pending,
+  boardRef,
+  canDrop,
+  onDropCard,
+  onOrder,
+  onAnnounce,
+  onOpen,
+  onPick,
+  onTarget,
+  onMove,
+  onCancel,
+}: {
+  board: Board | null;
+  tasks: readonly Task[];
+  stale: boolean;
+  busy: boolean;
+  order: readonly Status[];
+  picked: Picked | null;
+  pending: boolean;
+  boardRef: React.RefObject<HTMLDivElement | null>;
+  canDrop: () => boolean;
+  onDropCard: (status: Status) => boolean;
+  onOrder: (order: readonly Status[]) => void;
+  onAnnounce: (message: string) => void;
+  onOpen: (task: Task) => void;
+  onPick: (value: Picked) => void;
+  onTarget: (status: Status) => void;
+  onMove: (id: string, status: Status) => void;
+  onCancel: () => void;
+}) {
+  const [preview, setPreview] = React.useState<readonly Status[] | null>(null);
+  const [lifted, setLifted] = React.useState<Lifted | null>(null);
+  const gesture = React.useRef<ColumnGesture | null>(null);
+  const lefts = React.useRef(new Map<Status, number>());
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const shown = preview ?? order;
+
+  const columnOf = (id: Status) =>
+    boardRef.current?.querySelector<HTMLElement>(`[data-status="${id}"]`) ?? null;
+
+  // Layout positions ignore transforms, so reading them mid-animation stays stable.
+  function measure() {
+    for (const id of shown) {
+      const element = columnOf(id);
+
+      if (element) lefts.current.set(id, element.offsetLeft);
+    }
+  }
+
+  function boardX(clientX: number) {
+    const element = boardRef.current;
+
+    return element ? clientX - element.getBoundingClientRect().left + element.scrollLeft : clientX;
+  }
+
+  function follow() {
+    const current = gesture.current;
+    const element = current?.moved ? columnOf(current.id) : null;
+
+    if (current && element)
+      element.style.transform = `translateX(${boardX(current.clientX) - current.grab - element.offsetLeft}px)`;
+  }
+
+  function slide(element: HTMLElement, from: string) {
+    if (reducedMotion || !("animate" in element)) return;
+
+    element.animate([{ transform: from }, { transform: "none" }], {
+      duration: 180,
+      easing: liftEase,
+    });
+  }
+
+  const shownKey = shown.join();
+
+  React.useLayoutEffect(() => {
+    for (const id of shown) {
+      const element = columnOf(id);
+      const before = lefts.current.get(id);
+
+      if (!element) continue;
+
+      if (before !== undefined && before !== element.offsetLeft && id !== gesture.current?.id)
+        slide(element, `translateX(${before - element.offsetLeft}px)`);
+
+      lefts.current.set(id, element.offsetLeft);
+    }
+
+    follow();
+
+    if (lifted?.keyboard) {
+      const grip = boardRef.current?.querySelector<HTMLElement>(
+        `[data-column-grip="${lifted.id}"]`,
+      );
+
+      grip?.focus({ preventScroll: true });
+      columnOf(lifted.id)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [shownKey]);
+
+  function positions(list: readonly Status[]) {
+    return list.map((id) => `${statusLabel(id)}`).join(", ");
+  }
+
+  function finish(next: readonly Status[] | null) {
+    setPreview(null);
+    setLifted(null);
+
+    if (next && next.join() !== order.join()) {
+      onOrder(next);
+      onAnnounce(`Columns reordered: ${positions(next)}.`);
+    } else onAnnounce("Column order unchanged.");
+  }
+
+  function lift(id: Status) {
+    measure();
+    setPreview(order);
+    setLifted({ id, keyboard: true });
+    onAnnounce(
+      `${statusLabel(id)} column lifted. Use left and right arrows to move it, Enter to drop, Escape to cancel.`,
+    );
+  }
+
+  function release(cancelled: boolean) {
+    const current = gesture.current;
+
+    gesture.current = null;
+
+    if (!current?.moved) return;
+
+    const element = columnOf(current.id);
+
+    if (element) {
+      const from = element.style.transform;
+
+      element.style.transform = "";
+      slide(element, from);
+    }
+
+    finish(cancelled ? null : shown);
+  }
+
+  function startColumn(event: React.PointerEvent<HTMLElement>, id: Status) {
+    if (event.button !== 0 || picked || lifted?.keyboard) return;
+
+    const onGrip =
+      event.target instanceof Element && event.target.closest("[data-column-grip]") !== null;
+
+    // Touch keeps the header scrollable; only the grip starts a touch drag.
+    if (!onGrip && event.pointerType !== "mouse") return;
+
+    const element = columnOf(id);
+
+    if (!element) return;
+
+    event.preventDefault();
+
+    if (onGrip) boardRef.current?.querySelector<HTMLElement>(`[data-column-grip="${id}"]`)?.focus();
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    measure();
+    gesture.current = {
+      id,
+      pointer: event.pointerId,
+      startX: event.clientX,
+      clientX: event.clientX,
+      grab: boardX(event.clientX) - element.offsetLeft,
+      moved: false,
+      onGrip,
+    };
+  }
+
+  function moveColumn(event: React.PointerEvent<HTMLElement>) {
+    const current = gesture.current;
+    const element = boardRef.current;
+
+    if (!current || !element || current.pointer !== event.pointerId) return;
+
+    current.clientX = event.clientX;
+
+    if (!current.moved && Math.abs(event.clientX - current.startX) > 6) {
+      current.moved = true;
+      setPreview(order);
+      setLifted({ id: current.id, keyboard: false });
+      onAnnounce(`Moving ${statusLabel(current.id)} column.`);
+    }
+
+    if (!current.moved) return;
+
+    const bounds = element.getBoundingClientRect();
+
+    if (event.clientX < bounds.left + 32) element.scrollLeft -= 16;
+
+    if (event.clientX > bounds.right - 32) element.scrollLeft += 16;
+
+    const offsets = shown.map((id) => columnOf(id)?.offsetLeft ?? 0);
+    const first = Math.min(...offsets);
+    const step = (Math.max(...offsets) - first) / Math.max(1, shown.length - 1);
+
+    if (step > 0) {
+      const slot = Math.max(
+        0,
+        Math.min(
+          shown.length - 1,
+          Math.round((boardX(event.clientX) - current.grab - first) / step),
+        ),
+      );
+
+      if (slot !== shown.indexOf(current.id)) setPreview(place(shown, current.id, slot));
+    }
+
+    follow();
+  }
+
+  function endColumn(event: React.PointerEvent<HTMLElement>) {
+    const current = gesture.current;
+
+    if (!current || current.pointer !== event.pointerId) return;
+
+    event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (!current.moved) {
+      gesture.current = null;
+
+      if (current.onGrip) lift(current.id);
+
+      return;
+    }
+
+    release(false);
+  }
+
+  function columnKey(event: React.KeyboardEvent, id: Status) {
+    const space = event.key === " " || event.key === "Enter";
+
+    if (!lifted && space) {
+      event.preventDefault();
+      lift(id);
+    } else if (lifted?.id === id && lifted.keyboard) {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+
+        const slot = shown.indexOf(id) + (event.key === "ArrowRight" ? 1 : -1);
+
+        if (slot >= 0 && slot < shown.length) {
+          setPreview(place(shown, id, slot));
+          onAnnounce(`${statusLabel(id)} column, position ${slot + 1} of ${shown.length}.`);
+        }
+      } else if (space) {
+        event.preventDefault();
+        finish(shown);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        finish(null);
+      }
+    }
+  }
+
+  const dragging = lifted && !lifted.keyboard;
+
+  React.useEffect(() => {
+    if (!lifted?.keyboard) return;
+
+    const away = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest("[data-column-grip]"))
+        finish(null);
+    };
+
+    window.addEventListener("pointerdown", away);
+
+    return () => window.removeEventListener("pointerdown", away);
+  });
+
+  React.useEffect(() => {
+    if (!dragging) return;
+
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") release(true);
+    };
+
+    window.addEventListener("keydown", escape);
+
+    return () => window.removeEventListener("keydown", escape);
+  });
+
+  return (
+    <div
+      ref={boardRef}
+      data-board="true"
+      hidden={board !== null && board.projects.length === 0}
+      className={cn(
+        "relative grid h-full grid-cols-[repeat(4,minmax(264px,1fr))] grid-rows-[minmax(0,1fr)] gap-3 overflow-x-auto pb-4 transition-opacity [scrollbar-gutter:stable]",
+        stale && "opacity-60",
+      )}
+      aria-busy={busy || !board || stale}
+    >
+      {shown.map((id) => {
+        const label = statusLabel(id);
+        const inColumn = tasks.filter((task) => task.status === id);
+        const dropping = picked?.target === id;
+        const isLifted = lifted?.id === id;
+
+        return (
+          <section
+            key={id}
+            data-status={id}
+            data-lifted={isLifted ? (lifted.keyboard ? "keyboard" : "pointer") : undefined}
+            aria-label={label}
+            className={cn(
+              "flex min-h-64 flex-col rounded-2xl bg-sunken transition-[background-color,box-shadow] duration-150",
+              dropping &&
+                "bg-clay-tint/60 outline-2 -outline-offset-2 outline-dashed outline-clay/60",
+              isLifted && "relative z-20 shadow-drag",
+              isLifted && lifted.keyboard && "ring-2 ring-clay",
+            )}
+            onDragOver={(event) => {
+              if (canDrop()) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                onTarget(id);
+              }
+            }}
+            onDrop={(event) => {
+              if (onDropCard(id)) event.preventDefault();
+            }}
+          >
+            <div
+              data-column-head={id}
+              className="group/col flex cursor-grab items-center gap-2 px-3 pt-2.5 pb-2 select-none active:cursor-grabbing"
+              onPointerDown={(event) => startColumn(event, id)}
+              onPointerMove={moveColumn}
+              onPointerUp={endColumn}
+              onPointerCancel={() => release(true)}
+            >
+              <StatusIcon status={id} />
+              <h2 className="text-meta font-medium text-foreground">{label}</h2>
+              <span className="text-micro text-muted-foreground tabular-nums">
+                {inColumn.length}
+              </span>
+              <Button
+                data-column-grip={id}
+                variant="ghost"
+                size="iconSm"
+                className="ml-auto -mr-1 cursor-grab touch-none text-faint opacity-0 group-focus-within/col:opacity-100 group-hover/col:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
+                aria-label={`Reorder ${label} column`}
+                aria-describedby="column-instructions"
+                aria-pressed={isLifted}
+                onKeyDown={(event) => columnKey(event, id)}
+              >
+                <GripVertical />
+              </Button>
+            </div>
+            {isLifted && lifted.keyboard ? (
+              <p className="px-3 pb-2 text-micro font-medium text-clay-ink">
+                Arrows move · Enter drops · Esc cancels
+              </p>
+            ) : null}
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2 pt-0.5">
+              {!board
+                ? [0, 1].map((n) => (
+                    <div
+                      key={n}
+                      className="h-[92px] shrink-0 animate-pulse rounded-xl border border-border bg-card/60"
+                    />
+                  ))
+                : null}
+              {inColumn.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  order={shown}
+                  picked={picked}
+                  pending={pending}
+                  onOpen={onOpen}
+                  onPick={onPick}
+                  onTarget={onTarget}
+                  onMove={onMove}
+                  onCancel={onCancel}
+                  boardRef={boardRef}
+                />
+              ))}
+              {board && !inColumn.length ? (
+                <p
+                  className={cn(
+                    "rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-meta text-muted-foreground",
+                    dropping && "border-clay/50 text-clay-ink",
+                  )}
+                >
+                  {dropping ? "Drop here" : "No tasks"}
+                </p>
+              ) : null}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function StationTrack({ task }: { task: Task }) {
+  const stage = stageOf(task);
+  const at = stage ? stages.indexOf(stage) : -1;
+
+  return (
+    <div
+      role="img"
+      aria-label={stage ? `At ${stage}, ${statusLabel(task.status)}` : "No stage recorded"}
+      className="relative grid grid-cols-6 items-center py-3"
+    >
+      <span
+        className={cn(
+          "absolute inset-x-[8.33%] top-1/2 border-t",
+          at < 0 ? "border-dashed border-border-strong" : "border-border-strong",
+        )}
+      />
+      {at > 0 ? (
+        <span
+          className={cn(
+            "absolute left-[8.33%] top-1/2 h-0.5 -translate-y-1/2",
+            statusFill[task.status],
+          )}
+          style={{ width: `${(at / stages.length) * 100}%` }}
+        />
+      ) : null}
+      {stages.map((name, index) => (
+        <span key={name} className="relative flex justify-center">
+          {index === at ? (
+            <span className="rounded-full bg-background p-0.5 group-hover/row:bg-sunken">
+              <StatusIcon status={task.status} className="size-4" />
+            </span>
+          ) : (
+            <span
+              className={cn(
+                "rounded-full",
+                index < at ? cn("size-2", statusFill[task.status]) : "size-1.5 bg-border-strong",
+              )}
+            />
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PipelineView({ tasks, onOpen }: TaskViewProps) {
+  const grid =
+    "grid grid-cols-1 md:grid-cols-[minmax(230px,1.15fr)_minmax(420px,3fr)_64px] md:items-center md:gap-4";
+
+  return (
+    <div className="pb-8 md:min-w-[760px]">
+      <div className={cn(grid, "sticky top-0 z-10 bg-background px-3 pt-1 pb-2")}>
+        <span className="text-micro font-medium text-muted-foreground max-md:hidden">Task</span>
+        <div className="grid grid-cols-6">
+          {stages.map((stage) => (
+            <span
+              key={stage}
+              className="text-center text-micro font-medium capitalize md:text-meta"
+            >
+              {stage}
+              <span className="ml-1.5 text-micro font-normal text-muted-foreground tabular-nums max-md:hidden">
+                {tasks.filter((task) => stageOf(task) === stage).length}
+              </span>
+            </span>
+          ))}
+        </div>
+        <span className="text-right text-micro font-medium text-muted-foreground max-md:hidden">
+          Moved
+        </span>
+      </div>
+      {attentionOrder.map((status) => {
+        const group = tasks
+          .filter((task) => task.status === status)
+          .sort(
+            (a, b) =>
+              (b.stage ? stages.indexOf(b.stage) : -1) - (a.stage ? stages.indexOf(a.stage) : -1) ||
+              a.id.localeCompare(b.id),
+          );
+
+        if (!group.length) return null;
+
+        return (
+          <section key={status} aria-label={statusLabel(status)} className="mt-4 first:mt-1">
+            <h2 className="flex items-center gap-2 px-3 pb-1.5 text-meta font-medium">
+              <StatusIcon status={status} />
+              {statusLabel(status)}
+              <span className="text-micro font-normal text-muted-foreground tabular-nums">
+                {group.length}
+              </span>
+            </h2>
+            <ul className="border-t border-border">
+              {group.map((task) => (
+                <li
+                  key={task.id}
+                  data-pipeline-task={task.id}
+                  className={cn(
+                    grid,
+                    "group/row border-b border-border px-3 transition-colors duration-100 hover:bg-sunken max-md:pt-2.5",
+                  )}
+                >
+                  <div className="flex min-w-0 items-baseline gap-2.5">
+                    <span className="w-7 shrink-0 text-micro text-muted-foreground tabular-nums">
+                      {taskNumber(task)}
+                    </span>
+                    <OpenTask
+                      task={task}
+                      onOpen={onOpen}
+                      className={cn(
+                        "truncate text-sm font-medium",
+                        status === "done" && "font-normal text-muted-foreground",
+                      )}
+                    />
+                  </div>
+                  <StationTrack task={task} />
+                  <span
+                    className="text-right text-micro text-muted-foreground tabular-nums max-md:hidden"
+                    title={`Updated ${task.updated}`}
+                  >
+                    {ago(task.updated)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+const quietAfterDays = 3;
+
+function FocusAction({
+  label,
+  icon: Icon,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  icon: React.ComponentType<{ "aria-hidden"?: boolean }>;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button variant="ghost" size="sm" disabled={disabled} onClick={onClick}>
+      <Icon aria-hidden />
+      {label}
+    </Button>
+  );
+}
+
+function FocusRow({
+  task,
+  pending,
+  onOpen,
+  onMove,
+}: {
+  task: Task;
+  pending: boolean;
+  onOpen: (task: Task) => void;
+  onMove: (id: string, status: Status) => void;
+}) {
+  const quiet = task.status === "inprogress" ? (daysSince(task.updated) ?? 0) : 0;
+
+  return (
+    <li
+      data-task={task.id}
+      tabIndex={-1}
+      className="group/row flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2 transition-colors duration-100 hover:bg-sunken"
+    >
+      <StatusIcon status={task.status} />
+      <div className="min-w-[200px] flex-1">
+        <OpenTask
+          task={task}
+          onOpen={onOpen}
+          className={cn(
+            "block text-body leading-snug font-medium",
+            task.status === "done" && "font-normal text-muted-foreground",
+          )}
+        />
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-micro text-muted-foreground tabular-nums">
+          {taskNumber(task) ? <span>#{taskNumber(task)}</span> : null}
+          {stageOf(task) ? <span className="capitalize">{stageOf(task)}</span> : null}
+          <span title={`Updated ${task.updated}`}>{ago(task.updated)}</span>
+          {quiet >= quietAfterDays ? (
+            <span className={chip({ status: "blocked" })}>Quiet {quiet}d</span>
+          ) : null}
+        </p>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 transition-opacity duration-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+        {task.status === "backlog" ? (
+          <FocusAction
+            label="Start"
+            icon={Play}
+            disabled={pending}
+            onClick={() => onMove(task.id, "inprogress")}
+          />
+        ) : null}
+        {task.status === "blocked" ? (
+          <FocusAction
+            label="Resume"
+            icon={Play}
+            disabled={pending}
+            onClick={() => onMove(task.id, "inprogress")}
+          />
+        ) : null}
+        {task.status === "inprogress" ? (
+          <>
+            <FocusAction
+              label="Block"
+              icon={Pause}
+              disabled={pending}
+              onClick={() => onMove(task.id, "blocked")}
+            />
+            <FocusAction
+              label="Done"
+              icon={Check}
+              disabled={pending}
+              onClick={() => onMove(task.id, "done")}
+            />
+          </>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function focusHeadline(blocked: number, active: number, next: Task | undefined) {
+  if (blocked > 0)
+    return blocked === 1
+      ? "One task is waiting on a decision."
+      : `${blocked} tasks are waiting on a decision.`;
+
+  if (active > 0)
+    return active === 1
+      ? "One task is in progress, and nothing is stuck."
+      : `${active} tasks are in progress, and nothing is stuck.`;
+
+  if (next) return `Nothing is running. ${next.title} is next.`;
+
+  return "All clear.";
+}
+
+function FocusView({
+  tasks,
+  pending,
+  onOpen,
+  onMove,
+}: TaskViewProps & { pending: boolean; onMove: (id: string, status: Status) => void }) {
+  const stageRank = (task: Task) => (task.stage ? stages.indexOf(task.stage) : -1);
+  const blocked = tasks.filter((task) => task.status === "blocked");
+
+  const active = tasks
+    .filter((task) => task.status === "inprogress")
+    .sort((a, b) => a.updated.localeCompare(b.updated));
+
+  const backlog = tasks
+    .filter((task) => task.status === "backlog")
+    .sort((a, b) => stageRank(b) - stageRank(a) || a.id.localeCompare(b.id));
+
+  const shipped = tasks
+    .filter((task) => task.status === "done")
+    .sort((a, b) => b.updated.localeCompare(a.updated));
+
+  const sections = [
+    { title: "Waiting on you", items: blocked, more: 0 },
+    { title: "In progress", items: active, more: 0 },
+    { title: "Up next", items: backlog.slice(0, 5), more: backlog.length - 5 },
+    { title: "Recently done", items: shipped.slice(0, 4), more: shipped.length - 4 },
+  ];
+
+  return (
+    <div className="mx-auto max-w-[760px] pt-4 pb-12">
+      <p className="px-3 font-serif text-title text-balance">
+        {focusHeadline(blocked.length, active.length, backlog[0])}
+      </p>
+      {sections.map((section) =>
+        section.items.length ? (
+          <section key={section.title} aria-label={section.title} className="mt-8">
+            <h2 className="flex items-center gap-2 px-3 pb-1 text-meta font-medium text-muted-foreground">
+              {section.title}
+              <span className="text-micro font-normal tabular-nums">
+                {section.items.length + Math.max(0, section.more)}
+              </span>
+            </h2>
+            <ul>
+              {section.items.map((task) => (
+                <FocusRow
+                  key={task.id}
+                  task={task}
+                  pending={pending}
+                  onOpen={onOpen}
+                  onMove={onMove}
+                />
+              ))}
+            </ul>
+            {section.more > 0 ? (
+              <p className="px-3 pt-1 text-micro text-muted-foreground">{section.more} more</p>
+            ) : null}
+          </section>
+        ) : null,
+      )}
+    </div>
+  );
+}
+
+const hillRow = 4;
+
+const hillHeight = (x: number) => 0.9 - 0.56 * Math.exp(-((x - 0.5) ** 2) / (2 * 0.19 ** 2));
+
+const hillCurve = Array.from({ length: 101 }, (_, index) => {
+  const x = index / 100;
+
+  return `${x * 1000},${hillHeight(x) * 400}`;
+}).join(" L");
+
+type HillDot = { task: Task; x: number; y: number; level: number };
+
+function hillDots(tasks: readonly Task[]): HillDot[] {
+  return stages.flatMap((stage, band) => {
+    const group = tasks.filter((task) => stageOf(task) === stage);
+
+    return group.map((task, index) => {
+      const level = Math.floor(index / hillRow);
+      const inRow = level < Math.floor(group.length / hillRow) ? hillRow : group.length % hillRow;
+      const x = (band + 0.08 + (0.84 * ((index % hillRow) + 0.5)) / inRow) / stages.length;
+
+      return { task, x, y: hillHeight(x), level };
+    });
+  });
+}
+
+function HillList({
+  title,
+  dots,
+  hot,
+  onHot,
+  onOpen,
+}: {
+  title: string;
+  dots: readonly HillDot[];
+  hot: string;
+  onHot: (id: string) => void;
+  onOpen: (task: Task) => void;
+}) {
+  return (
+    <section aria-label={title}>
+      <h2 className="border-b border-border px-2 pb-2 text-meta font-medium">{title}</h2>
+      {dots.length ? null : (
+        <p className="px-2 py-3 text-meta text-muted-foreground">Nothing here right now.</p>
+      )}
+      <ul>
+        {dots.map(({ task }) => (
+          <li
+            key={task.id}
+            data-hill-task={task.id}
+            onMouseEnter={() => onHot(task.id)}
+            onMouseLeave={() => onHot("")}
+            className={cn(
+              "flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors duration-100",
+              hot === task.id && "bg-sunken",
+            )}
+          >
+            <StatusIcon status={task.status} />
+            <span className="w-7 shrink-0 text-micro text-muted-foreground tabular-nums">
+              {taskNumber(task)}
+            </span>
+            <OpenTask task={task} onOpen={onOpen} className="flex-1 truncate text-sm" />
+            <span className="text-micro text-muted-foreground capitalize">{stageOf(task)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function HillView({ tasks, onOpen }: TaskViewProps) {
+  const [hot, setHot] = React.useState("");
+  const dots = hillDots(tasks);
+  const uphill = dots.filter((dot) => dot.x < 0.5);
+  const downhill = dots.filter((dot) => dot.x >= 0.5);
+  const unstaged = tasks.filter((task) => !stageOf(task));
+  const levels = Math.max(0, ...dots.map((dot) => dot.level));
+
+  return (
+    <div className="pb-10">
+      <div className="overflow-x-auto" style={{ paddingTop: Math.max(0, levels - 2) * 38 }}>
+        <div className="relative mx-auto h-[min(46vh,420px)] min-h-[300px] min-w-[860px] max-w-[1280px] md:min-w-[640px]">
+          <svg
+            viewBox="0 0 1000 400"
+            preserveAspectRatio="none"
+            className="absolute inset-0 size-full"
+            aria-hidden
+          >
+            <path d={`M0,400 L${hillCurve} L1000,400 Z`} fill="var(--surface-sunken)" />
+            <path
+              d={`M${hillCurve}`}
+              fill="none"
+              stroke="var(--border-strong)"
+              strokeWidth="1.5"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="500"
+              x2="500"
+              y1={hillHeight(0.5) * 400}
+              y2="400"
+              stroke="var(--border-strong)"
+              strokeDasharray="4 5"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <span className="absolute top-2 left-[6%] font-serif text-xl">Figuring it out</span>
+          <span className="absolute top-2 right-[6%] font-serif text-xl">Getting it done</span>
+          {dots.map(({ task, x, y, level }) => (
+            <button
+              key={task.id}
+              type="button"
+              data-hill-dot={task.id}
+              aria-label={`${task.title}, ${stageOf(task)}, ${statusLabel(task.status)}`}
+              title={task.title}
+              onClick={() => onOpen(task)}
+              onMouseEnter={() => setHot(task.id)}
+              onMouseLeave={() => setHot("")}
+              onFocus={() => setHot(task.id)}
+              onBlur={() => setHot("")}
+              className={cn(
+                "absolute grid size-7 cursor-pointer md:size-8 place-items-center rounded-full border-2 bg-card text-micro font-medium tabular-nums transition-[scale,box-shadow] duration-150 ease-[var(--ease)]",
+                statusRing[task.status],
+                task.status === "inprogress" && "task-ping",
+                task.status === "done" && "opacity-60",
+                hot === task.id && "z-10 scale-110 shadow-lift opacity-100",
+              )}
+              style={{
+                left: `${x * 100}%`,
+                top: `${y * 100}%`,
+                transform: `translate(-50%, calc(-50% - ${level * 38}px))`,
+              }}
+            >
+              {taskNumber(task).replace(/^0+/, "") || task.title.slice(0, 1)}
+            </button>
+          ))}
+          <div className="absolute inset-x-0 bottom-2 grid grid-cols-6" aria-hidden>
+            {stages.map((stage) => (
+              <span key={stage} className="text-center text-micro text-muted-foreground capitalize">
+                {stage}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto mt-8 grid max-w-[1280px] grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
+        <HillList title="Uphill" dots={uphill} hot={hot} onHot={setHot} onOpen={onOpen} />
+        <HillList title="Downhill" dots={downhill} hot={hot} onHot={setHot} onOpen={onOpen} />
+      </div>
+      {unstaged.length ? (
+        <section aria-label="Not on the hill" className="mx-auto mt-8 max-w-[1280px]">
+          <h2 className="border-b border-border px-2 pb-2 text-meta font-medium">
+            No stage recorded
+          </h2>
+          <ul className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            {unstaged.map((task) => (
+              <li key={task.id} className="flex items-center gap-2.5 px-2 py-1.5">
+                <StatusIcon status={task.status} />
+                <OpenTask task={task} onOpen={onOpen} className="truncate text-sm" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+const dayWidth = 26;
+
+function timelineTicks(first: number, last: number) {
+  const weekly = last - first <= 84;
+
+  return Array.from({ length: last - first + 1 }, (_, index) => first + index).filter((day) => {
+    const date = new Date(day * dayMs);
+
+    return weekly ? date.getUTCDay() === 1 : date.getUTCDate() === 1;
+  });
+}
+
+function TimelineView({ tasks, onOpen }: TaskViewProps) {
+  const scroller = React.useRef<HTMLDivElement>(null);
+  const now = today();
+
+  const rows = tasks.flatMap((task) => {
+    const start = dayNumber(task.created);
+    const moved = dayNumber(task.updated);
+
+    return start === null || moved === null ? [] : [{ task, start, moved }];
+  });
+
+  const undated = tasks.length - rows.length;
+  const first = Math.min(now, ...rows.map((row) => row.start)) - 1;
+  const last = now + 2;
+  const span = last - first + 1;
+  const ticks = timelineTicks(first, last);
+  const percent = (day: number) => `${((day - first) / span) * 100}%`;
+
+  React.useLayoutEffect(() => {
+    if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth;
+  }, [span]);
+
+  const ordered = [...rows].sort((a, b) => b.start - a.start || b.task.id.localeCompare(a.task.id));
+
+  return (
+    <div ref={scroller} className="h-full overflow-auto">
+      <div className="min-w-full pb-6" style={{ width: 280 + span * dayWidth }}>
+        <div className="sticky top-0 z-20 flex bg-background">
+          <span className="sticky left-0 z-10 flex w-[280px] shrink-0 items-end bg-background px-3 pb-2 text-micro font-medium text-muted-foreground">
+            Task
+          </span>
+          <div className="relative h-8 flex-1 border-b border-border">
+            {ticks
+              .filter((day) => Math.abs(day - now) > 2)
+              .map((day) => (
+                <span
+                  key={day}
+                  className="absolute bottom-1.5 -translate-x-1/2 text-micro whitespace-nowrap text-muted-foreground tabular-nums"
+                  style={{ left: percent(day) }}
+                >
+                  {shortDay(day)}
+                </span>
+              ))}
+            <span
+              className="absolute bottom-1.5 -translate-x-1/2 text-micro font-medium text-clay-ink"
+              style={{ left: percent(now + 1) }}
+            >
+              Today
+            </span>
+          </div>
+        </div>
+        <ul className="relative">
+          <li aria-hidden className="pointer-events-none absolute inset-y-0 right-0 left-[280px]">
+            {ticks.map((day) => (
+              <span
+                key={day}
+                className="absolute inset-y-0 w-px bg-border"
+                style={{ left: percent(day) }}
+              />
+            ))}
+            <span
+              className="absolute inset-y-0 w-0.5 bg-clay"
+              style={{ left: percent(now + 1) }}
+              title="Today"
+            />
+          </li>
+          {ordered.map(({ task, start, moved }) => {
+            const end = Math.max(moved, start) + 1;
+            const open = task.status !== "done";
+
+            return (
+              <li
+                key={task.id}
+                data-timeline-task={task.id}
+                className="group/row relative flex h-10 items-center"
+              >
+                <div className="sticky left-0 z-10 flex h-full w-[280px] shrink-0 items-center gap-2 bg-background px-3 group-hover/row:bg-sunken">
+                  <StatusIcon status={task.status} />
+                  <OpenTask task={task} onOpen={onOpen} className="truncate text-sm" />
+                </div>
+                <div className="relative h-full flex-1">
+                  {open && end <= now ? (
+                    <span
+                      className="absolute top-1/2 border-t-2 border-dotted border-border-strong"
+                      style={{
+                        left: percent(end),
+                        width: `${((now + 1 - end) / span) * 100}%`,
+                      }}
+                    />
+                  ) : null}
+                  <span
+                    title={`${task.title}: ${shortDay(start)} to ${shortDay(end - 1)}${
+                      open ? ", still open" : ""
+                    }`}
+                    className={cn(
+                      "absolute top-1/2 h-5 -translate-y-1/2 rounded-[5px]",
+                      statusFill[task.status],
+                      task.status === "done" && "opacity-55",
+                      task.status === "backlog" && "opacity-40",
+                    )}
+                    style={{ left: percent(start), width: `${((end - start) / span) * 100}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {undated ? (
+          <p className="sticky left-0 px-3 pt-3 text-micro text-muted-foreground">
+            {undated} task{undated === 1 ? "" : "s"} without valid dates not shown.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const tableColumns = [
+  { key: "number", label: "#", className: "w-14" },
+  { key: "title", label: "Task", className: "" },
+  { key: "status", label: "Status", className: "w-40" },
+  { key: "stage", label: "Stage", className: "w-24" },
+  { key: "subtasks", label: "Subtasks", className: "w-28" },
+  { key: "created", label: "Created", className: "w-28 max-md:hidden" },
+  { key: "updated", label: "Updated", className: "w-28" },
+  { key: "age", label: "Age", className: "w-20 max-md:hidden" },
+] as const;
+
+type TableKey = (typeof tableColumns)[number]["key"];
+
+function tableValue(task: Task, key: TableKey): string | number {
+  if (key === "number") return task.id;
+
+  if (key === "title") return task.title.toLowerCase();
+
+  if (key === "status") return attentionOrder.indexOf(task.status);
+
+  if (key === "stage") {
+    const stage = stageOf(task);
+
+    return stage ? stages.indexOf(stage) : -1;
+  }
+
+  if (key === "subtasks") return task.subtasks.total;
+
+  if (key === "created") return task.created;
+
+  if (key === "updated") return task.updated;
+
+  return daysSince(task.created) ?? -1;
+}
+
+function TableView({
+  tasks,
+  pending,
+  onOpen,
+  onMove,
+}: TaskViewProps & { pending: boolean; onMove: (id: string, status: Status) => void }) {
+  const [sort, setSort] = React.useState<{ key: TableKey; ascending: boolean }>({
+    key: "updated",
+    ascending: false,
+  });
+
+  const rows = [...tasks].sort((a, b) => {
+    const left = tableValue(a, sort.key);
+    const right = tableValue(b, sort.key);
+    const order = left < right ? -1 : left > right ? 1 : a.id.localeCompare(b.id);
+
+    return sort.ascending ? order : -order;
+  });
+
+  const cell = "px-3 py-2 align-middle tabular-nums";
+
+  return (
+    <div className="h-full overflow-auto pb-8">
+      <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
+        <thead>
+          <tr>
+            {tableColumns.map((column) => {
+              const active = sort.key === column.key;
+              const Arrow = sort.ascending ? ArrowUp : ArrowDown;
+
+              return (
+                <th
+                  key={column.key}
+                  scope="col"
+                  aria-sort={active ? (sort.ascending ? "ascending" : "descending") : "none"}
+                  className={cn(
+                    "sticky top-0 z-10 border-b border-border-strong bg-background p-0 text-left",
+                    column.className,
+                  )}
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full cursor-pointer items-center gap-1 px-3 py-2 text-micro font-medium transition-colors duration-100 hover:text-foreground",
+                      active ? "text-foreground" : "text-muted-foreground",
+                    )}
+                    onClick={() =>
+                      setSort({
+                        key: column.key,
+                        ascending: active ? !sort.ascending : column.key === "title",
+                      })
+                    }
+                  >
+                    {column.label}
+                    {active ? <Arrow className="size-3" aria-hidden /> : null}
+                  </button>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((task) => (
+            <tr
+              key={task.id}
+              data-task={task.id}
+              tabIndex={-1}
+              className="transition-colors duration-100 hover:bg-sunken"
+            >
+              <td className={cn(cell, "border-b border-border text-micro text-muted-foreground")}>
+                {taskNumber(task)}
+              </td>
+              <td className={cn(cell, "border-b border-border")}>
+                <OpenTask
+                  task={task}
+                  onOpen={onOpen}
+                  className={cn(
+                    "font-medium",
+                    task.status === "done" && "font-normal text-muted-foreground",
+                  )}
+                />
+              </td>
+              <td className={cn(cell, "border-b border-border")}>
+                <span className="flex items-center gap-2">
+                  <StatusIcon status={task.status} />
+                  <select
+                    aria-label={`Status of ${task.title}`}
+                    value={task.status}
+                    disabled={pending}
+                    onChange={(event) => {
+                      const status = columns.find((column) => column.id === event.target.value);
+
+                      if (status) onMove(task.id, status.id);
+                    }}
+                    className="cursor-pointer rounded-md bg-transparent py-0.5 text-meta hover:bg-muted disabled:opacity-50"
+                  >
+                    {columns.map((column) => (
+                      <option key={column.id} value={column.id}>
+                        {column.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </td>
+              <td
+                className={cn(
+                  cell,
+                  "border-b border-border text-meta capitalize text-muted-foreground",
+                )}
+              >
+                {stageOf(task) ?? ""}
+              </td>
+              <td className={cn(cell, "border-b border-border text-meta text-muted-foreground")}>
+                {task.subtasks.total ? (
+                  <SubtaskMeter done={task.subtasks.done} total={task.subtasks.total} />
+                ) : (
+                  ""
+                )}
+              </td>
+              <td
+                className={cn(
+                  cell,
+                  "border-b border-border text-meta text-muted-foreground max-md:hidden",
+                )}
+              >
+                {task.created}
+              </td>
+              <td className={cn(cell, "border-b border-border text-meta text-muted-foreground")}>
+                {task.updated}
+              </td>
+              <td
+                className={cn(
+                  cell,
+                  "border-b border-border text-meta text-muted-foreground max-md:hidden",
+                )}
+              >
+                {daysSince(task.created) === null ? "" : `${daysSince(task.created)}d`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function usePortfolio(projects: Board["projects"], refresh: number, enabled: boolean) {
+  const [boards, setBoards] = React.useState<ReadonlyMap<string, Board | null> | null>(null);
+  const ids = projects.map((project) => project.id).join();
+
+  React.useEffect(() => {
+    if (!enabled) return;
+
+    const controller = new AbortController();
+
+    Promise.all(
+      projects.map(async (project): Promise<[string, Board | null]> => {
+        try {
+          const value = await request(`/api/board?project=${project.id}`, {
+            signal: controller.signal,
+          });
+
+          return [project.id, Schema.decodeUnknownSync(boardSchema)(value)];
+        } catch {
+          return [project.id, null];
+        }
+      }),
+    ).then((entries) => {
+      if (!controller.signal.aborted) setBoards(new Map(entries));
+    });
+
+    return () => controller.abort();
+  }, [ids, refresh, enabled]);
+
+  return boards;
+}
+
+function PortfolioView({
+  board,
+  query,
+  refresh,
+  onSelectProject,
+  onOpenAcross,
+}: {
+  board: Board;
+  query: string;
+  refresh: number;
+  onSelectProject: (id: string) => void;
+  onOpenAcross: (projectId: string, task: Task) => void;
+}) {
+  const boards = usePortfolio(board.projects, refresh, true);
+
+  if (!boards) return <SkeletonRows />;
+
+  const rows = board.projects
+    .map((project) => {
+      const loaded = boards.get(project.id) ?? null;
+      const tasks = loaded?.tasks ?? [];
+
+      return {
+        project,
+        loaded,
+        tasks,
+        blocked: tasks.filter((task) => task.status === "blocked"),
+        active: tasks.filter((task) => task.status === "inprogress"),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.blocked.length - a.blocked.length ||
+        b.active.length - a.active.length ||
+        a.project.name.localeCompare(b.project.name),
+    );
+
+  const count = (pick: "blocked" | "active") =>
+    rows.reduce((sum, row) => sum + row[pick].length, 0);
+
+  return (
+    <div className="mx-auto max-w-[1100px] pt-4 pb-12">
+      <p className="px-3 font-serif text-title text-balance">
+        {rows.length} {rows.length === 1 ? "project" : "projects"}, {count("active")} in progress,{" "}
+        {count("blocked")} blocked.
+      </p>
+      <ul className="mt-6 border-t border-border">
+        {rows.map(({ project, loaded, tasks, blocked, active }) => {
+          const attention = [...blocked, ...active].filter((task) => matches(task, query));
+
+          return (
+            <li
+              key={project.id}
+              data-portfolio-project={project.id}
+              className="grid gap-x-8 gap-y-3 border-b border-border px-3 py-5 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+            >
+              <div className="min-w-0">
+                <button
+                  type="button"
+                  className="flex max-w-full cursor-pointer items-center gap-2 font-serif text-xl leading-tight decoration-clay/40 underline-offset-4 hover:underline"
+                  onClick={() => onSelectProject(project.id)}
+                >
+                  {project.id === board.projectId ? (
+                    <span className="size-1.5 shrink-0 rounded-full bg-clay" aria-hidden />
+                  ) : null}
+                  <span className="truncate">{project.name}</span>
+                </button>
+                <p className="mt-1 text-micro text-muted-foreground tabular-nums">
+                  {!loaded
+                    ? "Could not read this project."
+                    : `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"}`}
+                </p>
+                {tasks.length ? (
+                  <div
+                    role="img"
+                    aria-label={columns
+                      .map(
+                        (column) =>
+                          `${tasks.filter((task) => task.status === column.id).length} ${column.label}`,
+                      )
+                      .join(", ")}
+                    className="mt-3 flex flex-wrap gap-[3px]"
+                  >
+                    {defaultOrder.flatMap((status) =>
+                      tasks
+                        .filter((task) => task.status === status)
+                        .map((task) => (
+                          <span
+                            key={task.id}
+                            title={task.title}
+                            className={cn("size-2.5 rounded-[3px]", statusFill[status])}
+                          />
+                        )),
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              <div className="min-w-0">
+                {attention.length ? (
+                  <ul className="space-y-1">
+                    {attention.slice(0, 4).map((task) => (
+                      <li key={task.id} className="flex items-center gap-2">
+                        <StatusIcon status={task.status} />
+                        <button
+                          type="button"
+                          title={task.title}
+                          className="min-w-0 cursor-pointer truncate text-left text-sm decoration-clay/40 underline-offset-4 hover:underline"
+                          onClick={() => onOpenAcross(project.id, task)}
+                        >
+                          {task.title}
+                        </button>
+                        {task.stage ? (
+                          <span className="ml-auto shrink-0 text-micro text-muted-foreground capitalize">
+                            {task.stage}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                    {attention.length > 4 ? (
+                      <li className="pl-5.5 text-micro text-muted-foreground">
+                        {attention.length - 4} more
+                      </li>
+                    ) : null}
+                  </ul>
+                ) : (
+                  <p className="text-meta text-muted-foreground">
+                    {query ? "No active tasks match." : "Nothing running."}
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+const hideableViews: readonly View[] = ["pipeline", "hill", "timeline", "table"];
+
+function ViewSwitcher({ view, onChange }: { view: View; onChange: (view: View) => void }) {
+  return (
+    <nav aria-label="Views" className="max-w-full overflow-x-auto">
+      <ul className="flex items-center gap-0.5 rounded-lg bg-sunken p-0.5">
+        {views.map((item, index) => {
+          const current = item.id === view;
+          const Icon = item.icon;
+
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                data-view={item.id}
+                aria-current={current ? "page" : undefined}
+                aria-label={item.label}
+                title={`${item.label} (${index + 1})`}
+                onClick={() => onChange(item.id)}
+                className={cn(
+                  "flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-meta transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)] [&_svg]:size-4",
+                  current
+                    ? "bg-card font-medium text-foreground shadow-card"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon aria-hidden />
+                <span className={cn(!current && "max-[1400px]:hidden")}>{item.label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function StatusRibbon({ tasks }: { tasks: readonly Task[] }) {
+  return (
+    <div className="flex h-[3px] w-full gap-px bg-border" aria-hidden>
+      {tasks.length
+        ? defaultOrder.map((status) => {
+            const count = tasks.filter((task) => task.status === status).length;
+
+            return count ? (
+              <span
+                key={status}
+                className={cn("h-full transition-[flex-grow] duration-300", statusFill[status])}
+                style={{ flexGrow: count }}
+                title={`${statusLabel(status)}: ${count}`}
+              />
+            ) : null;
+          })
+        : null}
+    </div>
+  );
+}
+
 function App() {
   const [board, setBoard] = React.useState<Board | null>(null);
   const [error, setError] = React.useState("");
@@ -1500,10 +3189,17 @@ function App() {
   const saving = React.useRef(false);
   const pickedRef = React.useRef<Picked | null>(null);
   const [liveKey, setLiveKey] = React.useState(0);
+  const [anyKey, setAnyKey] = React.useState(0);
   const [projectId, setProjectId] = React.useState(activeProject);
+  const [view, setView] = React.useState<View>(readView);
+  const [order, setOrder] = React.useState<readonly Status[]>(readColumnOrder);
+  const [query, setQuery] = React.useState("");
+  const [hideDone, setHideDone] = React.useState(() => readSetting("factory-hide-done") === "1");
+  const filterRef = React.useRef<HTMLInputElement>(null);
   const [picking, setPicking] = React.useState(false);
   const pickAbort = React.useRef<AbortController | null>(null);
   const [navOpen, setNavOpen] = React.useState(false);
+
   const [collapsed, setCollapsed] = React.useState(() => {
     try {
       return localStorage.getItem("factory-sidebar") === "collapsed";
@@ -1521,6 +3217,21 @@ function App() {
     } catch {
       // The choice still applies to this page load.
     }
+  }
+
+  function chooseView(next: View) {
+    setView(next);
+    writeSetting("factory-view", next === "board" ? null : next);
+  }
+
+  function chooseOrder(next: readonly Status[]) {
+    setOrder(next);
+    writeSetting("factory-columns", next.join() === defaultOrder.join() ? null : next.join());
+  }
+
+  function toggleHideDone() {
+    setHideDone(!hideDone);
+    writeSetting("factory-hide-done", hideDone ? null : "1");
   }
 
   function selectProject(id: string) {
@@ -1628,12 +3339,45 @@ function App() {
         changed = "";
       }
 
+      if (saving.current || pickedRef.current) return;
+
+      setAnyKey((key) => key + 1);
+
       if (changed && changed !== activeProject) return;
 
-      if (!saving.current && !pickedRef.current) setLiveKey((key) => key + 1);
+      setLiveKey((key) => key + 1);
     });
 
     return () => events.close();
+  }, []);
+
+  React.useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+
+      if (document.querySelector('[role="dialog"]') || pickedRef.current) return;
+
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.matches("input, select, textarea, [contenteditable]")
+      )
+        return;
+
+      if (event.key === "/") {
+        event.preventDefault();
+        filterRef.current?.focus();
+
+        return;
+      }
+
+      const next = views[Number(event.key) - 1];
+
+      if (next) chooseView(next.id);
+    };
+
+    window.addEventListener("keydown", shortcut);
+
+    return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
   function pick(value: Picked) {
@@ -1676,7 +3420,12 @@ function App() {
         await request("/api/status", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ token: board.token, project: board.projectId, task: id, status }),
+          body: new URLSearchParams({
+            token: board.token,
+            project: board.projectId,
+            task: id,
+            status,
+          }),
         }),
       );
 
@@ -1701,154 +3450,205 @@ function App() {
   }
 
   const stale = board !== null && projectId !== "" && board.projectId !== projectId;
+  const hasProjects = board !== null && board.projects.length > 0;
+  // With no project the hidden board keeps its slot and the empty state explains what to do.
+  const shownView: View = board && !hasProjects ? "board" : view;
+  const blockedCount = board?.tasks.filter((task) => task.status === "blocked").length ?? 0;
+  const filtered = (board?.tasks ?? []).filter((task) => matches(task, query));
+
+  const visible =
+    hideDone && hideableViews.includes(shownView)
+      ? filtered.filter((task) => task.status !== "done")
+      : filtered;
 
   return (
     <div className="flex min-h-dvh">
-    <ProjectSidebar
-      board={board}
-      picking={picking}
-      open={navOpen}
-      collapsed={collapsed}
-      onToggleCollapsed={toggleCollapsed}
-      onClose={() => setNavOpen(false)}
-      onSelect={selectProject}
-      onRemove={(id) => void removeProject(id)}
-      onPick={() => void pickFolder()}
-      onCancelPick={() => pickAbort.current?.abort()}
-      onAddPath={addPath}
-    />
-    <main className="min-w-0 flex-1 px-5 pb-8 md:px-10 md:pb-10">
-      <header className="sticky top-0 z-30 -mx-5 mb-6 flex items-center gap-3 border-b border-border bg-background px-5 py-3 md:-mx-10 md:px-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="-ml-2 md:hidden"
-          aria-label="Open projects"
-          aria-expanded={navOpen}
-          onClick={() => setNavOpen(true)}
-        >
-          <Menu />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="truncate font-serif text-xl leading-tight">
-            {board?.project || "Factory"}
-          </h1>
-        </div>
-        {board && board.projects.length > 0 ? (
-          <span className="ml-auto hidden text-meta text-muted-foreground tabular-nums sm:inline">
-            {board.tasks.length} tasks ·{" "}
-            {board.tasks.filter((task) => task.status === "inprogress").length} in progress
-          </span>
-        ) : null}
-      </header>
-      {error ? <Alert>{error}</Alert> : null}
-      {board?.errors.map((message) => (
-        <Alert key={message}>{message}</Alert>
-      ))}
-      <p id="move-instructions" className="sr-only">
-        Drag cards between columns. On a card or move grip, press Space, use left/right arrows, and
-        Enter to save or Escape to cancel.
-      </p>
-      <p role="status" aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
-      {board && board.projects.length === 0 ? (
-        <EmptyProjects
-          picking={picking}
-          onPick={() => void pickFolder()}
-          onCancelPick={() => pickAbort.current?.abort()}
-        />
-      ) : null}
-      <div
-        ref={boardRef}
-        data-board="true"
-        hidden={board !== null && board.projects.length === 0}
-        className={cn(
-          "grid grid-cols-[repeat(4,minmax(264px,1fr))] items-start gap-4 overflow-x-auto pb-6 transition-opacity [scrollbar-gutter:stable]",
-          stale && "opacity-60",
-        )}
-        aria-busy={Boolean(pending) || !board || stale}
-      >
-        {columns.map((column) => {
-          const tasks = board?.tasks.filter((task) => task.status === column.id) ?? [];
-          const dropping = picked?.target === column.id;
-
-          return (
-            <section
-              key={column.id}
-              data-status={column.id}
-              aria-label={column.label}
-              className={cn(
-                "min-h-64 rounded-2xl bg-sunken p-2 transition-[background-color,box-shadow] duration-150",
-                dropping &&
-                  "bg-clay-tint/60 outline-2 -outline-offset-2 outline-dashed outline-clay/60",
-              )}
-              onDragOver={(event) => {
-                if (pickedRef.current && !saving.current) {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  target(column.id);
-                }
-              }}
-              onDrop={(event) => {
-                const current = pickedRef.current;
-
-                if (!current) return;
-                event.preventDefault();
-                void move(current.id, column.id);
-              }}
-            >
-              <h2 className="flex items-center gap-2 px-2.5 pt-1.5 pb-3 text-meta font-medium text-foreground">
-                <StatusIcon status={column.id} />
-                {column.label}
-                <span className="ml-auto rounded-full bg-card px-2 py-0.5 text-micro text-muted-foreground tabular-nums shadow-card">
-                  {tasks.length}
-                </span>
-              </h2>
-              <div className="flex flex-col gap-2">
-                {!board
-                  ? [0, 1].map((n) => (
-                      <div
-                        key={n}
-                        className="h-[92px] animate-pulse rounded-xl border border-border bg-card/60"
-                      />
-                    ))
-                  : null}
-                {tasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    picked={picked}
-                    pending={Boolean(pending)}
-                    onOpen={setSelected}
-                    onPick={pick}
-                    onTarget={target}
-                    onMove={(id, status) => void move(id, status)}
-                    onCancel={cancel}
-                    boardRef={boardRef}
-                  />
-                ))}
-                {board && !tasks.length ? (
-                  <p
-                    className={cn(
-                      "rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-meta text-muted-foreground",
-                      dropping && "border-clay/50 text-clay-ink",
-                    )}
-                  >
-                    {dropping ? "Drop here" : "No tasks"}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-      <TaskReader
-        root={selected}
-        onClose={() => setSelected(null)}
-        liveKey={liveKey}
+      <ProjectSidebar
+        board={board}
+        picking={picking}
+        open={navOpen}
+        collapsed={collapsed}
+        onToggleCollapsed={toggleCollapsed}
+        onClose={() => setNavOpen(false)}
+        onSelect={selectProject}
+        onRemove={(id) => void removeProject(id)}
+        onPick={() => void pickFolder()}
+        onCancelPick={() => pickAbort.current?.abort()}
+        onAddPath={addPath}
       />
-    </main>
+      <main className="flex h-dvh min-w-0 flex-1 flex-col">
+        <header className="z-30 shrink-0 bg-background">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 md:px-8 xl:flex-nowrap">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="-ml-2 md:hidden"
+              aria-label="Open projects"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen(true)}
+            >
+              <Menu />
+            </Button>
+            <div className="flex min-w-0 items-baseline gap-3">
+              <h1 className="truncate font-serif text-xl leading-tight">
+                {board?.project || "Factory"}
+              </h1>
+              {board && hasProjects ? (
+                <span className="hidden text-meta whitespace-nowrap text-muted-foreground tabular-nums 2xl:inline">
+                  {board.tasks.length} tasks ·{" "}
+                  {board.tasks.filter((task) => task.status === "inprogress").length} in progress
+                  {blockedCount ? ` · ${blockedCount} blocked` : ""}
+                </span>
+              ) : null}
+            </div>
+            {hasProjects ? (
+              <div className="ml-auto flex max-w-full flex-wrap items-center gap-2 xl:shrink-0 xl:flex-nowrap">
+                {view === "board" && order.join() !== defaultOrder.join() ? (
+                  <Button variant="ghost" size="sm" onClick={() => chooseOrder(defaultOrder)}>
+                    <RotateCcw aria-hidden />
+                    Reset columns
+                  </Button>
+                ) : null}
+                {hideableViews.includes(view) ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={hideDone}
+                    onClick={toggleHideDone}
+                  >
+                    {hideDone ? "Show done" : "Hide done"}
+                  </Button>
+                ) : null}
+                <label className="relative block">
+                  <span className="sr-only">Filter tasks</span>
+                  <Search
+                    className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint"
+                    aria-hidden
+                  />
+                  <input
+                    ref={filterRef}
+                    type="search"
+                    value={query}
+                    placeholder="Filter"
+                    aria-keyshortcuts="/"
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        setQuery("");
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    className="h-8 w-36 rounded-md border border-border bg-card pr-2 pl-8 text-meta placeholder:text-muted-foreground transition-[width] duration-150 ease-[var(--ease)] focus:w-52 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+                <ViewSwitcher view={view} onChange={chooseView} />
+              </div>
+            ) : null}
+          </div>
+          <StatusRibbon tasks={board?.tasks ?? []} />
+        </header>
+        <p id="move-instructions" className="sr-only">
+          Drag cards between columns. On a card or move grip, press Space, use left/right arrows,
+          and Enter to save or Escape to cancel.
+        </p>
+        <p id="column-instructions" className="sr-only">
+          Drag a column by its header to reorder it. On the reorder grip, press Space, use left and
+          right arrows, and Enter to drop or Escape to cancel.
+        </p>
+        <p role="status" aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
+        <div className="flex min-h-0 flex-1 flex-col px-5 pt-3 md:px-8">
+          {error ? <Alert>{error}</Alert> : null}
+          {board?.errors.map((message) => (
+            <Alert key={message}>{message}</Alert>
+          ))}
+          {board && !hasProjects ? (
+            <EmptyProjects
+              picking={picking}
+              onPick={() => void pickFolder()}
+              onCancelPick={() => pickAbort.current?.abort()}
+            />
+          ) : null}
+          <div
+            key={shownView}
+            className={cn(
+              "view-in min-h-0 flex-1 transition-opacity",
+              shownView === "board" || shownView === "timeline" || shownView === "table"
+                ? "overflow-hidden"
+                : "overflow-y-auto",
+              shownView !== "board" && stale && "opacity-60",
+            )}
+          >
+            {shownView === "board" ? (
+              <BoardView
+                board={board}
+                tasks={filtered}
+                stale={stale}
+                busy={Boolean(pending)}
+                order={order}
+                picked={picked}
+                pending={Boolean(pending)}
+                boardRef={boardRef}
+                canDrop={() => Boolean(pickedRef.current) && !saving.current}
+                onDropCard={(status) => {
+                  const current = pickedRef.current;
+
+                  if (current) void move(current.id, status);
+
+                  return Boolean(current);
+                }}
+                onOrder={chooseOrder}
+                onAnnounce={setAnnouncement}
+                onOpen={setSelected}
+                onPick={pick}
+                onTarget={target}
+                onMove={(id, status) => void move(id, status)}
+                onCancel={cancel}
+              />
+            ) : !board ? (
+              <SkeletonRows />
+            ) : shownView === "portfolio" ? (
+              <PortfolioView
+                board={board}
+                query={query}
+                refresh={anyKey + liveKey}
+                onSelectProject={(id) => {
+                  selectProject(id);
+                  chooseView("board");
+                }}
+                onOpenAcross={(id, task) => {
+                  selectProject(id);
+                  setSelected(task);
+                }}
+              />
+            ) : !visible.length ? (
+              <Nothing query={query} onClear={() => setQuery("")} />
+            ) : shownView === "pipeline" ? (
+              <PipelineView tasks={visible} onOpen={setSelected} />
+            ) : shownView === "focus" ? (
+              <FocusView
+                tasks={visible}
+                pending={Boolean(pending)}
+                onOpen={setSelected}
+                onMove={(id, status) => void move(id, status)}
+              />
+            ) : shownView === "hill" ? (
+              <HillView tasks={visible} onOpen={setSelected} />
+            ) : shownView === "timeline" ? (
+              <TimelineView tasks={visible} onOpen={setSelected} />
+            ) : (
+              <TableView
+                tasks={visible}
+                pending={Boolean(pending)}
+                onOpen={setSelected}
+                onMove={(id, status) => void move(id, status)}
+              />
+            )}
+          </div>
+        </div>
+        <TaskReader root={selected} onClose={() => setSelected(null)} liveKey={liveKey} />
+      </main>
     </div>
   );
 }
