@@ -137,6 +137,7 @@ import {
   ArrowUp,
   ChartGantt,
   Check,
+  Inbox,
   ChevronDown,
   ChevronRight,
   CircleAlert,
@@ -241,7 +242,7 @@ function TabsList(props: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className="flex shrink-0 gap-7 border-b border-border px-8"
+      className="flex shrink-0 flex-wrap gap-x-7 border-b border-border px-8"
       {...props}
     />
   );
@@ -287,6 +288,14 @@ const taskSchema = Schema.Struct({
   created: Schema.String,
   updated: Schema.String,
   stage: Schema.optional(Schema.Literals(stages)),
+  blocker: Schema.optional(Schema.String),
+});
+
+const queueItemSchema = Schema.Struct({
+  taken: Schema.Boolean,
+  text: Schema.String,
+  task: Schema.String,
+  context: Schema.String,
 });
 
 const boardSchema = Schema.Struct({
@@ -297,6 +306,7 @@ const boardSchema = Schema.Struct({
   ),
   token: Schema.String,
   tasks: Schema.Array(taskSchema),
+  backlog: Schema.Array(queueItemSchema),
   errors: Schema.Array(Schema.String),
 });
 
@@ -306,6 +316,7 @@ const documentsSchema = Schema.Struct({
   plan: Schema.String,
   debrief: Schema.String,
   subtasks: Schema.Array(taskSchema),
+  others: Schema.Array(Schema.Struct({ path: Schema.String, html: Schema.String })),
 });
 
 type Task = typeof taskSchema.Type;
@@ -313,6 +324,8 @@ type Task = typeof taskSchema.Type;
 type Board = typeof boardSchema.Type;
 
 type Documents = typeof documentsSchema.Type;
+
+type QueueItem = typeof queueItemSchema.Type;
 
 type Status = typeof statusSchema.Type;
 
@@ -330,6 +343,15 @@ function statusLabel(status: Status) {
 type Stage = (typeof stages)[number];
 
 const defaultOrder: readonly Status[] = columns.map((column) => column.id);
+
+// The Queue column shows backlog.md lines; it is not a status, so cards cannot be dropped on it.
+type ColumnId = "queue" | Status;
+
+const defaultColumns: readonly ColumnId[] = ["queue", ...defaultOrder];
+
+function columnLabel(id: ColumnId) {
+  return id === "queue" ? "Queue" : statusLabel(id);
+}
 
 // Browser settings are conveniences: every reader and writer tolerates blocked storage.
 function readSetting(key: string) {
@@ -349,17 +371,19 @@ function writeSetting(key: string, value: string | null) {
   }
 }
 
-function readColumnOrder(): readonly Status[] {
+function readColumnOrder(): readonly ColumnId[] {
   const saved = (readSetting("factory-columns") ?? "").split(",");
-  const order = saved.flatMap((part) => defaultOrder.filter((status) => status === part));
+  const named = saved.flatMap((part) => defaultColumns.filter((id) => id === part));
+  // An order saved before the Queue column existed keeps its status columns.
+  const order: readonly ColumnId[] = named.includes("queue") ? named : ["queue", ...named];
 
-  return new Set(order).size === defaultOrder.length && order.length === defaultOrder.length
+  return new Set(order).size === defaultColumns.length && order.length === defaultColumns.length
     ? order
-    : defaultOrder;
+    : defaultColumns;
 }
 
-function place(order: readonly Status[], id: Status, slot: number): readonly Status[] {
-  const rest = order.filter((status) => status !== id);
+function place(order: readonly ColumnId[], id: ColumnId, slot: number): readonly ColumnId[] {
+  const rest = order.filter((column) => column !== id);
 
   return [...rest.slice(0, slot), id, ...rest.slice(slot)];
 }
@@ -436,14 +460,20 @@ function stageOf(task: Task): Stage | undefined {
   return task.status === "done" ? "done" : task.stage;
 }
 
-function matches(task: Task, query: string) {
-  const haystack =
-    `${task.id} ${task.title} ${statusLabel(task.status)} ${task.stage ?? ""}`.toLowerCase();
+function matchesWords(text: string, query: string) {
+  const haystack = text.toLowerCase();
 
   return query
     .toLowerCase()
     .split(/\s+/)
     .every((word) => haystack.includes(word));
+}
+
+function matches(task: Task, query: string) {
+  return matchesWords(
+    `${task.id} ${task.title} ${statusLabel(task.status)} ${task.stage ?? ""}`,
+    query,
+  );
 }
 
 const statusFill: Record<Status, string> = {
@@ -647,6 +677,43 @@ function StageRail({ task }: { task: Task }) {
         />
       ))}
     </span>
+  );
+}
+
+function BlockerNote({ task, className }: { task: Task; className?: string }) {
+  return task.blocker ? (
+    <p
+      data-blocker={task.id}
+      className={cn(
+        "rounded-md bg-st-blocked-bg px-2.5 py-1.5 text-micro text-st-blocked-ink [overflow-wrap:anywhere]",
+        className,
+      )}
+    >
+      {task.blocker}
+    </p>
+  ) : null;
+}
+
+function QueueCard({ item }: { item: QueueItem }) {
+  return (
+    <Card data-queue-item="true" className={cn("shrink-0 p-3.5", item.taken && "opacity-60")}>
+      <p
+        className={cn(
+          "text-body leading-snug [overflow-wrap:anywhere]",
+          item.taken && "line-through",
+        )}
+      >
+        {item.text}
+      </p>
+      {item.task ? (
+        <p className="mt-1 font-mono text-micro text-muted-foreground">→ {item.task}</p>
+      ) : null}
+      {item.context ? (
+        <p className="mt-2 text-micro whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+          {item.context}
+        </p>
+      ) : null}
+    </Card>
   );
 }
 
@@ -855,6 +922,7 @@ function TaskCard({
           <SubtaskMeter done={task.subtasks.done} total={task.subtasks.total} className="ml-auto" />
         ) : null}
       </div>
+      <BlockerNote task={task} className="mt-2.5" />
       {mine && picked.keyboard ? (
         <p className="mt-3 flex items-center gap-1.5 text-micro font-medium text-clay-ink">
           <ArrowRight className="size-3" aria-hidden />
@@ -862,6 +930,129 @@ function TaskCard({
         </p>
       ) : null}
     </Card>
+  );
+}
+
+function StatusMenu({
+  task,
+  x,
+  y,
+  onMove,
+  onClose,
+}: {
+  task: Task;
+  x: number;
+  y: number;
+  onMove: (id: string, status: Status) => void;
+  onClose: () => void;
+}) {
+  const menu = React.useRef<HTMLDivElement>(null);
+  const opener = React.useRef(document.activeElement);
+  const [position, setPosition] = React.useState({ left: x, top: y });
+
+  React.useLayoutEffect(() => {
+    const element = menu.current;
+
+    if (!element) return;
+
+    const { width, height } = element.getBoundingClientRect();
+
+    setPosition({
+      left: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
+      top: Math.max(8, Math.min(y, window.innerHeight - height - 8)),
+    });
+    element.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+  }, [x, y]);
+
+  React.useEffect(() => {
+    const away = (event: Event) => {
+      if (!(event.target instanceof Node && menu.current?.contains(event.target))) onClose();
+    };
+
+    window.addEventListener("pointerdown", away, true);
+    window.addEventListener("scroll", away, true);
+    window.addEventListener("resize", onClose);
+    window.addEventListener("blur", onClose);
+
+    return () => {
+      window.removeEventListener("pointerdown", away, true);
+      window.removeEventListener("scroll", away, true);
+      window.removeEventListener("resize", onClose);
+      window.removeEventListener("blur", onClose);
+    };
+  });
+
+  React.useEffect(
+    () => () => {
+      if (opener.current instanceof HTMLElement && opener.current.isConnected)
+        opener.current.focus({ preventScroll: true });
+    },
+    [],
+  );
+
+  function key(event: React.KeyboardEvent) {
+    // The menu owns the keyboard while open, so number keys must not switch views behind it.
+    event.stopPropagation();
+
+    const items = Array.from(
+      menu.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [],
+    );
+
+    const at = items.findIndex((item) => item === document.activeElement);
+
+    const next = new Map([
+      ["ArrowDown", (at + 1) % items.length],
+      ["ArrowUp", (at - 1 + items.length) % items.length],
+      ["Home", 0],
+      ["End", items.length - 1],
+    ]).get(event.key);
+
+    if (next !== undefined) {
+      event.preventDefault();
+      items[next]?.focus();
+    } else if (event.key === "Escape" || event.key === "Tab") {
+      event.preventDefault();
+      onClose();
+    }
+  }
+
+  return (
+    <div
+      ref={menu}
+      role="menu"
+      aria-label={`Change status of ${task.title}`}
+      style={position}
+      className="fixed z-50 w-56 rounded-lg border border-border bg-card p-1 text-meta shadow-lift"
+      onKeyDown={key}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      <p className="truncate px-2 py-1.5 text-micro text-muted-foreground" title={task.title}>
+        {task.title}
+      </p>
+      {defaultOrder.map((status) => {
+        const current = status === task.status;
+
+        return (
+          <button
+            key={status}
+            type="button"
+            role="menuitemradio"
+            aria-checked={current}
+            data-status-option={status}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-foreground transition-colors duration-100 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+            onClick={() => {
+              onClose();
+
+              if (!current) onMove(task.id, status);
+            }}
+          >
+            <StatusIcon status={status} className="size-3.5" />
+            <span className="flex-1">{statusLabel(status)}</span>
+            {current ? <Check className="size-3.5 text-clay-ink" aria-hidden /> : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1042,6 +1233,35 @@ function SendMenu({ file, className }: { file: string; className?: string }) {
   );
 }
 
+const tabOfFile = new Map([
+  ["INTENT.md", "intent"],
+  ["BRIEF.md", "intent"],
+  ["DESIGN.md", "design"],
+  ["PLAN.md", "plan"],
+  ["DEBRIEF.md", "debrief"],
+]);
+
+function documentLabel(path: string) {
+  if (path === "TASK.md") return "Task";
+
+  return path === "REVIEW.md" ? "Review" : path.replace(/\.md$/, "");
+}
+
+// A relative link's target, from the task directory; "" when it climbs out of the task.
+function resolveRelative(from: string, href: string) {
+  const parts = from.split("/").slice(0, -1);
+
+  for (const segment of (href.split("#")[0] ?? "").split("/")) {
+    if (segment === "..") {
+      if (!parts.length) return "";
+
+      parts.pop();
+    } else if (segment && segment !== ".") parts.push(segment);
+  }
+
+  return parts.join("/");
+}
+
 function TaskReader({
   root,
   onClose,
@@ -1130,8 +1350,28 @@ function TaskReader({
     setTrail([...trail, subtask]);
   }
 
-  const document_ = (html: string) => (
-    <article className="reader px-8 py-8 lg:px-12" dangerouslySetInnerHTML={{ __html: html }} />
+  // Links between task documents switch tabs instead of leaving the board.
+  function followLink(event: React.MouseEvent, from: string) {
+    const href =
+      event.target instanceof Element ? event.target.closest("a")?.getAttribute("href") : null;
+
+    if (!href || !/^[\w./-]+\.md(#[\w-]*)?$/.test(href)) return;
+
+    event.preventDefault();
+
+    const target = resolveRelative(from, href);
+    const next = tabOfFile.get(target) ?? target;
+
+    if (tabOfFile.has(target) || documents?.others.some((other) => other.path === target))
+      setTab(next);
+  }
+
+  const document_ = (html: string, path: string) => (
+    <article
+      className="reader px-8 py-8 lg:px-12"
+      onClick={(event) => followLink(event, path)}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 
   return (
@@ -1249,6 +1489,11 @@ function TaskReader({
             <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="plan">Plan</TabsTrigger>
             <TabsTrigger value="debrief">Debrief</TabsTrigger>
+            {documents?.others.map((other) => (
+              <TabsTrigger key={other.path} value={other.path}>
+                {documentLabel(other.path)}
+              </TabsTrigger>
+            ))}
             {!wide && subs.length ? (
               <TabsTrigger value="subtasks">
                 Subtasks
@@ -1284,7 +1529,16 @@ function TaskReader({
                       value={name}
                       className="min-h-0 flex-1 overflow-auto"
                     >
-                      {document_(documents[name])}
+                      {document_(documents[name], `${name.toUpperCase()}.md`)}
+                    </TabsPrimitive.Content>
+                  ))}
+                  {documents.others.map((other) => (
+                    <TabsPrimitive.Content
+                      key={other.path}
+                      value={other.path}
+                      className="min-h-0 flex-1 overflow-auto"
+                    >
+                      {document_(other.html, other.path)}
                     </TabsPrimitive.Content>
                   ))}
                   {!wide && subs.length ? (
@@ -1748,10 +2002,10 @@ type TaskViewProps = {
   onOpen: (task: Task) => void;
 };
 
-type Lifted = { id: Status; keyboard: boolean };
+type Lifted = { id: ColumnId; keyboard: boolean };
 
 type ColumnGesture = {
-  id: Status;
+  id: ColumnId;
   pointer: number;
   startX: number;
   clientX: number;
@@ -1765,6 +2019,7 @@ const liftEase = "cubic-bezier(.165,.84,.44,1)";
 function BoardView({
   board,
   tasks,
+  queue,
   stale,
   busy,
   order,
@@ -1783,15 +2038,16 @@ function BoardView({
 }: {
   board: Board | null;
   tasks: readonly Task[];
+  queue: readonly QueueItem[];
   stale: boolean;
   busy: boolean;
-  order: readonly Status[];
+  order: readonly ColumnId[];
   picked: Picked | null;
   pending: boolean;
   boardRef: React.RefObject<HTMLDivElement | null>;
   canDrop: () => boolean;
   onDropCard: (status: Status) => boolean;
-  onOrder: (order: readonly Status[]) => void;
+  onOrder: (order: readonly ColumnId[]) => void;
   onAnnounce: (message: string) => void;
   onOpen: (task: Task) => void;
   onPick: (value: Picked) => void;
@@ -1799,15 +2055,17 @@ function BoardView({
   onMove: (id: string, status: Status) => void;
   onCancel: () => void;
 }) {
-  const [preview, setPreview] = React.useState<readonly Status[] | null>(null);
+  const [preview, setPreview] = React.useState<readonly ColumnId[] | null>(null);
   const [lifted, setLifted] = React.useState<Lifted | null>(null);
   const gesture = React.useRef<ColumnGesture | null>(null);
-  const lefts = React.useRef(new Map<Status, number>());
+  const lefts = React.useRef(new Map<ColumnId, number>());
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const shown = preview ?? order;
 
-  const columnOf = (id: Status) =>
-    boardRef.current?.querySelector<HTMLElement>(`[data-status="${id}"]`) ?? null;
+  const statusColumns = shown.flatMap((id) => (id === "queue" ? [] : [id]));
+
+  const columnOf = (id: ColumnId) =>
+    boardRef.current?.querySelector<HTMLElement>(`[data-column="${id}"]`) ?? null;
 
   // Layout positions ignore transforms, so reading them mid-animation stays stable.
   function measure() {
@@ -1868,11 +2126,11 @@ function BoardView({
     }
   }, [shownKey]);
 
-  function positions(list: readonly Status[]) {
-    return list.map((id) => `${statusLabel(id)}`).join(", ");
+  function positions(list: readonly ColumnId[]) {
+    return list.map(columnLabel).join(", ");
   }
 
-  function finish(next: readonly Status[] | null) {
+  function finish(next: readonly ColumnId[] | null) {
     setPreview(null);
     setLifted(null);
 
@@ -1882,12 +2140,12 @@ function BoardView({
     } else onAnnounce("Column order unchanged.");
   }
 
-  function lift(id: Status) {
+  function lift(id: ColumnId) {
     measure();
     setPreview(order);
     setLifted({ id, keyboard: true });
     onAnnounce(
-      `${statusLabel(id)} column lifted. Use left and right arrows to move it, Enter to drop, Escape to cancel.`,
+      `${columnLabel(id)} column lifted. Use left and right arrows to move it, Enter to drop, Escape to cancel.`,
     );
   }
 
@@ -1910,7 +2168,7 @@ function BoardView({
     finish(cancelled ? null : shown);
   }
 
-  function startColumn(event: React.PointerEvent<HTMLElement>, id: Status) {
+  function startColumn(event: React.PointerEvent<HTMLElement>, id: ColumnId) {
     if (event.button !== 0 || picked || lifted?.keyboard) return;
 
     const onGrip =
@@ -1952,7 +2210,7 @@ function BoardView({
       current.moved = true;
       setPreview(order);
       setLifted({ id: current.id, keyboard: false });
-      onAnnounce(`Moving ${statusLabel(current.id)} column.`);
+      onAnnounce(`Moving ${columnLabel(current.id)} column.`);
     }
 
     if (!current.moved) return;
@@ -2000,7 +2258,7 @@ function BoardView({
     release(false);
   }
 
-  function columnKey(event: React.KeyboardEvent, id: Status) {
+  function columnKey(event: React.KeyboardEvent, id: ColumnId) {
     const space = event.key === " " || event.key === "Enter";
 
     if (!lifted && space) {
@@ -2014,7 +2272,7 @@ function BoardView({
 
         if (slot >= 0 && slot < shown.length) {
           setPreview(place(shown, id, slot));
-          onAnnounce(`${statusLabel(id)} column, position ${slot + 1} of ${shown.length}.`);
+          onAnnounce(`${columnLabel(id)} column, position ${slot + 1} of ${shown.length}.`);
         }
       } else if (space) {
         event.preventDefault();
@@ -2059,21 +2317,23 @@ function BoardView({
       data-board="true"
       hidden={board !== null && board.projects.length === 0}
       className={cn(
-        "relative grid h-full grid-cols-[repeat(4,minmax(264px,1fr))] grid-rows-[minmax(0,1fr)] gap-3 overflow-x-auto pb-4 transition-opacity [scrollbar-gutter:stable]",
+        "relative grid h-full grid-cols-[repeat(5,minmax(264px,1fr))] grid-rows-[minmax(0,1fr)] gap-3 overflow-x-auto pb-4 transition-opacity [scrollbar-gutter:stable]",
         stale && "opacity-60",
       )}
       aria-busy={busy || !board || stale}
     >
       {shown.map((id) => {
-        const label = statusLabel(id);
+        const label = columnLabel(id);
         const inColumn = tasks.filter((task) => task.status === id);
+        const count = id === "queue" ? queue.length : inColumn.length;
         const dropping = picked?.target === id;
         const isLifted = lifted?.id === id;
 
         return (
           <section
             key={id}
-            data-status={id}
+            data-column={id}
+            data-status={id === "queue" ? undefined : id}
             data-lifted={isLifted ? (lifted.keyboard ? "keyboard" : "pointer") : undefined}
             aria-label={label}
             className={cn(
@@ -2084,14 +2344,14 @@ function BoardView({
               isLifted && lifted.keyboard && "ring-2 ring-clay",
             )}
             onDragOver={(event) => {
-              if (canDrop()) {
+              if (id !== "queue" && canDrop()) {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = "move";
                 onTarget(id);
               }
             }}
             onDrop={(event) => {
-              if (onDropCard(id)) event.preventDefault();
+              if (id !== "queue" && onDropCard(id)) event.preventDefault();
             }}
           >
             <div
@@ -2102,11 +2362,13 @@ function BoardView({
               onPointerUp={endColumn}
               onPointerCancel={() => release(true)}
             >
-              <StatusIcon status={id} />
+              {id === "queue" ? (
+                <Inbox className="size-3.5 text-muted-foreground" aria-hidden />
+              ) : (
+                <StatusIcon status={id} />
+              )}
               <h2 className="text-meta font-medium text-foreground">{label}</h2>
-              <span className="text-micro text-muted-foreground tabular-nums">
-                {inColumn.length}
-              </span>
+              <span className="text-micro text-muted-foreground tabular-nums">{count}</span>
               <Button
                 data-column-grip={id}
                 variant="ghost"
@@ -2134,11 +2396,16 @@ function BoardView({
                     />
                   ))
                 : null}
+              {id === "queue"
+                ? queue.map((item, index) => (
+                    <QueueCard key={`${item.text}-${index}`} item={item} />
+                  ))
+                : null}
               {inColumn.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
-                  order={shown}
+                  order={statusColumns}
                   picked={picked}
                   pending={pending}
                   onOpen={onOpen}
@@ -2149,14 +2416,14 @@ function BoardView({
                   boardRef={boardRef}
                 />
               ))}
-              {board && !inColumn.length ? (
+              {board && !count ? (
                 <p
                   className={cn(
                     "rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-meta text-muted-foreground",
                     dropping && "border-clay/50 text-clay-ink",
                   )}
                 >
-                  {dropping ? "Drop here" : "No tasks"}
+                  {dropping ? "Drop here" : id === "queue" ? "Nothing queued" : "No tasks"}
                 </p>
               ) : null}
             </div>
@@ -2355,6 +2622,7 @@ function FocusRow({
             <span className={chip({ status: "blocked" })}>Quiet {quiet}d</span>
           ) : null}
         </p>
+        <BlockerNote task={task} className="mt-1.5" />
       </div>
       <div className="flex items-center gap-1 opacity-0 transition-opacity duration-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
         {task.status === "backlog" ? (
@@ -3184,6 +3452,7 @@ function App() {
   const [selected, setSelected] = React.useState<Task | null>(null);
   const [picked, setPicked] = React.useState<Picked | null>(null);
   const [pending, setPending] = React.useState<string | null>(null);
+  const [menu, setMenu] = React.useState<{ id: string; x: number; y: number } | null>(null);
   const [announcement, setAnnouncement] = React.useState("");
   const boardRef = React.useRef<HTMLDivElement>(null);
   const saving = React.useRef(false);
@@ -3192,7 +3461,7 @@ function App() {
   const [anyKey, setAnyKey] = React.useState(0);
   const [projectId, setProjectId] = React.useState(activeProject);
   const [view, setView] = React.useState<View>(readView);
-  const [order, setOrder] = React.useState<readonly Status[]>(readColumnOrder);
+  const [order, setOrder] = React.useState<readonly ColumnId[]>(readColumnOrder);
   const [query, setQuery] = React.useState("");
   const [hideDone, setHideDone] = React.useState(() => readSetting("factory-hide-done") === "1");
   const filterRef = React.useRef<HTMLInputElement>(null);
@@ -3224,9 +3493,9 @@ function App() {
     writeSetting("factory-view", next === "board" ? null : next);
   }
 
-  function chooseOrder(next: readonly Status[]) {
+  function chooseOrder(next: readonly ColumnId[]) {
     setOrder(next);
-    writeSetting("factory-columns", next.join() === defaultOrder.join() ? null : next.join());
+    writeSetting("factory-columns", next.join() === defaultColumns.join() ? null : next.join());
   }
 
   function toggleHideDone() {
@@ -3449,12 +3718,40 @@ function App() {
     }
   }
 
+  // Any task title or card in the project's views offers the menu; Portfolio lists other projects.
+  function openStatusMenu(event: React.MouseEvent) {
+    if (selected || view === "portfolio" || !(event.target instanceof Element)) return;
+
+    const element = event.target.closest<HTMLElement>("[data-task],[data-open-task]");
+    const id = element?.dataset.task ?? element?.dataset.openTask;
+
+    if (!element || !board?.tasks.some((task) => task.id === id) || !id) return;
+
+    event.preventDefault();
+
+    // The keyboard's context-menu key reports no pointer position.
+    const box = element.getBoundingClientRect();
+    const keyboard = event.clientX === 0 && event.clientY === 0;
+
+    setMenu({
+      id,
+      x: keyboard ? box.left : event.clientX,
+      y: keyboard ? box.bottom : event.clientY,
+    });
+  }
+
+  const menuTask = menu ? board?.tasks.find((task) => task.id === menu.id) : undefined;
+
   const stale = board !== null && projectId !== "" && board.projectId !== projectId;
   const hasProjects = board !== null && board.projects.length > 0;
   // With no project the hidden board keeps its slot and the empty state explains what to do.
   const shownView: View = board && !hasProjects ? "board" : view;
   const blockedCount = board?.tasks.filter((task) => task.status === "blocked").length ?? 0;
   const filtered = (board?.tasks ?? []).filter((task) => matches(task, query));
+
+  const queue = (board?.backlog ?? []).filter((item) =>
+    matchesWords(`${item.text} ${item.context}`, query),
+  );
 
   const visible =
     hideDone && hideableViews.includes(shownView)
@@ -3476,7 +3773,7 @@ function App() {
         onCancelPick={() => pickAbort.current?.abort()}
         onAddPath={addPath}
       />
-      <main className="flex h-dvh min-w-0 flex-1 flex-col">
+      <main className="flex h-dvh min-w-0 flex-1 flex-col" onContextMenu={openStatusMenu}>
         <header className="z-30 shrink-0 bg-background">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 md:px-8 xl:flex-nowrap">
             <Button
@@ -3503,8 +3800,8 @@ function App() {
             </div>
             {hasProjects ? (
               <div className="ml-auto flex max-w-full flex-wrap items-center gap-2 xl:shrink-0 xl:flex-nowrap">
-                {view === "board" && order.join() !== defaultOrder.join() ? (
-                  <Button variant="ghost" size="sm" onClick={() => chooseOrder(defaultOrder)}>
+                {view === "board" && order.join() !== defaultColumns.join() ? (
+                  <Button variant="ghost" size="sm" onClick={() => chooseOrder(defaultColumns)}>
                     <RotateCcw aria-hidden />
                     Reset columns
                   </Button>
@@ -3549,7 +3846,8 @@ function App() {
         </header>
         <p id="move-instructions" className="sr-only">
           Drag cards between columns. On a card or move grip, press Space, use left/right arrows,
-          and Enter to save or Escape to cancel.
+          and Enter to save or Escape to cancel. Right-click a card or press the context menu key to
+          choose its status.
         </p>
         <p id="column-instructions" className="sr-only">
           Drag a column by its header to reorder it. On the reorder grip, press Space, use left and
@@ -3584,6 +3882,7 @@ function App() {
               <BoardView
                 board={board}
                 tasks={filtered}
+                queue={queue}
                 stale={stale}
                 busy={Boolean(pending)}
                 order={order}
@@ -3647,8 +3946,23 @@ function App() {
             )}
           </div>
         </div>
+        <footer className="flex shrink-0 flex-wrap gap-x-6 gap-y-1 px-5 pt-1 pb-2.5 font-mono text-micro text-faint max-md:hidden md:px-8">
+          <span>/factory intent &lt;request&gt;</span>
+          <span>/factory next</span>
+          <span>/factory design | plan | build | review</span>
+        </footer>
         <TaskReader root={selected} onClose={() => setSelected(null)} liveKey={liveKey} />
       </main>
+      {menu && menuTask ? (
+        <StatusMenu
+          key={menu.id}
+          task={menuTask}
+          x={menu.x}
+          y={menu.y}
+          onMove={(id, status) => void move(id, status)}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
     </div>
   );
 }

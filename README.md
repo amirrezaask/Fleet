@@ -91,7 +91,7 @@ rules/contracts in `docs/areas/` and actor flows in `docs/workflows/`. Existing
 
 The optional board groups cards into Backlog, In progress, Blocked, and Done (one per status directory) and shows subtask progress on parent cards.
 The single-file React app in `index.html` uses adapted shadcn components and
-Tailwind. Cards show the task's stage and open a modal with rendered Intent, Design, Plan and Debrief tabs. Drag-and-drop or keyboard moves move the task directory and update
+Tailwind. Cards show the task's stage and open a modal with rendered Intent, Design, Plan and Debrief tabs. Drag-and-drop, the right-click status menu and keyboard moves update the status in
 `TASK.md` (or a legacy `TASK.html`); they never launch sessions or prove that work is complete.
 One board watches all your projects: run `npx amirreza-factory [project-dir...]`
 (see the [board instructions](skills/factory/references/tasks.md)); add or remove projects from

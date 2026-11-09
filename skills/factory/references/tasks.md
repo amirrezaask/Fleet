@@ -138,55 +138,6 @@ Before copying, take task documents that exist only on live branches into the st
 `git worktree move` any worktree inside `.factory/` to `.worktrees/`. A branch that still
 carries `.factory/` then conflicts when merged; resolve that with `git rm -rq .factory`.
 
-## Per-repository board
-
-A read-only view of one project's task store: Board (kanban columns by `status` and the
-`backlog.md` queue, reorderable by dragging a column header or from its grip with the
-keyboard), Pipeline, Focus, Hill, Timeline and Table views (keys `1`-`6`, `/` filters),
-and a drawer with each task's Markdown documents. View, column order and hide-done are
-kept in the browser for that origin, so use a fixed `--port` to keep them across restarts. It
-changes nothing and starts no agents; the commands stay in the chat. Every project
-carries its own copy, made of two skill assets:
-
-- `skills/factory/assets/dashboard/board.ts`: the tiny server (Node.js 24+, built-ins
-  only). It binds to `127.0.0.1` on a free port and prints the URL, serves only `.md`
-  files under the store (no symlinks, `evidence/`, `worktree/` or `.git`), checks the `Host`
-  header and refuses everything but GET.
-- `skills/factory/assets/dashboard/dashboard.html`: the page it serves, read from the
-  directory beside `board.ts`. It polls every 2 seconds.
-
-**Install and refresh.** When Factory starts in a project, or the user asks for the board:
-
-1. Copy both files to `tools/factory-board/` in the project (create the directory).
-   Do this when either is missing or `cmp` shows it differs from the skill's asset, so
-   projects pick up board updates the next time Factory runs there. Copy as-is; never
-   edit the project's copy.
-2. If the project has a `package.json` without a `factory:board` script, add
-   `"factory:board": "node tools/factory-board/board.ts ."` (keep the file's other keys
-   and formatting). A project without `package.json` is launched with
-   `node tools/factory-board/board.ts`. Node below 22.18 cannot run `.ts` files
-   directly; when the project pins such a Node and has `tsx`, use `tsx` in place of `node`.
-3. If the project runs its own linter or formatter over `tools/`, add
-   `tools/factory-board/**` to their ignore lists: the copy keeps this repository's style
-   and must stay byte-identical to the asset.
-4. Commit the copy with the rest of the work. Leave the board running only when the user
-   asks.
-
-Launch it from the project root with `npm run factory:board` or
-`node tools/factory-board/board.ts [repo] [--port N]`. Without a server, `dashboard.html`
-also opens straight from disk in a Chromium browser: pick the project's folder in
-`~/.agents/factory` once and the browser remembers it.
-
-The page is React, shadcn-style components and Tailwind in the Claude look (light, dark
-or system theme), bundled with its fonts into that one file, so it needs no network.
-Task documents open in an animated drawer; inside a subtask, breadcrumbs lead back to
-every parent task. Sources live in `skills/factory/assets/dashboard/src/`; after
-changing them run `npm run build:dashboard` and commit the regenerated `dashboard.html`
-(a test fails if it drifts).
-
-This repository is the source of both assets and runs them in place with
-`npm run factory:board`. The per-repository board is separate from the shared board below.
-
 ## One shared board
 
 A single board serves every project; projects do not carry a copy. Run it with
@@ -198,8 +149,14 @@ a task store. Registered projects persist in `~/.agents/factory/projects.json`
 (`FACTORY_HOME` overrides the directory) and can also be added or removed in the
 UI header (a native folder dialog opens on the host; light/dark follows the system with a header toggle). The board binds to `127.0.0.1` on any free port (PORT overrides) and
 reports the URL. Leave a preview running only when the user asks to use it. Never
-add its `server.ts`, `index.html` or fonts to a project; projects use the per-repository
-board above. In this repository it runs with `npm run factory:shared-board`.
+add its `server.ts`, `index.html` or fonts to a project. In this repository it runs with
+`npm run factory:board`.
+
+Views are Board (status columns plus a read-only Queue column of `backlog.md` lines, reorderable),
+Pipeline, Focus, Hill, Timeline, Table and Portfolio (keys `1`-`7`, `/` filters). Change a task's
+status by dragging its card between columns or from the right-click menu on any task title or
+card outside Portfolio. A task opens with Intent, Design, Plan and Debrief tabs and one tab per
+other Markdown file (`TASK.md`, `REVIEW.md`, `design/*.md`); `.md` links between them switch tabs.
 
 The header shows the selected project name and a project switcher; the name is read from package.json
 `displayName`, then `name`, then the project directory. React renders it as text.
