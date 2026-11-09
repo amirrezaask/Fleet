@@ -180,11 +180,25 @@ const metadata = Schema.Struct({
 
 const stageField = Schema.Struct({ stage: Schema.Literals(stages) });
 
+const blockerField = Schema.Struct({ blocker: NonEmptyTrimmed });
+
 const statusField = Schema.Struct({ status: Schema.Literals(statuses) });
 
 // The pipeline stage is optional; an absent or unknown value shows no stage on the board.
 function stageOf(fields: { stage?: string }): { stage?: (typeof stages)[number] } {
   return Option.getOrElse(Schema.decodeUnknownOption(stageField)(fields), () => ({}));
+}
+
+// Why a blocked task is stuck: the blocker key, or the first line of a "## Blocker" section.
+function blockerOf(
+  status: string,
+  fields: { blocker?: string },
+  body: string,
+): { blocker?: string } {
+  const named = Option.getOrUndefined(Schema.decodeUnknownOption(blockerField)(fields))?.blocker;
+  const blocker = (named ?? /^## Blocker\s*\n([\s\S]*?)(?=\n## |$)/m.exec(body)?.[1] ?? "").trim();
+
+  return status === "blocked" && blocker && !/^none\.?$/i.test(blocker) ? { blocker } : {};
 }
 
 // Port 0 asks the OS for any free port; the real port is known once the server is listening.
@@ -346,8 +360,15 @@ function decodeTask(text: string, name = "TASK.md") {
     const parsed = matter(text);
     const data = Schema.decodeUnknownSync(metadata)(parsed.data);
 
+    const { status } = statusOf(parsed.data);
+
     return {
-      data: { ...data, ...statusOf(parsed.data), ...stageOf(parsed.data) },
+      data: {
+        ...data,
+        status,
+        ...stageOf(parsed.data),
+        ...blockerOf(status, parsed.data, parsed.content),
+      },
       content: parsed.content,
     };
   } catch {
@@ -465,19 +486,7 @@ function htmlBody(text: string): string {
   return inner.replace(/<h1[\s\S]*?<\/h1>/i, "");
 }
 
-// The first base names the document; later bases are legacy names read in its place.
-// Optional documents that were never written render a short note instead of an error.
-async function renderDocument(
-  root: string,
-  id: string,
-  bases: string[],
-  optional = false,
-): Promise<string> {
-  const found = await existingDocument(root, id, ...bases);
-
-  if (!found && optional) return `<p class="notice">Not written yet.</p>`;
-  const name = found ?? `${bases[0]}.md`;
-
+async function renderFile(root: string, id: string, name: string): Promise<string> {
   try {
     const text = await readDocument(root, id, name);
 
@@ -494,6 +503,97 @@ async function renderDocument(
   }
 }
 
+// The first base names the document; later bases are legacy names read in its place.
+// Optional documents that were never written render a short note instead of an error.
+async function renderDocument(
+  root: string,
+  id: string,
+  bases: string[],
+  optional = false,
+): Promise<string> {
+  const found = await existingDocument(root, id, ...bases);
+
+  if (!found && optional) return `<p class="notice">Not written yet.</p>`;
+
+  return renderFile(root, id, found ?? `${bases[0]}.md`);
+}
+
+// Subtasks are their own tasks; the rest is raw output or checkouts, not task documents.
+const notDocuments = new Set(["subtasks", "evidence", "worktree", "node_modules", ".git"]);
+
+// Directory entries never report a symlink as a file or directory, so links are left out.
+async function markdownFiles(directory: string, prefix = ""): Promise<string[]> {
+  const found: string[] = [];
+
+  for (const entry of await readdir(join(directory, prefix), { withFileTypes: true })) {
+    const path = `${prefix}${entry.name}`;
+
+    if (entry.isDirectory() && !notDocuments.has(entry.name))
+      found.push(...(await markdownFiles(directory, `${path}/`)));
+    else if (entry.isFile() && entry.name.endsWith(".md")) found.push(path);
+  }
+
+  return found;
+}
+
+// Every Markdown file of a task that has no fixed tab: TASK, REVIEW, then the rest by path.
+async function otherDocuments(root: string, id: string) {
+  const { directory } = await locate(root, id);
+  const intent = await existingDocument(root, id, "INTENT", "BRIEF");
+  const tabbed = new Set([intent, "DESIGN.md", "PLAN.md", "DEBRIEF.md"]);
+
+  const rank = (path: string) => {
+    const at = ["TASK.md", "REVIEW.md"].indexOf(path);
+
+    return at < 0 ? 2 : at;
+  };
+
+  const paths = (await markdownFiles(directory))
+    .filter((path) => !tabbed.has(path))
+    .sort((left, right) => rank(left) - rank(right) || left.localeCompare(right));
+
+  return Promise.all(paths.map(async (path) => ({ path, html: await renderFile(root, id, path) })));
+}
+
+type QueueItem = { taken: boolean; text: string; task: string; context: string };
+
+// backlog.md is a checklist; an indented line under an item is that item's context.
+function parseBacklog(text: string): QueueItem[] {
+  const items: QueueItem[] = [];
+
+  for (const line of text.split(/\r?\n/)) {
+    const item = /^- \[([ xX])\]\s+(.*)$/.exec(line);
+
+    if (item) {
+      const taken = item[1] !== " ";
+      const arrow = taken ? /^(.*?)\s*→\s*(\S+)\s*$/.exec(item[2] ?? "") : null;
+
+      items.push({ taken, text: arrow?.[1] ?? item[2] ?? "", task: arrow?.[2] ?? "", context: "" });
+    } else if (/^\s+\S/.test(line)) {
+      const last = items.at(-1);
+
+      if (last) last.context += (last.context ? "\n" : "") + line.trim();
+    }
+  }
+
+  return items;
+}
+
+// A project with no readable queue shows an empty Queue column.
+async function readBacklog(root: string): Promise<QueueItem[]> {
+  try {
+    const handle = await open(join(root, "backlog.md"), constants.O_RDONLY | constants.O_NOFOLLOW);
+
+    try {
+      return parseBacklog(await handle.readFile("utf8"));
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return [];
+  }
+}
+
 type TaskSummary = {
   id: string;
   status: string;
@@ -503,6 +603,7 @@ type TaskSummary = {
   created: string;
   updated: string;
   stage?: string;
+  blocker?: string;
 };
 
 async function formFields(request: IncomingMessage, address: string): Promise<URLSearchParams> {
@@ -743,6 +844,7 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
         projects: [],
         token,
         tasks: [],
+        backlog: [],
         errors: ["Add a project directory to start watching its tasks."],
       });
     const project = projectPath(url.searchParams.get("project"));
@@ -752,6 +854,7 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
       projectId: projectId(project),
       projects: await listProjects(),
       token,
+      backlog: await readBacklog(tasksOf(project)),
       ...(await listTasks(tasksOf(project))),
     });
   } else if (request.method === "GET" && url.pathname === "/api/projects") {
@@ -790,15 +893,16 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     const root = tasksOf(projectPath(url.searchParams.get("project")));
     await readTask(root, id);
 
-    const [intent, design, plan, debrief, subtasks] = await Promise.all([
+    const [intent, design, plan, debrief, subtasks, others] = await Promise.all([
       renderDocument(root, id, ["INTENT", "BRIEF"]),
       renderDocument(root, id, ["DESIGN"], true),
       renderDocument(root, id, ["PLAN"]),
       renderDocument(root, id, ["DEBRIEF"], true),
       listSubtasks(root, id),
+      otherDocuments(root, id),
     ]);
 
-    json(response, { intent, design, plan, debrief, subtasks });
+    json(response, { intent, design, plan, debrief, subtasks, others });
   } else if (request.method === "POST" && ["/api/status", "/status"].includes(url.pathname)) {
     const updated = await move(await formFields(request, address));
 

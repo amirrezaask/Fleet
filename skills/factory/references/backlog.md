@@ -40,7 +40,7 @@ user chooses how much runs at once.
 
 ## Rules
 
-- A backlog line is not a task: it has no status and the board does not list it.
+- A backlog line is not a task: it has no status, and the board shows it read-only in the Queue column.
 - Never delete a taken line; the arrow is the link from the request to its task.
 - Findings appended by agents are one line with the reason and a pointer to the
   originating task (`from 003-rate-limit review`).

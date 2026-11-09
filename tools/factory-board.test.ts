@@ -484,7 +484,7 @@ test("columns reorder by keyboard and pointer, persist, drive card moves, and re
       await eventually(() => document.querySelector("[data-lifted]") === null);
       assert.equal(
         window.localStorage.getItem("factory-columns"),
-        "backlog,done,inprogress,blocked",
+        "queue,backlog,done,inprogress,blocked",
       );
 
       // Card keyboard moves walk the columns in their on-screen order.
@@ -530,7 +530,7 @@ test("columns reorder by keyboard and pointer, persist, drive card moves, and re
       await settled(["blocked", "backlog", "done", "inprogress"]);
       assert.equal(
         window.localStorage.getItem("factory-columns"),
-        "blocked,backlog,done,inprogress",
+        "queue,blocked,backlog,done,inprogress",
       );
 
       const reset = Array.from(document.querySelectorAll("button")).find(
@@ -562,6 +562,177 @@ test("a saved column order that does not name every status falls back to the def
     } finally {
       window.close();
     }
+  });
+});
+
+test("a column order saved before the Queue column keeps its statuses behind Queue", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+
+    const { window } = await mount(base, false, {
+      "factory-columns": "done,blocked,inprogress,backlog",
+    });
+
+    try {
+      assert.deepEqual(
+        Array.from(
+          window.document.querySelectorAll<HTMLElement>("[data-board] > [data-column]"),
+        ).map((column) => column.dataset.column),
+        ["queue", "done", "blocked", "inprogress", "backlog"],
+      );
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("the right-click menu changes a task's status and closes without writing on Escape", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const { window, requests } = await mount(base);
+    const document = window.document;
+
+    const rightClick = (target: Element) =>
+      target.dispatchEvent(
+        new window.MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 40,
+          clientY: 50,
+        }),
+      );
+
+    try {
+      const card = document.querySelector('[data-task="move-task"]');
+      assert.ok(card);
+      assert.equal(rightClick(card), false, "the browser's own menu is replaced");
+      await eventually(() => document.querySelector('[role="menu"]') !== null);
+
+      const options = document.querySelectorAll<HTMLElement>('[role="menuitemradio"]');
+      assert.equal(options.length, 4);
+      assert.equal(
+        document.querySelector('[aria-checked="true"]')?.getAttribute("data-status-option"),
+        "backlog",
+      );
+
+      document
+        .querySelector('[role="menu"]')
+        ?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await eventually(() => document.querySelector('[role="menu"]') === null);
+      assert.equal(requests.filter((path) => path === "/api/status").length, 0);
+
+      rightClick(card);
+      await eventually(() => document.querySelector('[role="menu"]') !== null);
+      document.querySelector<HTMLElement>('[data-status-option="blocked"]')?.click();
+      await eventually(
+        () => document.querySelector('[data-status="blocked"] [data-task="move-task"]') !== null,
+      );
+      assert.equal(document.querySelector('[role="menu"]'), null);
+      assert.match(await readFile(join(tasks, "move-task/TASK.md"), "utf8"), /^status: blocked$/m);
+      assert.match(await readFile(join(tasks, "move-task/TASK.md"), "utf8"), /^owner: ADMIN$/m);
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("the Queue column lists backlog.md, filters, and takes no card drops", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    await writeFile(
+      join(tasks, "backlog.md"),
+      "- [ ] Export invoices\n  customers keep asking\n- [x] Rate limit → 001-rate-limit\n",
+    );
+    const { window } = await mount(base);
+    const document = window.document;
+
+    try {
+      const queue = document.querySelector('[data-column="queue"]');
+      assert.ok(queue);
+      assert.equal(queue.querySelectorAll("[data-queue-item]").length, 2);
+      assert.match(queue.textContent ?? "", /customers keep asking/);
+      assert.match(queue.textContent ?? "", /→ 001-rate-limit/);
+
+      const transfer = { setData: () => undefined, effectAllowed: "", dropEffect: "" };
+      document.querySelector('[data-task="move-task"]')?.dispatchEvent(
+        Object.assign(new window.Event("dragstart", { bubbles: true }), {
+          dataTransfer: transfer,
+        }),
+      );
+      await new Promise((resolveTurn) => setTimeout(resolveTurn, 5));
+      assert.equal(
+        queue.dispatchEvent(
+          Object.assign(new window.Event("dragover", { bubbles: true, cancelable: true }), {
+            dataTransfer: transfer,
+          }),
+        ),
+        true,
+        "a card cannot be dropped on the queue",
+      );
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("a task opens every Markdown file, follows links between them, and shows its blocker", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const blocked = join(tasks, "stuck-task");
+
+    await mkdir(blocked);
+    await writeFile(
+      join(blocked, "TASK.md"),
+      '---\ntitle: "Stuck"\ncreated: "2026-10-28"\nupdated: "2026-10-28"\nstatus: blocked\nblocker: Waiting on API keys\n---\n',
+    );
+    await writeFile(join(tasks, "move-task/REVIEW.md"), "# Review\n\n[the plan](PLAN.md)\n");
+    await mkdir(join(tasks, "move-task/design"));
+    await writeFile(join(tasks, "move-task/design/notes.md"), "# Notes\n");
+    await mkdir(join(tasks, "move-task/evidence"));
+    await writeFile(join(tasks, "move-task/evidence/raw.md"), "raw");
+    await symlink(join(tasks, "move-task/PLAN.md"), join(tasks, "move-task/linked.md"));
+
+    const { window } = await mount(base);
+    const document = window.document;
+
+    try {
+      assert.match(
+        document.querySelector('[data-blocker="stuck-task"]')?.textContent ?? "",
+        /Waiting on API keys/,
+      );
+      document.querySelector<HTMLElement>('[data-open-task="move-task"]')?.click();
+      await eventually(() => document.querySelector('[role="dialog"] .reader') !== null);
+      await eventually(() => document.querySelectorAll('[role="tab"]').length > 4);
+      assert.deepEqual(
+        Array.from(document.querySelectorAll('[role="tab"]')).map((tab) => tab.textContent),
+        ["Intent", "Design", "Plan", "Debrief", "Task", "Review", "design/notes"],
+      );
+
+      const review = Array.from(document.querySelectorAll('[role="tab"]')).find(
+        (tab) => tab.textContent === "Review",
+      );
+
+      assert.ok(review);
+      review.dispatchEvent(new window.MouseEvent("mousedown", { bubbles: true, button: 0 }));
+      await eventually(
+        () => document.querySelector('[data-state="active"][role="tabpanel"] a') !== null,
+      );
+      document.querySelector<HTMLElement>('[data-state="active"][role="tabpanel"] a')?.click();
+      await eventually(
+        () =>
+          document
+            .querySelector('[role="tabpanel"][data-state="active"]')
+            ?.textContent?.includes("Implementation") === true,
+      );
+      assert.equal(window.location.href, base + "/");
+    } finally {
+      window.close();
+    }
+
+    await rm(join(tasks, "backlog.md"), { force: true });
+    await symlink(join(tasks, "move-task/PLAN.md"), join(tasks, "backlog.md"));
+    const listed = await (await fetch(`${base}/api/board`)).json();
+    assert.deepEqual(listed.backlog, []);
   });
 });
 
@@ -990,7 +1161,7 @@ test("optional task stage is parsed from TASK.html and TASK.md and shown as a ca
       await eventually(() => document.querySelector('[role="dialog"] .reader table') !== null);
       assert.deepEqual(
         Array.from(document.querySelectorAll('[role="tab"]')).map((item) => item.textContent),
-        ["Intent", "Design", "Plan", "Debrief"],
+        ["Intent", "Design", "Plan", "Debrief", "Task"],
       );
       assert.equal(
         document.querySelector('[role="tab"][data-state="active"]')?.textContent,
