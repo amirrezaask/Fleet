@@ -142,7 +142,7 @@ async function eventually(check: () => boolean): Promise<void> {
   assert.ok(check(), "Expected UI state was not reached");
 }
 
-async function mount(base: string, live = false) {
+async function mount(base: string, live = false, storage: Record<string, string> = {}) {
   const dom = new JSDOM(await (await fetch(base)).text(), {
     url: base,
     runScripts: "outside-only",
@@ -153,6 +153,9 @@ async function mount(base: string, live = false) {
   const window = dom.window;
   const requests: string[] = [];
   window.AbortController = AbortController;
+
+  for (const [key, value] of Object.entries(storage)) window.localStorage.setItem(key, value);
+
   window.HTMLElement.prototype.scrollIntoView = () => undefined;
   window.HTMLElement.prototype.setPointerCapture = () => undefined;
   window.HTMLElement.prototype.releasePointerCapture = () => undefined;
@@ -426,6 +429,202 @@ test("React pointer grip persists status and updates the card without a reload",
           window.document.querySelector('[data-status="done"] [data-task="move-task"]') !== null,
       );
       assert.match(await readFile(join(tasks, "move-task/TASK.md"), "utf8"), /^title:/m);
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("columns reorder by keyboard and pointer, persist, drive card moves, and reset", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const { window } = await mount(base);
+    const document = window.document;
+
+    const order = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-board] > [data-status]")).map(
+        (column) => column.dataset.status,
+      );
+
+    const press = (element: Element, key: string) =>
+      element.dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true }));
+
+    const settled = (expected: string[]) =>
+      eventually(() => JSON.stringify(order()) === JSON.stringify(expected));
+
+    const grip = (status: string) => {
+      const element = document.querySelector(`[data-column-grip="${status}"]`);
+      assert.ok(element);
+
+      return element;
+    };
+
+    const tick = () => new Promise((resolveTurn) => setTimeout(resolveTurn, 10));
+
+    try {
+      assert.deepEqual(order(), ["backlog", "inprogress", "blocked", "done"]);
+
+      // Escape returns to the saved order without persisting anything.
+      press(grip("done"), " ");
+      await eventually(() => document.querySelector('[data-lifted="keyboard"]') !== null);
+      press(grip("done"), "ArrowLeft");
+      await settled(["backlog", "inprogress", "done", "blocked"]);
+      press(grip("done"), "Escape");
+      await settled(["backlog", "inprogress", "blocked", "done"]);
+      assert.equal(window.localStorage.getItem("factory-columns"), null);
+
+      // Enter commits and the choice is remembered.
+      press(grip("done"), " ");
+      await eventually(() => document.querySelector('[data-lifted="keyboard"]') !== null);
+      press(grip("done"), "ArrowLeft");
+      await settled(["backlog", "inprogress", "done", "blocked"]);
+      press(grip("done"), "ArrowLeft");
+      await settled(["backlog", "done", "inprogress", "blocked"]);
+      press(grip("done"), "Enter");
+      await eventually(() => document.querySelector("[data-lifted]") === null);
+      assert.equal(
+        window.localStorage.getItem("factory-columns"),
+        "backlog,done,inprogress,blocked",
+      );
+
+      // Card keyboard moves walk the columns in their on-screen order.
+      const card = document.querySelector<HTMLElement>('[data-task="move-task"]');
+      assert.ok(card);
+      press(card, " ");
+      await eventually(() => card.textContent?.includes("Moving to Backlog") === true);
+      press(card, "ArrowRight");
+      await eventually(() => card.textContent?.includes("Moving to Done") === true);
+      press(card, "Escape");
+      await eventually(() => card.textContent?.includes("Moving to") === false);
+
+      // A mouse drag on a column header previews and commits the new slot.
+      Object.defineProperty(window.HTMLElement.prototype, "offsetLeft", {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.parentElement
+            ? Array.from(this.parentElement.children).indexOf(this) * 300
+            : 0;
+        },
+      });
+      const head = document.querySelector('[data-column-head="blocked"]');
+      assert.ok(head);
+
+      for (const [type, x] of [
+        ["pointerdown", 950],
+        ["pointermove", 960],
+        ["pointermove", 100],
+        ["pointerup", 100],
+      ] as const) {
+        head.dispatchEvent(
+          Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+            pointerId: 7,
+            pointerType: "mouse",
+            button: 0,
+            clientX: x,
+            clientY: 10,
+          }),
+        );
+        await tick();
+      }
+
+      await settled(["blocked", "backlog", "done", "inprogress"]);
+      assert.equal(
+        window.localStorage.getItem("factory-columns"),
+        "blocked,backlog,done,inprogress",
+      );
+
+      const reset = Array.from(document.querySelectorAll("button")).find(
+        (button) => button.textContent === "Reset columns",
+      );
+
+      assert.ok(reset);
+      reset.click();
+      await settled(["backlog", "inprogress", "blocked", "done"]);
+      assert.equal(window.localStorage.getItem("factory-columns"), null);
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("a saved column order that does not name every status falls back to the default", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const { window } = await mount(base, false, { "factory-columns": "done,backlog,done,blocked" });
+
+    try {
+      assert.deepEqual(
+        Array.from(
+          window.document.querySelectorAll<HTMLElement>("[data-board] > [data-status]"),
+        ).map((column) => column.dataset.status),
+        ["backlog", "inprogress", "blocked", "done"],
+      );
+    } finally {
+      window.close();
+    }
+  });
+});
+
+test("every view renders the same tasks, switches by click and shortcut, and filters", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    const { window } = await mount(base);
+    const document = window.document;
+
+    const openIds = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-open-task]")).map(
+        (item) => item.dataset.openTask,
+      );
+
+    const choose = (view: string) =>
+      document.querySelector<HTMLButtonElement>(`[data-view="${view}"]`)?.click();
+
+    try {
+      for (const view of ["pipeline", "focus", "hill", "timeline", "table"]) {
+        choose(view);
+        await eventually(
+          () => document.querySelector(`[data-view="${view}"][aria-current="page"]`) !== null,
+        );
+        await eventually(() => openIds().includes("move-task"));
+        assert.equal(document.querySelector("[data-board]"), null);
+      }
+
+      assert.equal(window.localStorage.getItem("factory-view"), "table");
+
+      // The table's status control writes through the same status endpoint.
+      const select = document.querySelector<HTMLSelectElement>("select");
+      assert.ok(select);
+
+      const setValue = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        "value",
+      )?.set;
+
+      setValue?.call(select, "done");
+      select.dispatchEvent(new window.Event("change", { bubbles: true }));
+      await eventually(() => document.querySelector("select")?.value === "done");
+      assert.match(await readFile(join(tasks, "move-task/TASK.md"), "utf8"), /^status: done$/m);
+
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "7", bubbles: true }));
+      await eventually(
+        () => document.querySelector('[data-view="portfolio"][aria-current="page"]') !== null,
+      );
+      await eventually(() => document.querySelector("[data-portfolio-project]") !== null);
+
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "1", bubbles: true }));
+      await eventually(() => document.querySelector("[data-board]") !== null);
+
+      const filter = document.querySelector<HTMLInputElement>('input[type="search"]');
+      assert.ok(filter);
+
+      const setText = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      )?.set;
+
+      setText?.call(filter, "zzz-no-match");
+      filter.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await eventually(() => document.querySelector('[data-task="move-task"]') === null);
     } finally {
       window.close();
     }
