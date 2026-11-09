@@ -2,7 +2,8 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { ArrowRight, FileText } from "lucide-react";
 import { renderMarkdown } from "../markdown.ts";
 import { findTask, resolveRelative, trail, type Task } from "../model.ts";
-import { rise, StatusDot, STATUS_LABEL } from "./board.tsx";
+import { STATUS_LABEL } from "../view-model.ts";
+import { rise, StatusDot } from "./board.tsx";
 import { Badge } from "./ui/badge.tsx";
 import {
   Breadcrumb,
