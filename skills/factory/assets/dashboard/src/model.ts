@@ -15,6 +15,7 @@ export interface Task {
   readonly title: string;
   readonly status: Status;
   readonly stage: string;
+  readonly created: string;
   readonly updated: string;
   readonly blocker: string;
   readonly files: readonly string[];
@@ -112,6 +113,7 @@ export function buildTasks(
       title: data.get("title") || draft.id.replace(/^\d{3}-/, "").replaceAll("-", " "),
       status: isStatus(status) ? status : "backlog",
       stage: data.get("stage") ?? "",
+      created: data.get("created") ?? "",
       updated: data.get("updated") ?? "",
       blocker: status === "blocked" && !/^none\.?$/i.test(blocker) ? blocker : "",
       files: draft.files

@@ -140,8 +140,11 @@ carries `.factory/` then conflicts when merged; resolve that with `git rm -rq .f
 
 ## Per-repository board
 
-A read-only view of one project's task store: kanban columns by `status`, the
-`backlog.md` queue, and a drawer with each task's Markdown documents. It
+A read-only view of one project's task store: Board (kanban columns by `status` and the
+`backlog.md` queue, reorderable by dragging a column header or from its grip with the
+keyboard), Pipeline, Focus, Hill, Timeline and Table views (keys `1`-`6`, `/` filters),
+and a drawer with each task's Markdown documents. View, column order and hide-done are
+kept in the browser for that origin, so use a fixed `--port` to keep them across restarts. It
 changes nothing and starts no agents; the commands stay in the chat. Every project
 carries its own copy, made of two skill assets:
 

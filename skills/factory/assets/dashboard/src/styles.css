@@ -166,10 +166,15 @@
   --shadow-card: 0 1px 2px rgb(var(--shadow-rgb) / 0.06);
   --shadow-lift:
     0 1px 2px rgb(var(--shadow-rgb) / 0.06), 0 8px 20px -6px rgb(var(--shadow-rgb) / 0.16);
+  --shadow-drag: 0 12px 32px -8px rgb(var(--shadow-rgb) / 0.3);
   --shadow-dialog:
     0 32px 80px -16px rgb(var(--shadow-rgb) / 0.4), 0 0 0 1px rgb(var(--shadow-rgb) / 0.06);
   --text-display: clamp(30px, 3.6vw, 40px);
   --text-display--line-height: 1.1;
+  --text-title: 28px;
+  --text-title--line-height: 1.2;
+  --text-body: 15px;
+  --text-body--line-height: 1.5;
   --text-meta: 13px;
   --text-meta--line-height: 1.4;
   --text-micro: 12px;
@@ -183,6 +188,10 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 ::selection {
   background: var(--selection);
@@ -419,6 +428,25 @@ body {
     transform: none;
   }
 }
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes task-ping {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
 @keyframes pulse-dot {
   0%,
   100% {
@@ -456,6 +484,12 @@ body {
 }
 .doc-in {
   animation: doc-in 220ms var(--ease-out-strong) both;
+}
+.view-in {
+  animation: view-in 160ms var(--ease);
+}
+.task-ping {
+  animation: task-ping 2.4s ease-in-out infinite;
 }
 .pulse-dot {
   animation: pulse-dot 1.8s ease-in-out infinite;

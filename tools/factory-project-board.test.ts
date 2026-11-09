@@ -26,6 +26,17 @@ import {
   trail,
 } from "../skills/factory/assets/dashboard/src/model.ts";
 import {
+  ago,
+  hillDots,
+  matches,
+  parseColumnOrder,
+  parseView,
+  placeColumn,
+  stageOf,
+  timelineTicks,
+  COLUMNS,
+} from "../skills/factory/assets/dashboard/src/view-model.ts";
+import {
   folderSource,
   type DirectoryLike,
   type FileLike,
@@ -262,7 +273,10 @@ const files = [
 ].map((path) => ({ path, mtime: 1 }));
 
 const texts = new Map([
-  ["001-alpha/TASK.md", '---\ntitle: "Alpha"\nstatus: inprogress\nstage: build\n---\n'],
+  [
+    "001-alpha/TASK.md",
+    '---\ntitle: "Alpha"\ncreated: "2026-11-01"\nstatus: inprogress\nstage: build\n---\n',
+  ],
   ["001-alpha/subtasks/001-part/TASK.md", "---\ntitle: Part\nstatus: done\n---\n"],
   ["001-alpha/subtasks/001-part/subtasks/001-leaf/TASK.md", "---\ntitle: Leaf\n---\n"],
   [
@@ -283,6 +297,7 @@ test("builds the task tree with defaults, subtasks and blockers", () => {
     ],
   );
   assert.equal(tasks[0]?.title, "Alpha");
+  assert.equal(tasks[0]?.created, "2026-11-01");
   assert.deepEqual(tasks[0]?.files, ["TASK.md", "INTENT.md", "PLAN.md", "design/notes.md"]);
   assert.deepEqual(
     tasks[0]?.subtasks.map((t) => [t.id, t.status, t.files.join()]),
@@ -292,6 +307,62 @@ test("builds the task tree with defaults, subtasks and blockers", () => {
   assert.equal(tasks[2]?.title, "bare");
   assert.equal(countTasks(tasks[0]?.subtasks ?? []), 2);
   assert.equal(countDone(tasks[0]?.subtasks ?? []), 1);
+});
+
+test("a saved column order is used only when it names every column once", () => {
+  assert.deepEqual(parseColumnOrder("done,queue,blocked,backlog,inprogress"), [
+    "done",
+    "queue",
+    "blocked",
+    "backlog",
+    "inprogress",
+  ]);
+
+  for (const saved of [null, "", "done,done,blocked,backlog,inprogress", "done,queue", "a,b,c,d,e"])
+    assert.deepEqual(parseColumnOrder(saved), COLUMNS);
+
+  assert.deepEqual(placeColumn(COLUMNS, "done", 0), [
+    "done",
+    "queue",
+    "backlog",
+    "inprogress",
+    "blocked",
+  ]);
+  assert.deepEqual(placeColumn(COLUMNS, "queue", 4), [
+    "backlog",
+    "inprogress",
+    "blocked",
+    "done",
+    "queue",
+  ]);
+});
+
+test("views fall back to the board and read stages, dates and filters from tasks", () => {
+  assert.equal(parseView("hill"), "hill");
+  assert.equal(parseView("portfolio"), "board");
+
+  const tasks = buildTasks(files, texts);
+  const [alpha, beta] = tasks;
+
+  assert.ok(alpha && beta);
+  assert.equal(stageOf(alpha), "build");
+  assert.equal(stageOf(beta), undefined);
+  assert.equal(stageOf({ ...alpha, status: "done" }), "done");
+  assert.ok(matches(alpha, "BUILD alpha"));
+  assert.ok(matches(alpha, "leaf"), "a filter reaches subtasks");
+  assert.ok(!matches(alpha, "beta"));
+
+  const noon = new Date(2026, 10, 9, 12);
+
+  assert.equal(ago("2026-11-09", noon), "today");
+  assert.equal(ago("2026-11-08", noon), "yesterday");
+  assert.equal(ago("2026-11-02", noon), "7d ago");
+  assert.equal(ago("not a date", noon), "no date");
+  assert.deepEqual(
+    hillDots(tasks).map((dot) => dot.task.id),
+    ["001-alpha"],
+  );
+  assert.ok(timelineTicks(20_000, 20_020).length >= 2);
 });
 
 test("finds a task at any depth and returns the breadcrumb trail from the root", () => {
