@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net";
 import { execFile, execFileSync, type ChildProcess } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { constants, mkdirSync, watch, type FSWatcher } from "node:fs";
-import { lstat, mkdir, open, readdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -694,6 +694,56 @@ async function move(fields: URLSearchParams): Promise<TaskSummary> {
   }
 }
 
+// Deleting a task removes its whole directory, documents and subtasks included.
+async function deleteTask(fields: URLSearchParams): Promise<void> {
+  const { directory } = await locate(
+    tasksOf(projectPath(fields.get("project"))),
+    fields.get("task") ?? "",
+  );
+
+  await rm(directory, { recursive: true });
+}
+
+// Deleting a queue item removes its checklist line and the indented context under it. The item's
+// text must still match, so a backlog.md edited since the board loaded is not cut in the wrong place.
+async function deleteQueueItem(fields: URLSearchParams): Promise<QueueItem[]> {
+  const index = Number(fields.get("index"));
+  const path = join(tasksOf(projectPath(fields.get("project"))), "backlog.md");
+
+  const file = await open(path, constants.O_RDWR | constants.O_NOFOLLOW).catch(() => {
+    throw new BoardError("Queue item not found.", 404);
+  });
+
+  try {
+    const original = await file.readFile("utf8");
+
+    if (parseBacklog(original)[index]?.text !== fields.get("text"))
+      throw new BoardError("The queue changed. Reload the board and try again.", 409);
+    const lines = original.split(/(?<=\n)/);
+    const bare = (line: string) => line.replace(/\r?\n$/, "");
+    const items = lines.flatMap((line, at) => (/^- \[[ xX]\]\s+/.test(bare(line)) ? [at] : []));
+    // SAFETY: the text check above found the item, so its line exists.
+    const start = items[index] as number;
+    let end = start + 1;
+
+    while (end < lines.length && /^(\s+\S|\s*$)/.test(bare(lines[end] ?? ""))) end++;
+
+    // Blank lines after the item go with it only when a blank line already precedes it.
+    const spaced = start === 0 || /^\s*$/.test(bare(lines[start - 1] ?? ""));
+
+    while (!spaced && end > start + 1 && /^\s*$/.test(bare(lines[end - 1] ?? ""))) end--;
+
+    const written = [...lines.slice(0, start), ...lines.slice(end)].join("");
+
+    await file.write(written, 0, "utf8");
+    await file.truncate(Buffer.byteLength(written));
+
+    return parseBacklog(written);
+  } finally {
+    await file.close();
+  }
+}
+
 async function buildUI() {
   const source = await readFile(join(assetsDir, "index.html"), "utf8");
   const script = /<script type="text\/tsx">([\s\S]*?)<\/script>/.exec(source);
@@ -903,6 +953,11 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     ]);
 
     json(response, { intent, design, plan, debrief, subtasks, others });
+  } else if (request.method === "POST" && url.pathname === "/api/tasks/delete") {
+    await deleteTask(await formFields(request, address));
+    json(response, {});
+  } else if (request.method === "POST" && url.pathname === "/api/queue/delete") {
+    json(response, { backlog: await deleteQueueItem(await formFields(request, address)) });
   } else if (request.method === "POST" && ["/api/status", "/status"].includes(url.pathname)) {
     const updated = await move(await formFields(request, address));
 

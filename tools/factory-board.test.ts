@@ -675,6 +675,96 @@ test("the Queue column lists backlog.md, filters, and takes no card drops", asyn
   });
 });
 
+test("the context menu deletes task cards and queue items after a second press", async () => {
+  await fixture(async (base, tasks) => {
+    await task(tasks, "move-task");
+    await task(tasks, "doomed-task");
+    await mkdir(join(tasks, "doomed-task/subtasks/child"), { recursive: true });
+    await writeFile(
+      join(tasks, "backlog.md"),
+      "# Queue\n\n- [ ] Export invoices\n  customers keep asking\n\n- [ ] Audit logs\n- [x] Rate limit → 001-rate-limit\n",
+    );
+    const { window, requests } = await mount(base);
+    const document = window.document;
+
+    const rightClick = (target: Element | null) =>
+      target?.dispatchEvent(
+        new window.MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 40,
+          clientY: 50,
+        }),
+      );
+
+    const deleteItem = () => document.querySelector<HTMLElement>('[role="menu"] [data-delete]');
+
+    try {
+      rightClick(document.querySelector('[data-task="doomed-task"]'));
+      await eventually(() => deleteItem() !== null);
+      assert.match(deleteItem()?.textContent ?? "", /Delete task/);
+      deleteItem()?.click();
+      await eventually(() => deleteItem()?.dataset.delete === "confirm");
+      assert.equal(requests.filter((path) => path === "/api/tasks/delete").length, 0);
+      deleteItem()?.click();
+      await eventually(() => document.querySelector('[data-task="doomed-task"]') === null);
+      assert.equal(document.querySelector('[role="menu"]'), null);
+      await assert.rejects(readFile(join(tasks, "doomed-task/TASK.md")));
+      assert.ok(document.querySelector('[data-task="move-task"]'));
+
+      // Filtering keeps each queue item's position in backlog.md.
+      const filter = document.querySelector<HTMLInputElement>('input[type="search"]');
+      assert.ok(filter);
+
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      )?.set;
+
+      setter?.call(filter, "invoices");
+      filter.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await eventually(() => document.querySelectorAll("[data-queue-item]").length === 1);
+      rightClick(document.querySelector("[data-queue-item]"));
+      await eventually(() => deleteItem() !== null);
+      deleteItem()?.click();
+      await eventually(() => deleteItem()?.dataset.delete === "confirm");
+      deleteItem()?.click();
+      await eventually(() => document.querySelectorAll("[data-queue-item]").length === 0);
+      assert.equal(
+        await readFile(join(tasks, "backlog.md"), "utf8"),
+        "# Queue\n\n- [ ] Audit logs\n- [x] Rate limit → 001-rate-limit\n",
+      );
+    } finally {
+      window.close();
+    }
+
+    const { token } = await board(base);
+
+    const remove = (path: string, fields: Record<string, string>, origin = base) =>
+      fetch(`${base}${path}`, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ token, ...fields }),
+      });
+
+    assert.equal((await remove("/api/tasks/delete", { task: "../move-task" })).status, 400);
+    assert.equal((await remove("/api/tasks/delete", { task: "gone-task" })).status, 404);
+    assert.equal(
+      (await remove("/api/tasks/delete", { task: "move-task" }, "https://example.com")).status,
+      403,
+    );
+    assert.equal(
+      (await remove("/api/queue/delete", { index: "0", text: "Stale text" })).status,
+      409,
+    );
+    assert.equal(
+      (await remove("/api/queue/delete", { index: "0", text: "Audit logs" })).status,
+      200,
+    );
+    assert.ok(await readFile(join(tasks, "move-task/TASK.md"), "utf8"));
+  });
+});
+
 test("a task opens every Markdown file, follows links between them, and shows its blocker", async () => {
   await fixture(async (base, tasks) => {
     await task(tasks, "move-task");

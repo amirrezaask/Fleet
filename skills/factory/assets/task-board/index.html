@@ -160,6 +160,7 @@ import {
   Search,
   Send,
   Sun,
+  Trash2,
   Table2,
   Workflow,
   X,
@@ -326,6 +327,12 @@ type Board = typeof boardSchema.Type;
 type Documents = typeof documentsSchema.Type;
 
 type QueueItem = typeof queueItemSchema.Type;
+
+// The item's position in backlog.md, kept through filtering so a delete names the right line.
+type IndexedQueueItem = QueueItem & { index: number };
+
+// A context menu opens on either a task or a queue item, at a viewport position.
+type MenuTarget = { task?: string; queue?: number; x: number; y: number };
 
 type Status = typeof statusSchema.Type;
 
@@ -694,9 +701,17 @@ function BlockerNote({ task, className }: { task: Task; className?: string }) {
   ) : null;
 }
 
-function QueueCard({ item }: { item: QueueItem }) {
+function QueueCard({ item }: { item: IndexedQueueItem }) {
   return (
-    <Card data-queue-item="true" className={cn("shrink-0 p-3.5", item.taken && "opacity-60")}>
+    <Card
+      data-queue-item="true"
+      data-queue-index={item.index}
+      tabIndex={0}
+      className={cn(
+        "shrink-0 p-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        item.taken && "opacity-60",
+      )}
+    >
       <p
         className={cn(
           "text-body leading-snug [overflow-wrap:anywhere]",
@@ -933,18 +948,20 @@ function TaskCard({
   );
 }
 
-function StatusMenu({
-  task,
+function ContextMenu({
+  label,
+  title,
   x,
   y,
-  onMove,
   onClose,
+  children,
 }: {
-  task: Task;
+  label: string;
+  title: string;
   x: number;
   y: number;
-  onMove: (id: string, status: Status) => void;
   onClose: () => void;
+  children: React.ReactNode;
 }) {
   const menu = React.useRef<HTMLDivElement>(null);
   const opener = React.useRef(document.activeElement);
@@ -961,7 +978,10 @@ function StatusMenu({
       left: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
       top: Math.max(8, Math.min(y, window.innerHeight - height - 8)),
     });
-    element.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+    (
+      element.querySelector<HTMLElement>('[aria-checked="true"]') ??
+      element.querySelector<HTMLElement>('[role^="menuitem"]')
+    )?.focus();
   }, [x, y]);
 
   React.useEffect(() => {
@@ -995,7 +1015,7 @@ function StatusMenu({
     event.stopPropagation();
 
     const items = Array.from(
-      menu.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [],
+      menu.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [],
     );
 
     const at = items.findIndex((item) => item === document.activeElement);
@@ -1020,15 +1040,67 @@ function StatusMenu({
     <div
       ref={menu}
       role="menu"
-      aria-label={`Change status of ${task.title}`}
+      aria-label={label}
       style={position}
       className="fixed z-50 w-56 rounded-lg border border-border bg-card p-1 text-meta shadow-lift"
       onKeyDown={key}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <p className="truncate px-2 py-1.5 text-micro text-muted-foreground" title={task.title}>
-        {task.title}
+      <p className="truncate px-2 py-1.5 text-micro text-muted-foreground" title={title}>
+        {title}
       </p>
+      {children}
+    </div>
+  );
+}
+
+const menuItemClass =
+  "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors duration-100 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none";
+
+// Deleting cannot be undone from the board, so the first press only asks for a second one.
+function DeleteItem({ label, onDelete }: { label: string; onDelete: () => void }) {
+  const [confirming, setConfirming] = React.useState(false);
+
+  return (
+    <>
+      <div role="separator" className="-mx-1 my-1 h-px bg-border" />
+      <button
+        type="button"
+        role="menuitem"
+        data-delete={confirming ? "confirm" : ""}
+        className={cn(menuItemClass, "text-st-blocked-ink")}
+        onClick={() => (confirming ? onDelete() : setConfirming(true))}
+      >
+        <Trash2 className="size-3.5" aria-hidden />
+        <span className="flex-1">{confirming ? "Press again to delete" : label}</span>
+      </button>
+    </>
+  );
+}
+
+function StatusMenu({
+  task,
+  x,
+  y,
+  onMove,
+  onDelete,
+  onClose,
+}: {
+  task: Task;
+  x: number;
+  y: number;
+  onMove: (id: string, status: Status) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <ContextMenu
+      label={`Change status of ${task.title}`}
+      title={task.title}
+      x={x}
+      y={y}
+      onClose={onClose}
+    >
       {defaultOrder.map((status) => {
         const current = status === task.status;
 
@@ -1039,7 +1111,7 @@ function StatusMenu({
             role="menuitemradio"
             aria-checked={current}
             data-status-option={status}
-            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-foreground transition-colors duration-100 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+            className={cn(menuItemClass, "text-foreground")}
             onClick={() => {
               onClose();
 
@@ -1052,7 +1124,40 @@ function StatusMenu({
           </button>
         );
       })}
-    </div>
+      <DeleteItem
+        label="Delete task"
+        onDelete={() => {
+          onClose();
+          onDelete(task.id);
+        }}
+      />
+    </ContextMenu>
+  );
+}
+
+function QueueMenu({
+  item,
+  x,
+  y,
+  onDelete,
+  onClose,
+}: {
+  item: QueueItem;
+  x: number;
+  y: number;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <ContextMenu label={`Queue item ${item.text}`} title={item.text} x={x} y={y} onClose={onClose}>
+      <DeleteItem
+        label="Delete from queue"
+        onDelete={() => {
+          onClose();
+          onDelete();
+        }}
+      />
+    </ContextMenu>
   );
 }
 
@@ -2038,7 +2143,7 @@ function BoardView({
 }: {
   board: Board | null;
   tasks: readonly Task[];
-  queue: readonly QueueItem[];
+  queue: readonly IndexedQueueItem[];
   stale: boolean;
   busy: boolean;
   order: readonly ColumnId[];
@@ -2397,9 +2502,7 @@ function BoardView({
                   ))
                 : null}
               {id === "queue"
-                ? queue.map((item, index) => (
-                    <QueueCard key={`${item.text}-${index}`} item={item} />
-                  ))
+                ? queue.map((item) => <QueueCard key={`${item.text}-${item.index}`} item={item} />)
                 : null}
               {inColumn.map((task) => (
                 <TaskCard
@@ -3452,7 +3555,7 @@ function App() {
   const [selected, setSelected] = React.useState<Task | null>(null);
   const [picked, setPicked] = React.useState<Picked | null>(null);
   const [pending, setPending] = React.useState<string | null>(null);
-  const [menu, setMenu] = React.useState<{ id: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = React.useState<MenuTarget | null>(null);
   const [announcement, setAnnouncement] = React.useState("");
   const boardRef = React.useRef<HTMLDivElement>(null);
   const saving = React.useRef(false);
@@ -3718,14 +3821,63 @@ function App() {
     }
   }
 
-  // Any task title or card in the project's views offers the menu; Portfolio lists other projects.
-  function openStatusMenu(event: React.MouseEvent) {
+  async function deleteTask(id: string) {
+    if (!board) return;
+
+    setError("");
+    setAnnouncement("Deleting task…");
+
+    try {
+      await request("/api/tasks/delete", form({ project: board.projectId, task: id }));
+      setBoard((current) =>
+        current ? { ...current, tasks: current.tasks.filter((task) => task.id !== id) } : current,
+      );
+      setAnnouncement("Task deleted.");
+    } catch {
+      setError("Could not delete the task. Reload to check whether it still exists, then try again.");
+      setAnnouncement("Delete failed.");
+    }
+  }
+
+  async function deleteQueueItem(item: IndexedQueueItem) {
+    if (!board) return;
+
+    setError("");
+    setAnnouncement("Deleting queue item…");
+
+    try {
+      const result = Schema.decodeUnknownSync(
+        Schema.Struct({ backlog: Schema.Array(queueItemSchema) }),
+      )(
+        await request(
+          "/api/queue/delete",
+          form({ project: board.projectId, index: String(item.index), text: item.text }),
+        ),
+      );
+
+      setBoard((current) => (current ? { ...current, backlog: result.backlog } : current));
+      setAnnouncement("Queue item deleted.");
+    } catch {
+      setError("Could not delete the queue item. Reload the board and try again.");
+      setAnnouncement("Delete failed.");
+    }
+  }
+
+  // Any task title, card or queue item in the project's views offers the menu; Portfolio lists
+  // other projects.
+  function openContextMenu(event: React.MouseEvent) {
     if (selected || view === "portfolio" || !(event.target instanceof Element)) return;
 
-    const element = event.target.closest<HTMLElement>("[data-task],[data-open-task]");
-    const id = element?.dataset.task ?? element?.dataset.openTask;
+    const element = event.target.closest<HTMLElement>(
+      "[data-task],[data-open-task],[data-queue-index]",
+    );
 
-    if (!element || !board?.tasks.some((task) => task.id === id) || !id) return;
+    const id = element?.dataset.task ?? element?.dataset.openTask;
+    const index = Number(element?.dataset.queueIndex);
+    const isTask = board?.tasks.some((task) => task.id === id) === true;
+    const isQueue = Number.isInteger(index) && board?.backlog[index] !== undefined;
+
+    if (!element || !(isTask || isQueue)) return;
 
     event.preventDefault();
 
@@ -3734,13 +3886,15 @@ function App() {
     const keyboard = event.clientX === 0 && event.clientY === 0;
 
     setMenu({
-      id,
+      ...(isTask ? { task: id } : { queue: index }),
       x: keyboard ? box.left : event.clientX,
       y: keyboard ? box.bottom : event.clientY,
     });
   }
 
-  const menuTask = menu ? board?.tasks.find((task) => task.id === menu.id) : undefined;
+  const menuTask = menu ? board?.tasks.find((task) => task.id === menu.task) : undefined;
+  const queued = menu?.queue === undefined ? undefined : board?.backlog[menu.queue];
+  const menuQueue = queued && menu?.queue !== undefined ? { ...queued, index: menu.queue } : undefined;
 
   const stale = board !== null && projectId !== "" && board.projectId !== projectId;
   const hasProjects = board !== null && board.projects.length > 0;
@@ -3749,9 +3903,9 @@ function App() {
   const blockedCount = board?.tasks.filter((task) => task.status === "blocked").length ?? 0;
   const filtered = (board?.tasks ?? []).filter((task) => matches(task, query));
 
-  const queue = (board?.backlog ?? []).filter((item) =>
-    matchesWords(`${item.text} ${item.context}`, query),
-  );
+  const queue = (board?.backlog ?? [])
+    .map((item, index) => ({ ...item, index }))
+    .filter((item) => matchesWords(`${item.text} ${item.context}`, query));
 
   const visible =
     hideDone && hideableViews.includes(shownView)
@@ -3773,7 +3927,7 @@ function App() {
         onCancelPick={() => pickAbort.current?.abort()}
         onAddPath={addPath}
       />
-      <main className="flex h-dvh min-w-0 flex-1 flex-col" onContextMenu={openStatusMenu}>
+      <main className="flex h-dvh min-w-0 flex-1 flex-col" onContextMenu={openContextMenu}>
         <header className="z-30 shrink-0 bg-background">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 md:px-8 xl:flex-nowrap">
             <Button
@@ -3847,7 +4001,7 @@ function App() {
         <p id="move-instructions" className="sr-only">
           Drag cards between columns. On a card or move grip, press Space, use left/right arrows,
           and Enter to save or Escape to cancel. Right-click a card or press the context menu key to
-          choose its status.
+          choose its status or delete it; queue items offer delete the same way.
         </p>
         <p id="column-instructions" className="sr-only">
           Drag a column by its header to reorder it. On the reorder grip, press Space, use left and
@@ -3955,11 +4109,22 @@ function App() {
       </main>
       {menu && menuTask ? (
         <StatusMenu
-          key={menu.id}
+          key={menuTask.id}
           task={menuTask}
           x={menu.x}
           y={menu.y}
           onMove={(id, status) => void move(id, status)}
+          onDelete={(id) => void deleteTask(id)}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+      {menu && menuQueue ? (
+        <QueueMenu
+          key={`queue-${menuQueue.index}`}
+          item={menuQueue}
+          x={menu.x}
+          y={menu.y}
+          onDelete={() => void deleteQueueItem(menuQueue)}
           onClose={() => setMenu(null)}
         />
       ) : null}
