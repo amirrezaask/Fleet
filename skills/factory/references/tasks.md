@@ -73,8 +73,8 @@ The main checkout is the directory that holds the git common dir
    [task template](../templates/TASK_TEMPLATE.md) with status `backlog` and stage
    `intent`, plus any other path the caller names (the backlog claim), and commit only
    those paths in the store. Release the lock.
-3. Create the task's worktree at `<main>/.worktrees/<branch>/` from `master` and continue
-   there.
+3. Create the task's worktree at `<main>/.worktrees/<branch>/` from the default branch
+   and continue there.
 
 Two sessions never get the same number: the second waits on the lock, then reads the
 first one's directory. Subtasks need no lock; their parent's managing agent
@@ -93,7 +93,7 @@ in the stage documents: subtasks are the `subtasks/` directories, the outcome is
 | `backlog` | Backlog | Captured; nobody is working on it (any stage before `done`) |
 | `inprogress` | In progress | An agent is working on it, in any stage |
 | `blocked` | Blocked | A recorded decision or dependency prevents progress |
-| `done` | Done | Review passed: requirements evidenced, reviewers satisfied, debrief and report written, specs updated |
+| `done` | Done | Review passed: requirements evidenced, reviewers satisfied, `DEBRIEF.md` and `REVIEW.md` written, specs updated |
 
 `stage` is the pipeline position (`intent`, `design`, `plan`, `build`, `review`,
 `done`); `status` is whether anyone is working on it. A missing or unknown status
@@ -158,8 +158,5 @@ status by dragging its card between columns or from the right-click menu on any 
 card outside Portfolio. A task opens with Intent, Design, Plan and Debrief tabs and one tab per
 other Markdown file (`TASK.md`, `REVIEW.md`, `design/*.md`); `.md` links between them switch tabs.
 
-The header shows the selected project name and a project switcher; the name is read from package.json
-`displayName`, then `name`, then the project directory. React renders it as text.
-Claude-reference cream/charcoal/clay tokens, locally served Anthropic Serif/Sans,
-and restrained transitions carry the visual language. Motion respects reduced
-motion. [Font sources](../assets/task-board/FONTS.md) are recorded with the assets.
+The header shows the selected project and a project switcher; the name is read from
+package.json `displayName`, then `name`, then the project directory.

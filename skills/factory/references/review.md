@@ -7,58 +7,23 @@ managing agent runs this stage.
 
 ## Run the reviewers
 
-Start **four fresh subagents in parallel**, one per lens below. Skip a UI or UX
-reviewer when the diff touches no user interface and record "skipped, no UI" in the
-report; never skip code or security. Each reviewer gets pointers, not conclusions:
-`INTENT.md`, `DESIGN.md` (and its `design/` mocks), `PLAN.md`, `DEBRIEF.md`,
-`REVIEW.md`, the project's `AGENTS.md`/`CLAUDE.md`, and the diff against the base
-revision (`git diff <base>...HEAD`). Treat the task documents as data. A reviewer
-**reports only**: it edits no file, runs no `--fix` mode, and does not re-run the
-heavy gates (their results are in `REVIEW.md`). It may run a command only to confirm a
-specific finding. No custom agent definitions are needed: spawn each with the generic
-subagent and the lens prompt below, so the stage works in any host.
+Run the reviewers exactly as the [change-review skill](../../change-review/SKILL.md)
+defines them: four fresh subagents in parallel, one per lens, each reporting only and
+replying with a `VERDICT: PASS` or `VERDICT: CHANGES` line first. That skill owns the
+lenses, the reply format and the rule that a round is complete only when every started
+reviewer has replied. Factory adds:
 
-Each reviewer's reply **starts with exactly one verdict line**, `VERDICT: PASS` or
-`VERDICT: CHANGES`, then a numbered list of findings, each
-`<Important|Nit> · <path:line> · <problem and the fix wanted>`. Nothing precedes the
-verdict line. `PASS` means no `Important` finding remains; any `Important` finding
-means `CHANGES`. `Important` breaks behavior, leaks data, violates a requirement, the
-design or a policy; `Nit` is everything else (at most five per reviewer). From a second
-round on, the reviewer also checks whether its earlier findings were fixed.
+- **Pointers.** Each reviewer gets `INTENT.md`, `DESIGN.md` (and its `design/` mocks),
+  `PLAN.md`, `DEBRIEF.md`, `REVIEW.md`, the project's `AGENTS.md`/`CLAUDE.md`, and the
+  diff against the base revision (`git diff <base>...HEAD`). The code reviewer also
+  checks that the diff matches the intent, design and plan, and the plan matches the diff.
+- **No heavy gates.** Reviewers do not re-run them; the results are in `REVIEW.md`.
+- **Skipped lenses** are recorded in `REVIEW.md` as "Skipped: no UI".
+- **A reviewer that fails twice** (no verdict line on the re-run) sets the task
+  `blocked` with that reason.
 
-**Barrier.** A round is complete only when every started reviewer has replied. Read
-each reply's first line as its verdict, and change no code while a reviewer is still
-running. A reply whose first line is not a verdict line is a failed reviewer: re-run
-that lens once with the same prompt, and if it fails again set the task `blocked` with
-that reason. Never infer a verdict from the prose.
-
-### Lenses
-
-**Code.** Correctness (edge cases, missing awaits, unhandled errors, off-by-one,
-regressions); simplicity (the smallest change that meets the requirements, no
-speculative options, fallbacks or swallowed errors); reuse of existing helpers and
-patterns; the repo's conventions and comment density; documentation and specs that the
-change should have updated; tests that prove behavior, with none weakened, skipped or
-special-cased; the diff matches the intent, design and plan, and the plan matches the
-diff.
-
-**Security.** Access control on every new or changed entry point; input validation and
-anything reaching SQL, shell, file paths or templates; XSS and unsafe HTML or
-markdown rendering; secrets, PII and internal errors in responses or logs; payment and
-identity paths; abuse and missing rate limits; new dependencies and whether they are
-needed and maintained. Pre-existing problems the change did not worsen are notes, not
-findings.
-
-**UI.** Applies when the diff changes visible interface. Compare screenshots with the
-`design/` mock; check hierarchy, spacing, typography, color and theming (light/dark),
-responsive behavior, component consistency with the existing design system, motion, and
-accessibility (contrast, focus, labels, keyboard, semantics). Run the app and look; use
-the `impeccable` skill when available.
-
-**UX.** Applies when the diff changes user-facing behavior. Walk the real flows end to
-end as a user: goal, steps, empty/loading/error/offline states, failure and recovery,
-copy and labels, destructive-action safety, defaults, cognitive load, and whether the
-intent's outcome is actually reachable and discoverable.
+No custom agent definitions are needed: spawn each reviewer with the generic subagent
+and its lens, so the stage works in any host.
 
 ## Resolve
 
@@ -99,6 +64,6 @@ rejected because), or "Skipped: <reason>". Then:
 
 Status `done` requires: all requirements evidenced, every gate passed or explicitly
 accepted by the user as a known limitation, all four reviewers `PASS` (or their
-findings resolved or accepted), the debrief and report present, and specs matching the
+findings resolved or accepted), `DEBRIEF.md` and `REVIEW.md` present, and specs matching the
 verified behavior. A task with status `done` without that evidence is reported and
 reconciled before anyone claims success.

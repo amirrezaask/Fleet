@@ -20,7 +20,8 @@ Give yourself a check for every change, and use it continuously:
 
 1. **Bugs first get a failing test.** Write the plan's reproducing test, run it, and
    confirm it fails for the expected reason. Commit it. Then fix the code **without
-   editing that test**.
+   editing that test**. When the cause is not yet proven, find it with the
+   [debugging skill](../../debugging/SKILL.md).
 2. Write each planned `fast` test with the code it covers, or before it.
 3. After each step, run the fast tests the step touches; before the build ends, run
    all of them. When a test fails, fix the code, not the test. Never skip, delete or
@@ -77,7 +78,7 @@ revise `PLAN.md` with the fix and add the incident to `DEBRIEF.md`.
 Record command, revision, environment and the literal result for each gate. Never
 claim an unrun check passed; mark it Not run or Blocked with the reason. Keep raw
 output (json, logs, traces, png) in the task's gitignored `evidence/` folder; track
-only the Markdown report.
+only `REVIEW.md`.
 
 ### Review file
 
@@ -103,5 +104,6 @@ the template whole and fill its sections. It is for future agents and engineers;
 - **Memory candidates:** a mistake made twice, or a convention the agent kept missing.
   Propose the exact line for `AGENTS.md`/`CLAUDE.md` or the relevant skill; apply it
   only within this task's scope or when the user asks.
-- Out-of-scope findings with evidence and location (see the loop in the Factory skill).
+- Out-of-scope findings with evidence and location; the ones worth doing become
+  [backlog](backlog.md) lines.
 - Fast test results: command, revision, outcome.

@@ -19,16 +19,14 @@ are written only there; read [the task store](references/tasks.md#the-task-store
 
 ## Commands
 
-Factory is one command, `/factory`, with an optional stage subcommand.
-
-| Command | Accepts on entry | Does | Ends when |
+| Command | Needs | Does | Ends when |
 | --- | --- | --- | --- |
 | `/factory [request or task]` | — | Router: find or create the task, report its stage, run stages forward | It stops at each human gate |
 | `/factory next` | `<factory>/backlog.md` | Take the first open backlog line, claim it, and run `/factory intent` on it; see [backlog](references/backlog.md) | The intent stops at its approval gate |
 | `/factory intent [request]` | — | Create `<factory>/<NNN>-<name>/` under the [shared lock](references/tasks.md#creating-a-task-one-lock-one-commit) or reuse the named task; follow [intent](references/intent.md) | The user approves `INTENT.md` and it is committed |
 | `/factory design [task]` | `INTENT.md` | Follow [design](references/design.md): write `DESIGN.md` and `design/` | The user accepts the design and it is committed |
 | `/factory plan [task]` | `DESIGN.md` or the recorded skip | Follow [plan](references/plan.md) read-only: change no code | `PLAN.md` passes its self-check and is committed |
-| `/factory build [task]` | — | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |
+| `/factory build [task]` | `PLAN.md` | Follow [build](references/build.md): implement, keep fast tests green, then verify with heavy gates last (managing agent only) | The scope is implemented, regression and acceptance pass, heavy gates pass, `DEBRIEF.md` and `REVIEW.md` are committed |
 | `/factory review [task]` | `REVIEW.md` | Managing agent only; follow [review](references/review.md): four parallel reviewers (code, security, UI, UX) | All reviewers return `VERDICT: PASS` within 3 rounds, `REVIEW.md` has the review, specs are committed with status `done`; or the cap is hit and status is `blocked` |
 
 The first word after `/factory` is a subcommand only when it is exactly `next`, `intent`,
@@ -42,14 +40,6 @@ without a plan plans first) unless the user said to skip it. It ends with a comm
 of the stage's artifact and tells the user the next command.
 
 ## Pipeline
-
-| Stage | Guide | Artifact | Main reader | Gate to leave the stage |
-| --- | --- | --- | --- | --- |
-| Intent | [intent](references/intent.md) | `INTENT.md` | The user: one screen | **The user approves the intent** |
-| Design | [design](references/design.md) | `DESIGN.md`, `design/` | The user reviews | **The user accepts the design**, or the intent says it is skipped |
-| Plan | [plan](references/plan.md) | `PLAN.md` | Implementing agents: verbose | Agent self-check: coverage and interrogation |
-| Build | [build](references/build.md) | Code, tests, `DEBRIEF.md`, `REVIEW.md` | Future agents; the user reads the verdict | Fast tests green, then regression, acceptance and heavy gates (last) pass |
-| Review | [review](references/review.md) | Review section of `REVIEW.md` | The user: verdict first | Code, security, UI and UX reviewers pass and specs match the verified behavior |
 
 **Every stage ends with a commit** of its artifact in the task store, and the next stage starts by
 reading it. The commit chain is the audit trail: what was asked, what was decided,
@@ -87,24 +77,19 @@ documents for agents are complete.
   the first screen, evidence below.
 
 All documents are Markdown from the [templates](templates/); the user reviews any of
-them rendered with `md <file>`. Legacy tasks keep their files and stay readable:
-`TASK.html`, `INTENT.html`, `PLAN.html`, `DEBRIEF.html`, `REPORT.html`, and
-`BRIEF.html`/`BRIEF.md` as the intent. New documents are always Markdown; when both
-formats exist the `.md` is canonical. Every new debrief is `DEBRIEF.md` from the
-debrief template, including one for work done without the pipeline.
+them rendered with `md <file>`. Legacy HTML task documents, `REPORT.*` and
+`BRIEF.*` (read as the intent) stay readable in place; new documents are always
+Markdown, and when both formats exist the `.md` is canonical.
 
 ## Tasks
 
-A task is one directory, `<factory>/<NNN>-<task-name>/`, numbered `001`, `002`, ... in creation order, whose name never changes. It holds
-`TASK.md`, its stage documents and `REVIEW.md` (older tasks: `REPORT.md`), its `design/` folder and its
-`subtasks/` folder. `<factory>/` lists every task. `TASK.md`
-records the state in frontmatter: `status:` is `backlog`, `inprogress`,
-`blocked` or `done`, and `stage:` is
-`intent`, `design`, `plan`, `build`, `review` or `done`. Read
-[task layout and board](references/tasks.md) for naming, metadata and the board.
+A task is one directory, `<factory>/<NNN>-<task-name>/`, numbered in creation order,
+whose name never changes. Its `TASK.md` frontmatter records `status` (`backlog`,
+`inprogress`, `blocked`, `done`) and `stage` (`intent`, `design`, `plan`, `build`,
+`review`, `done`). Read [task layout and board](references/tasks.md) for naming,
+metadata, task creation and the board.
 
-`/factory intent` creates `<factory>/<NNN>-<name>/` (the next free number) with `TASK.md` from the
-[task template](templates/TASK_TEMPLATE.md), status `backlog`. **When an agent picks
+`/factory intent` creates the task with status `backlog`. **When an agent picks
 a task up, it sets `status` to `inprogress`** and updates `stage` and `updated`. It
 sets `backlog` when it stops between stages with no work in flight, `blocked` with the
 reason when a decision or dependency stops it, and `done` only when Review passes.
@@ -122,7 +107,7 @@ yet: one line each, no ceremony. `/factory next` turns the first open line into 
 and the pipeline runs as usual. Read [backlog](references/backlog.md).
 
 **The loop.** A finding outside the task's scope (a bug, a risk, a debt) is not fixed
-silently. Record it in the debrief or report, and when it deserves work, append it as
+silently. Record it in `DEBRIEF.md` or `REVIEW.md`, and when it deserves work, append it as
 an open line to `<factory>/backlog.md`. It enters the pipeline when `/factory next`
 reaches it or the user runs `/factory intent` on it.
 
@@ -138,12 +123,11 @@ slices, record dependencies and build the ready subtasks in parallel.
 
 ## Validation budget
 
-Cheap checks run continuously while building; heavy gates run once, as the last step
-of Build, on the whole task, so development and building stay fast. Subagents that
-implement part of a task run only the fast tests their plan names. Only the managing
-agent runs heavy gates, and only when the scope is complete and it intends to close the
-task. Review re-runs a heavy gate only when a fix could have changed its result. Implement everything the plan specifies before spending time on
-validation.
+Implement everything the plan specifies before spending time on validation. Cheap
+checks run continuously while building; heavy gates run once, as the last step of
+Build, on the whole task. Subagents that implement part of a task run only the fast
+tests their plan names. Only the managing agent runs heavy gates, and Review re-runs
+one only when a fix could have changed its result.
 
 ## Specifications
 
@@ -155,8 +139,7 @@ update them with verified behavior when Review closes the task. Follow
 
 On resume, read `TASK.md`, the stage documents, the relevant specs and the actual
 Git diff, and continue from the recorded stage. Chat history alone is not enough.
-Keep status in `TASK.md`, decisions in the stage documents,
-and results in the debrief and report (review findings included); create no parallel progress logs. The
-optional board changes task metadata only; it never starts agents. One
-[shared board](references/tasks.md#one-shared-board) (`npx amirreza-factory`) serves every project;
-projects carry no copy.
+Keep status in `TASK.md`, decisions in the stage documents, and results in
+`DEBRIEF.md` and `REVIEW.md`; create no parallel progress logs. The optional
+[shared board](references/tasks.md#one-shared-board) (`npx amirreza-factory`) changes
+task metadata only; it never starts agents.

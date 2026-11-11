@@ -65,11 +65,10 @@ The managing agent owns the graph and runs this loop:
    (a separate merger subagent or the manager), resolve conflicts, move the
    subtask status to `done` and record results in its plan.
 6. Recompute the frontier; start newly unblocked subtasks immediately.
-7. When every subtask is `done`, the managing agent alone runs the managing
-   agent alone runs [Verify](build.md#verify-last) (heavy gates last) on the integration
+7. When every subtask is `done`, the managing agent alone runs [Verify](build.md#verify-last) (heavy gates last) on the integration
    branch and fixes failures, using one fresh implementer subagent for a batch of fixes
    when useful, then runs the [Review stage](review.md).
-8. Write the report, update specs, set the parent status to `done`, and remove every
+8. Write `REVIEW.md`, update specs, set the parent status to `done`, and remove every
    implementer worktree.
 
 Keep communication with subagents sparse: pointers in, a short report out. A
