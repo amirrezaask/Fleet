@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anthropic design language: web example</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: var(--ad-sidebar) 1fr;
+        background: var(--ad-surface-0);
+        color: var(--ad-text);
+        font: var(--ad-weight-regular) var(--ad-text-body) / var(--ad-leading-body)
+          var(--ad-font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+        cursor: default; /* Desktop convention: arrow on buttons, pointer on links. */
+      }
+
+      :focus-visible {
+        outline: none;
+        box-shadow: var(--ad-shadow-focus);
+      }
+
+      /* Sidebar: sits on the ground surface, no border of its own. */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--ad-pad-sm);
+        min-width: 0;
+      }
+
+      .group-label {
+        padding: var(--ad-pad-md) var(--ad-pad-sm) var(--ad-pad-xs);
+        font-size: var(--ad-text-caption);
+        line-height: var(--ad-leading-caption);
+        color: var(--ad-text-muted);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: var(--ad-gap-xs);
+        height: var(--ad-row);
+        padding: 0 var(--ad-pad-sm);
+        border-radius: var(--ad-radius-xs);
+        color: var(--ad-text-secondary);
+        text-align: start;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background-color var(--ad-dur-fast) var(--ad-ease-snap);
+      }
+
+      .row:hover {
+        background: var(--ad-fill-hover);
+        color: var(--ad-text);
+      }
+
+      .row[aria-current="page"] {
+        background: var(--ad-fill-selected);
+        color: var(--ad-text);
+      }
+
+      /* Main pane: one surface step up, joined to the ground by a ring. */
+      .main {
+        display: grid;
+        grid-template-rows: var(--ad-header) 1fr auto;
+        min-width: 0;
+        margin: var(--ad-pad-sm) var(--ad-pad-sm) var(--ad-pad-sm) 0;
+        background: var(--ad-surface-1);
+        border-radius: var(--ad-radius-card);
+        box-shadow: var(--ad-shadow-card);
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ad-gap-sm);
+        padding: 0 var(--ad-pad-lg);
+        border-bottom: 1px solid var(--ad-border);
+      }
+
+      .title {
+        font-size: var(--ad-text-heading);
+        line-height: var(--ad-leading-heading);
+        font-weight: var(--ad-weight-header);
+      }
+
+      /* Segmented control. */
+      .segmented {
+        display: inline-flex;
+        padding: 2px;
+        gap: 2px;
+        border-radius: var(--ad-radius);
+        background: var(--ad-fill-hover);
+      }
+
+      .segmented button {
+        height: var(--ad-control-xs);
+        padding: 0 var(--ad-pad-sm);
+        border-radius: var(--ad-radius-xs);
+        font-weight: var(--ad-weight-control);
+        color: var(--ad-text-secondary);
+        transition:
+          background-color var(--ad-dur-snap) var(--ad-ease-snap),
+          color var(--ad-dur-snap) var(--ad-ease-snap);
+      }
+
+      .segmented button[aria-pressed="true"] {
+        background: var(--ad-surface-2);
+        color: var(--ad-text);
+        box-shadow: var(--ad-shadow-sm);
+      }
+
+      /* Transcript: a narrow reading column in a wide pane. */
+      .transcript {
+        overflow-y: auto;
+        padding: var(--ad-pad-xl) var(--ad-pad-lg);
+      }
+
+      .column {
+        max-width: var(--ad-measure);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--ad-gap-lg);
+      }
+
+      /* The user speaks in Sans, inside a quiet bubble. */
+      .user {
+        align-self: flex-end;
+        max-width: 85%;
+        padding: var(--ad-pad-sm) var(--ad-pad-md);
+        border-radius: var(--ad-radius-card);
+        background: var(--ad-fill-user-message);
+        font-size: var(--ad-text-prose);
+        line-height: var(--ad-leading-prose);
+      }
+
+      /* The assistant speaks in Serif, with no container at all. */
+      .assistant {
+        font-family: var(--ad-font-serif);
+        font-size: var(--ad-text-prose);
+        line-height: var(--ad-leading-prose);
+        animation: rise var(--ad-dur-sheet) var(--ad-ease-out) both;
+      }
+
+      .assistant p {
+        margin: 0 0 var(--ad-pad-md);
+      }
+
+      .assistant h2 {
+        margin: var(--ad-gap-md) 0 var(--ad-pad-sm);
+        font-size: 1.375em;
+        line-height: 1.25;
+        font-weight: var(--ad-weight-header);
+      }
+
+      .assistant code {
+        font-family: var(--ad-font-mono);
+        font-size: var(--ad-text-code);
+        padding: 1px 5px;
+        border-radius: var(--ad-radius-xs);
+        background: var(--ad-fill-card);
+        box-shadow: inset 0 0 0 1px var(--ad-border);
+      }
+
+      .assistant pre {
+        margin: 0 0 var(--ad-pad-md);
+        padding: var(--ad-pad-md) var(--ad-pad-lg);
+        border-radius: var(--ad-radius-card);
+        background: var(--ad-fill-card);
+        box-shadow: inset 0 0 0 1px var(--ad-border);
+        font: var(--ad-text-code) / var(--ad-leading-code) var(--ad-font-mono);
+        overflow-x: auto;
+      }
+
+      .actions {
+        display: flex;
+        gap: var(--ad-gap-xs);
+        font-family: var(--ad-font-sans);
+      }
+
+      /* Buttons. */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--ad-pad-xs);
+        height: var(--ad-control);
+        padding: 0 var(--ad-pad-md);
+        border-radius: var(--ad-radius);
+        font-size: var(--ad-text-body);
+        font-weight: var(--ad-weight-control);
+        white-space: nowrap;
+        transition:
+          background-color var(--ad-dur-fast) var(--ad-ease-snap),
+          scale var(--ad-dur-snap) var(--ad-ease-spring);
+      }
+
+      .btn:active {
+        scale: var(--ad-press-scale);
+      }
+
+      .btn:disabled {
+        opacity: var(--ad-opacity-disabled);
+        pointer-events: none;
+      }
+
+      .btn-primary {
+        background: var(--ad-fill-primary);
+        color: var(--ad-on-primary);
+      }
+
+      .btn-primary:hover {
+        background: var(--ad-fill-primary-hover);
+      }
+
+      .btn-secondary {
+        background: var(--ad-fill-secondary);
+      }
+
+      .btn-secondary:hover {
+        background: var(--ad-fill-secondary-hover);
+      }
+
+      .btn-ghost {
+        color: var(--ad-text-secondary);
+      }
+
+      .btn-ghost:hover {
+        background: var(--ad-fill-hover);
+        color: var(--ad-text);
+      }
+
+      .btn-brand {
+        background: var(--ad-fill-brand);
+        color: var(--ad-on-brand);
+      }
+
+      .btn-brand:hover {
+        background: var(--ad-fill-brand-hover);
+      }
+
+      /* Menu: popover surface, ring, two-layer shadow, 6px gutter. */
+      .menu {
+        display: inline-flex;
+        flex-direction: column;
+        min-width: 13rem;
+        padding: var(--ad-pad-xs);
+        border-radius: var(--ad-radius-lg);
+        background: var(--ad-surface-popover);
+        box-shadow: var(--ad-shadow-popover);
+        font-family: var(--ad-font-sans);
+        font-size: var(--ad-text-body);
+        line-height: var(--ad-leading-body);
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: var(--ad-control);
+        padding: 0 var(--ad-pad-sm);
+        border-radius: var(--ad-radius-xs);
+      }
+
+      .menu-item:hover {
+        background: var(--ad-fill-hover);
+      }
+
+      .menu-item.danger {
+        color: var(--ad-text-danger);
+      }
+
+      .menu hr {
+        width: 100%;
+        margin: var(--ad-pad-xs) 0;
+        border: 0;
+        border-top: 1px solid var(--ad-border-line);
+      }
+
+      kbd {
+        font: var(--ad-text-caption) var(--ad-font-sans);
+        color: var(--ad-text-muted);
+      }
+
+      /* Composer: the one hero container. Largest radius, raised, ringed. */
+      .dock {
+        padding: 0 var(--ad-pad-lg) var(--ad-pad-lg);
+      }
+
+      .composer {
+        max-width: var(--ad-measure);
+        margin: 0 auto;
+        padding: var(--ad-pad-sm);
+        border-radius: var(--ad-radius-composer);
+        background: var(--ad-surface-2);
+        box-shadow: var(--ad-shadow-card);
+        transition: box-shadow var(--ad-dur-base) var(--ad-ease-snap);
+      }
+
+      .composer:focus-within {
+        box-shadow:
+          var(--ad-shadow-card),
+          0 0 0 1px var(--ad-border-strong);
+      }
+
+      .composer textarea {
+        display: block;
+        width: 100%;
+        min-height: 2.75rem;
+        padding: var(--ad-pad-xs) var(--ad-pad-sm);
+        border: 0;
+        outline: 0;
+        resize: none;
+        background: none;
+        color: inherit;
+        font: var(--ad-text-prose) / var(--ad-leading-prose) var(--ad-font-sans);
+      }
+
+      .composer textarea::placeholder {
+        color: var(--ad-text-muted);
+      }
+
+      .composer-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          translate: 0 6px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      @media (max-width: 720px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .main {
+          margin: 0;
+          border-radius: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="sidebar" aria-label="Sessions">
+      <button class="btn btn-secondary">New session</button>
+      <div class="group-label">Today</div>
+      <button class="row" aria-current="page">Design tokens for the board</button>
+      <button class="row">Fix flaky install test</button>
+      <button class="row">Draft the release notes</button>
+      <div class="group-label">Yesterday</div>
+      <button class="row">Port the importer to Effect</button>
+      <button class="row">Why is the build slow?</button>
+    </nav>
+
+    <main class="main">
+      <header class="header">
+        <div class="title">Design tokens for the board</div>
+        <div style="display: flex; gap: var(--ad-gap-xs)">
+          <div class="segmented" data-set="register" role="group" aria-label="Register">
+            <button aria-pressed="true" data-value="product">Product</button>
+            <button aria-pressed="false" data-value="brand">Brand</button>
+          </div>
+          <div class="segmented" data-set="mode" role="group" aria-label="Mode">
+            <button aria-pressed="true" data-value="">Auto</button>
+            <button aria-pressed="false" data-value="light">Light</button>
+            <button aria-pressed="false" data-value="dark">Dark</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="transcript">
+        <div class="column">
+          <div class="user">Which radius should the task cards use?</div>
+
+          <div class="assistant">
+            <p>
+              Use <code>--ad-radius</code> (8px) for the cards and keep 12px for the column they sit
+              in. The column has 4px of padding, so the nested corners stay concentric.
+            </p>
+            <h2>Why not match them</h2>
+            <p>
+              Two boxes with the same radius, one inside the other, look pinched at the corners. The
+              inner radius should be the outer radius minus the padding between them.
+            </p>
+            <pre>.column { border-radius: 12px; padding: 4px; }
+.card   { border-radius: 8px; }</pre>
+            <div class="actions">
+              <button class="btn btn-ghost">Copy</button>
+              <button class="btn btn-ghost">Retry</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: var(--ad-gap-lg); align-items: start">
+            <div style="display: flex; flex-wrap: wrap; gap: var(--ad-gap-xs)">
+              <button class="btn btn-primary">Primary</button>
+              <button class="btn btn-secondary">Secondary</button>
+              <button class="btn btn-ghost">Ghost</button>
+              <button class="btn btn-brand">Brand</button>
+              <button class="btn btn-primary" disabled>Disabled</button>
+            </div>
+            <div class="menu" role="menu">
+              <div class="menu-item" role="menuitem">Rename <kbd>R</kbd></div>
+              <div class="menu-item" role="menuitem">Duplicate <kbd>D</kbd></div>
+              <hr />
+              <div class="menu-item danger" role="menuitem">Delete</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="composer">
+          <textarea placeholder="Reply…" aria-label="Message"></textarea>
+          <div class="composer-bar">
+            <button class="btn btn-ghost">Attach</button>
+            <button class="btn btn-primary">Send</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      for (const group of document.querySelectorAll(".segmented")) {
+        group.addEventListener("click", (event) => {
+          const button = event.target.closest("button");
+          if (!button) return;
+          for (const other of group.children) other.setAttribute("aria-pressed", other === button);
+          const { value } = button.dataset;
+          if (value) document.documentElement.dataset[group.dataset.set] = value;
+          else delete document.documentElement.dataset[group.dataset.set];
+        });
+      }
+    </script>
+  </body>
+</html>

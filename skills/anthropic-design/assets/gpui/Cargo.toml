@@ -1,0 +1,13 @@
+[package]
+name = "anthropic-design-gpui-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+gpui = "=0.2.2"
+
+[features]
+# gpui compiles its Metal shaders at build time, which needs full Xcode. With
+# only the Command Line Tools installed, build with this feature instead.
+runtime_shaders = ["gpui/runtime_shaders"]
