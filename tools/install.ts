@@ -208,7 +208,8 @@ function main(): void {
     join(home, ".cursor", "skills-cursor"),
   ];
 
-  const requiredSkills = ["factory"];
+  // Factory's Review stage runs the reviewers that change-review defines.
+  const requiredSkills = ["factory", "change-review"];
 
   for (const name of requiredSkills) {
     const source = join(repo, "skills", name, "SKILL.md");

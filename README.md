@@ -10,9 +10,18 @@ as Claude-styled HTML with `md <file.md>`.
 | Skill | Task trigger |
 | --- | --- |
 | `factory` | Only `/factory`: route a task through the pipeline, stopping at human gates; task board |
-| `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
+| `change-review` | An explicit review request: code, security, UI and UX reviewers, verdict first |
+| `debugging` | A defect whose cause is not yet proven: reproduce, find the cause, failing test, fix |
+| `maintenance` | Looped review-and-fix subagents per area until two rounds find nothing |
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
+| `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
+
+The catalog holds how we work, not what a library does: each skill is a procedure a
+session follows for one kind of task. Rules that apply to every task belong in
+`AGENTS.md`; project-specific procedures belong in that project's own skill folder;
+library and framework knowledge is installed from its upstream (`npx skills add`) and
+never edited in place.
 
 ## Factory pipeline
 
@@ -28,9 +37,9 @@ goes to the gates.
 | Build | `/factory build` | Code, tests, `DEBRIEF.md`, `REVIEW.md` | Future agents; the user reads the verdict | Fast tests green, regression, acceptance, then heavy gates last |
 | Review | `/factory review` | Review section of `REVIEW.md` | The user, verdict first | Four parallel reviewers (code, security, UI, UX) pass |
 
-Skills use `disable-model-invocation: true` (Claude Code) and
+Factory uses `disable-model-invocation: true` (Claude Code) and
 `agents/openai.yaml` `allow_implicit_invocation: false` (Codex), so hosts never load
-them implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
+it implicitly. Stage commands are thin entrypoints; the [Factory skill](skills/factory/SKILL.md)
 holds the shared contract and `skills/factory/references/<stage>.md` holds each stage's
 method. Tasks live in `~/.agents/factory/<project>/<task>/` with their status in `TASK.md`; the optional board shows the
 stage and the Intent/Design/Plan/Debrief documents.
@@ -132,7 +141,8 @@ npm run install:agents -- --list
 npm run install:agents -- performance
 ```
 
-Selected installs include Factory and the global files. The global
+Selected installs include Factory, `change-review` (Factory's Review stage runs its
+reviewers) and the global files. The global
 `INTENT_TEMPLATE.md`, `DESIGN_TEMPLATE.md`, `PLAN_TEMPLATE.md`, `DEBRIEF_TEMPLATE.md`,
 `REVIEW_TEMPLATE.md` and `SPEC_TEMPLATE.md` aliases point into
 `skills/factory/templates/` (SPEC_TEMPLATE.md is `AREA_TEMPLATE.md`); TASK_TEMPLATE.md

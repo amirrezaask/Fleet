@@ -59,7 +59,7 @@ _Written by `/factory review`: one section per reviewer subagent. Mark a lens "S
 ## Limitations and follow-up
 
 - <What remains unverified and why.>
-- <Out-of-scope findings and their draft-intent tasks; specs updated (paths); or None.>
+- <Out-of-scope findings and their backlog lines; specs updated (paths); or None.>
 
 ## Environment and raw evidence
 

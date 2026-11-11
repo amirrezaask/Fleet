@@ -3834,7 +3834,9 @@ function App() {
       );
       setAnnouncement("Task deleted.");
     } catch {
-      setError("Could not delete the task. Reload to check whether it still exists, then try again.");
+      setError(
+        "Could not delete the task. Reload to check whether it still exists, then try again.",
+      );
       setAnnouncement("Delete failed.");
     }
   }
@@ -3894,7 +3896,9 @@ function App() {
 
   const menuTask = menu ? board?.tasks.find((task) => task.id === menu.task) : undefined;
   const queued = menu?.queue === undefined ? undefined : board?.backlog[menu.queue];
-  const menuQueue = queued && menu?.queue !== undefined ? { ...queued, index: menu.queue } : undefined;
+
+  const menuQueue =
+    queued && menu?.queue !== undefined ? { ...queued, index: menu.queue } : undefined;
 
   const stale = board !== null && projectId !== "" && board.projectId !== projectId;
   const hasProjects = board !== null && board.projects.length > 0;

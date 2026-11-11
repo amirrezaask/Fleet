@@ -1,8 +1,6 @@
 ---
 name: performance
 description: Diagnose and optimize latency, throughput, memory, loading, or frame-time problems. Use for performance investigations, performance-focused reviews, and workload-driven data layout design; ordinary implementation does not trigger it.
-metadata:
-  category: performance
 ---
 
 # Performance engineering
@@ -40,3 +38,8 @@ ordinary resource adapters encapsulated when that boundary fits.
 
 For a finding, name location, workload, evidence or hypothesis, proposed mechanism,
 correctness risk, and verification. A local optimization does not need a large template.
+
+Benchmarks and load tests are heavy runs: do them after the change is complete, under
+[resource-bounded runs](../resource-bounded-runs/SKILL.md) when they are large. Write
+the result as a Markdown summary in `docs/reports/<date>-<title>` (or the Factory task's
+`REVIEW.md`), with raw output gitignored.

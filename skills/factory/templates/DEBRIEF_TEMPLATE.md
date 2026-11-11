@@ -34,4 +34,4 @@ Debrief · build of [PLAN.md](<PLAN.md>) · created <YYYY-MM-DD HH:mm> · <agent
 
 ## Out-of-scope findings
 
-- <Finding, evidence, location, impact, and the draft-intent task created for it; or None. Do not imply it was fixed.>
+- <Finding, evidence, location, impact, and the backlog line added for it; or None. Do not imply it was fixed.>

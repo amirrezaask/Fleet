@@ -104,7 +104,7 @@ test("selected install includes global workflow skills; foreign symlinks are pre
     assert.equal(invoke(home, skill).status, 0);
     assert.deepEqual(
       readdirSync(join(home, ".agents", "skills")).sort(),
-      [...new Set([skill, "factory"])].sort(),
+      [...new Set([skill, "factory", "change-review"])].sort(),
     );
     const destination = join(home, ".codex", "skills", skill);
     rmSync(destination);
@@ -228,7 +228,7 @@ test("foreign template aliases and regular files fail preflight without partial 
 });
 
 test("missing template or required skill fails before any home mutation", () => {
-  for (const missing of ["template", "factory"])
+  for (const missing of ["template", "factory", "change-review"])
     isolated((temporary) => {
       const fixture = join(temporary, "fixture");
       const home = join(temporary, "home");
@@ -237,7 +237,7 @@ test("missing template or required skill fails before any home mutation", () => 
       writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
       writeFileSync(join(fixture, "AGENTS.md"), "global");
 
-      for (const name of ["factory"]) {
+      for (const name of ["factory", "change-review"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });
 
         if (missing !== name) writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
