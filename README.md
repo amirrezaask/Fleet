@@ -16,6 +16,7 @@ as Claude-styled HTML with `md <file.md>`.
 | `performance` | Systems, browser, and GPU performance investigations and optimization |
 | `configure-oxlint` | Base Oxlint/Oxfmt policy and upstream anti-slop skill installation |
 | `resource-bounded-runs` | Large copies and resource-heavy build or test processes |
+| `anthropic-design` | Claude-style or Anthropic-style UI: rules, tokens, component specs, web and Rust GPUI examples |
 
 The catalog holds how we work, not what a library does: each skill is a procedure a
 session follows for one kind of task. Rules that apply to every task belong in
