@@ -384,45 +384,38 @@ function readJson(path: string) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-test("registers the session budget hook once, preserving existing settings and hooks", () =>
+test("retires the session hook, preserving existing settings and hooks", () =>
   isolated((home) => {
     const settings = join(home, ".claude", "settings.json");
     const other = { matcher: "*", hooks: [{ type: "command", command: "echo keep" }] };
-    mkdirSync(join(home, ".claude"));
+    const ours = { hooks: [{ type: "command", command: `node ${budgetHook}` }] };
+    const link = join(home, ".claude", "hooks", budgetHook);
+    mkdirSync(join(home, ".claude", "hooks"), { recursive: true });
+    symlinkSync(join(root, "tools", budgetHook), link);
     writeFileSync(
       settings,
-      JSON.stringify({ model: "sonnet", hooks: { PostToolUse: [other], Stop: [other] } }),
+      JSON.stringify({
+        model: "sonnet",
+        hooks: {
+          SessionStart: [ours],
+          PreToolUse: [{ matcher: "AskUserQuestion", ...ours }],
+          Stop: [other, ours],
+        },
+      }),
     );
 
     assert.equal(invoke(home, "--dry-run").status, 0);
-    assert.equal(readJson(settings).hooks.PostToolUse.length, 1);
+    assert.equal(readJson(settings).hooks.Stop.length, 2);
+    assert.ok(lstatSync(link).isSymbolicLink());
 
     assert.equal(invoke(home).status, 0);
     const installed = readJson(settings);
     assert.equal(installed.model, "sonnet");
-    const link = join(home, ".claude", "hooks", budgetHook);
-    assert.equal(readlinkSync(link), join(root, "tools", budgetHook));
-
-    assert.deepEqual(installed.hooks.Stop[0], other);
-    assert.equal(installed.hooks.Stop.length, 2);
-
-    for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
-      const ours = installed.hooks[event].at(-1);
-      assert.ok(ours.hooks[0].command.includes(link));
-    }
-
-    assert.deepEqual(installed.hooks.PostToolUse, [other]);
+    assert.deepEqual(installed.hooks, { Stop: [other] });
     assert.equal(installed.autoCompactWindow, 300_000);
-    assert.match(installed.hooks.PreToolUse[0].matcher, /AskUserQuestion/);
-    assert.equal(installed.hooks.Stop[1].matcher, undefined);
+    assert.equal(existsSync(link), false);
 
     const before = readFileSync(settings, "utf8");
-    assert.equal(invoke(home).status, 0);
-    assert.equal(readFileSync(settings, "utf8"), before);
-
-    installed.hooks.Stop[1].hooks[0].command = `old ${budgetHook}`;
-    installed.hooks.PreToolUse[0].matcher = "*";
-    writeFileSync(settings, JSON.stringify(installed));
     assert.equal(invoke(home).status, 0);
     assert.equal(readFileSync(settings, "utf8"), before);
   }));
@@ -459,251 +452,4 @@ test("unparseable settings.json fails before any home mutation", () =>
     assert.equal(readFileSync(join(home, ".claude", "settings.json"), "utf8"), "{ not json");
     assert.equal(existsSync(join(home, ".agents")), false);
     assert.equal(existsSync(join(home, ".claude", "hooks")), false);
-  }));
-
-interface ToolArgs {
-  recap?: string;
-  ask?: string;
-  initiation?: string;
-  file_path?: string;
-}
-
-interface HookPayload {
-  cwd?: string;
-  hook_event_name?: string;
-  transcript_path?: string;
-  tool_name?: string;
-  tool_input?: ToolArgs;
-  tool_use_id?: string;
-  agent_id?: string;
-  source?: string;
-  stop_hook_active?: boolean;
-  last_assistant_message?: string;
-}
-
-interface HookEnv {
-  SESSION_AUTONOMY?: string;
-  SESSION_STOP_BLOCKS?: string;
-}
-
-// Synthetic transcript records in Claude Code's JSONL shape.
-const readCall = (filePath: string) =>
-  JSON.stringify({
-    type: "assistant",
-    isSidechain: false,
-    message: {
-      content: [{ type: "tool_use", id: "t1", name: "Read", input: { file_path: filePath } }],
-    },
-  });
-
-const toolUse = (name: string, id: string, messageId: string) =>
-  JSON.stringify({
-    type: "assistant",
-    message: { id: messageId, content: [{ type: "tool_use", id, name, input: {} }] },
-  });
-
-function hookSession(
-  run: (hook: (input: HookPayload, env?: HookEnv) => string, home: string) => void,
-) {
-  isolated((home) => {
-    const sessionId = `hook-test-${process.pid}-${Math.random().toString(36).slice(2)}`;
-
-    const hook = (input: HookPayload, env: HookEnv = {}) => {
-      const result = spawnSync(process.execPath, [join(root, "tools", budgetHook)], {
-        env: {
-          ...process.env,
-          HOME: home,
-          FACTORY_HOME: join(home, "factory"),
-          ...env,
-        },
-        input: JSON.stringify({ session_id: sessionId, cwd: home, ...input }),
-        encoding: "utf8",
-      });
-
-      assert.equal(result.status, 0, result.stderr);
-
-      return result.stdout;
-    };
-
-    try {
-      run(hook, home);
-    } finally {
-      rmSync(join(tmpdir(), `session-hooks-${sessionId.replace(/\W/g, "_")}.json`), {
-        force: true,
-      });
-    }
-  });
-}
-
-test("PreToolUse denies questions to ADMIN and unchecked or forked sessions", () =>
-  hookSession((hook, home) => {
-    const transcript = join(home, "t.jsonl");
-
-    const pre = (tool_name: string, tool_input: ToolArgs = {}, extra: HookPayload = {}) =>
-      hook({
-        hook_event_name: "PreToolUse",
-        transcript_path: transcript,
-        tool_name,
-        tool_input,
-        tool_use_id: "toolu_now",
-        ...extra,
-      });
-
-    const denied = (output: string) =>
-      JSON.parse(output).hookSpecificOutput.permissionDecision === "deny";
-
-    writeFileSync(transcript, "");
-    assert.ok(denied(pre("AskUserQuestion")));
-    assert.ok(denied(pre("mcp__ccd_turn__wrap_up", { recap: "r", ask: "Start it?" })));
-    assert.equal(pre("mcp__ccd_turn__wrap_up", { recap: "r" }), "");
-    assert.ok(denied(pre("mcp__ccd_session__hand_off_to_session")));
-    assert.ok(denied(pre("mcp__ccd_session__start_session", { initiation: "offer" })));
-
-    const start = "mcp__ccd_session__start_session";
-    const list = "mcp__ccd_session_mgmt__list_sessions";
-    assert.ok(denied(pre(start, { initiation: "user_asked" })));
-
-    writeFileSync(
-      transcript,
-      `${toolUse(list, "toolu_l1", "m1")}\n${toolUse(start, "toolu_now", "m2")}\n`,
-    );
-    assert.equal(pre(start, { initiation: "user_asked" }), "");
-
-    writeFileSync(
-      transcript,
-      [
-        toolUse(list, "toolu_l1", "m1"),
-        toolUse(start, "toolu_s1", "m2"),
-        toolUse(start, "toolu_now", "m2"),
-      ].join("\n"),
-    );
-    assert.equal(pre(start), "", "sibling calls after one list_sessions are allowed");
-
-    writeFileSync(
-      transcript,
-      [
-        toolUse(list, "toolu_l1", "m1"),
-        toolUse(start, "toolu_s1", "m2"),
-        toolUse(start, "toolu_now", "m3"),
-      ].join("\n"),
-    );
-    assert.ok(denied(pre(start)), "a later start needs a fresh list_sessions");
-
-    assert.equal(pre(start, {}, { agent_id: "sub" }), "");
-    assert.ok(denied(pre("AskUserQuestion", {}, { agent_id: "sub" })));
-    assert.equal(
-      hook(
-        { hook_event_name: "PreToolUse", tool_name: "AskUserQuestion" },
-        { SESSION_AUTONOMY: "off" },
-      ),
-      "",
-    );
-  }));
-
-test("Stop blocks questions to ADMIN while a touched task is in progress, with a loop guard", () =>
-  hookSession((hook, home) => {
-    const task = join(home, "factory", "some-project", "epic", "subtasks", "leaf");
-
-    mkdirSync(task, { recursive: true });
-    writeFileSync(join(task, "TASK.md"), "status: inprogress\n## Blocker\nNone\n");
-    const transcript = join(home, "t.jsonl");
-    const read = readCall(join(task, "PLAN.md"));
-    writeFileSync(transcript, `${read}\n`);
-
-    // A raised block cap keeps every scenario below observable in one session.
-    const stop = (last_assistant_message: string, extra: HookPayload = {}) =>
-      hook(
-        {
-          hook_event_name: "Stop",
-          transcript_path: transcript,
-          last_assistant_message,
-          ...extra,
-        },
-        { SESSION_STOP_BLOCKS: "20" },
-      );
-
-    assert.equal(stop("Committed M3. Next I start M4."), "");
-    const blocked = JSON.parse(stop("M3 is done.\n\nStart the continuation session?"));
-    assert.equal(blocked.decision, "block");
-    assert.ok(blocked.reason.includes(task));
-    assert.equal(
-      stop("Waiting on you for the branch name.", { stop_hook_active: true }),
-      "",
-      "no work since block",
-    );
-
-    writeFileSync(transcript, `${read}\n${read}\n`);
-    assert.match(stop("Should I keep going?", { stop_hook_active: true }), /"block"/);
-
-    writeFileSync(
-      join(task, "TASK.md"),
-      "status: inprogress\n## Blocker\nBRIEF R2 conflicts with the engine API.\n",
-    );
-    assert.equal(stop("Which option do you want?"), "", "an escalated task may end");
-
-    writeFileSync(join(task, "TASK.md"), "status: inprogress\n## Blocker\nNone\n");
-
-    // A legacy task with only a TASK.html is still read.
-    rmSync(join(task, "TASK.md"));
-
-    const html = (blocker: string, status = "inprogress") =>
-      `<meta name="status" content="${status}"><main><h1>Leaf</h1><h2>Blocker</h2>\n<p>${blocker}</p>\n<h2>Outcome</h2><p>None</p></main>`;
-
-    writeFileSync(join(task, "TASK.html"), html("&lt;Reason when blocked; otherwise None.&gt;"));
-    writeFileSync(transcript, `${readCall(join(task, "PLAN.html"))}\n`);
-    assert.match(
-      stop("Which option?"),
-      /"block"/,
-      "TASK.html template placeholder is not a blocker",
-    );
-    writeFileSync(join(task, "TASK.html"), html("BRIEF R2 conflicts with the engine API."));
-    assert.equal(stop("Which option do you want?"), "", "an escalated TASK.html task may end");
-
-    writeFileSync(join(task, "TASK.html"), html("None"));
-    writeFileSync(transcript, `${readCall(join(task, "INTENT.html"))}\n`);
-    assert.match(stop("Which option?"), /"block"/, "touching INTENT.html marks the task");
-
-    writeFileSync(transcript, `${readCall(join(task, "PLAN.html"))}\n`);
-    writeFileSync(join(task, "TASK.html"), html("None", "done"));
-    assert.equal(stop("Anything else?"), "", "a task moved to another status may end");
-
-    rmSync(join(home, "factory"), { recursive: true });
-    assert.equal(stop("Anything else?"), "", "a finished or moved task may end");
-  }));
-
-test("SessionStart lists in-progress leaf tasks and re-grounds after compaction", () =>
-  hookSession((hook, home) => {
-    const cwd = join(home, "dev", "app");
-
-    assert.equal(hook({ hook_event_name: "SessionStart", source: "startup", cwd }), "");
-    const tasks = join(home, "factory", "dev", "app");
-
-    const status = (name: string, value: string) => {
-      mkdirSync(join(tasks, name), { recursive: true });
-      writeFileSync(join(tasks, name, "TASK.md"), `status: ${value}\n`);
-    };
-
-    status("epic", "inprogress");
-    status("epic/subtasks/leaf", "inprogress");
-    status("epic/subtasks/other-step", "done");
-    status("solo", "inprogress");
-    mkdirSync(join(tasks, "solo", "design"), { recursive: true });
-    status("idle", "backlog");
-    status("idle/subtasks/child", "inprogress");
-
-    const start = JSON.parse(
-      hook({ hook_event_name: "SessionStart", source: "startup", cwd }),
-    ).hookSpecificOutput;
-
-    assert.equal(start.hookEventName, "SessionStart");
-    assert.match(start.additionalContext, /list_sessions/);
-    const listed = /In-progress leaf tasks here: (.*)\./.exec(start.additionalContext)?.[1];
-    assert.deepEqual(listed?.split(", ").sort(), [
-      join(tasks, "epic/subtasks/leaf"),
-      join(tasks, "solo"),
-    ]);
-    assert.match(
-      hook({ hook_event_name: "SessionStart", source: "compact", cwd }),
-      /re-read the task/,
-    );
   }));

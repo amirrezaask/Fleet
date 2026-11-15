@@ -86,12 +86,8 @@ const retiredWorkflowSkills = [
 // the "Compact Instructions" section of AGENTS.md steers what the summary keeps.
 const autoCompactWindow = 300_000;
 
-// Events our entry used to be registered for.
-const retiredHookEvents = ["PostToolUse"];
-
-function quote(path: string): string {
-  return `'${path.replaceAll("'", "'\\''")}'`;
-}
+// Events the retired session hook was registered for; reruns remove its entries.
+const retiredHookEvents = ["PostToolUse", "SessionStart", "PreToolUse", "Stop"];
 
 function readSettings(path: string): Settings {
   if (!present(path)) return {};
@@ -111,20 +107,9 @@ function readSettings(path: string): Settings {
   }
 }
 
-// One script serves every session hook event; it dispatches on hook_event_name.
-// PreToolUse only needs the tools it governs, so other tool calls skip the process.
-const budgetHookEvents: [string, string | undefined][] = [
-  ["SessionStart", undefined],
-  [
-    "PreToolUse",
-    "AskUserQuestion|mcp__ccd_turn__wrap_up|mcp__ccd_session__start_session|mcp__ccd_session__hand_off_to_session",
-  ],
-  ["Stop", undefined],
-];
-
-// Registers the session hook once per event. A rerun only rewrites our own entry
-// (found by script name), so other hooks in settings.json are never touched.
-function registerBudgetHook(path: string, settings: Settings, command: string, write: boolean) {
+// Removes the retired session hook's entries (found by script name), so other
+// hooks in settings.json are never touched.
+function retireBudgetHook(path: string, settings: Settings, write: boolean) {
   let changed = false;
 
   for (const event of retiredHookEvents) {
@@ -151,27 +136,6 @@ function registerBudgetHook(path: string, settings: Settings, command: string, w
     console.log(`set autoCompactWindow ${autoCompactWindow} in ${path}`);
     settings.autoCompactWindow = autoCompactWindow;
     changed = true;
-  }
-
-  for (const [event, matcher] of budgetHookEvents) {
-    const groups = ((settings.hooks ??= {})[event] ??= []);
-
-    const group = groups.find((entry) =>
-      entry.hooks?.some((hook) => hook.command?.includes(budgetHook)),
-    );
-
-    const known = group?.hooks?.find((hook) => hook.command?.includes(budgetHook));
-
-    if (group && known?.command === command && group.matcher === matcher) continue;
-
-    console.log(`${known ? "update" : "add"} ${event} hook in ${path}`);
-
-    changed = true;
-
-    if (group && known) {
-      known.command = command;
-      group.matcher = matcher;
-    } else groups.push({ matcher, hooks: [{ type: "command", command, timeout: 10 }] });
   }
 
   if (changed && write) writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
@@ -231,11 +195,7 @@ function main(): void {
     { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
   ];
 
-  for (const path of [
-    ...globalFiles.map((file) => file.path),
-    join("tools", budgetHook),
-    join("tools", markdownViewer),
-  ]) {
+  for (const path of [...globalFiles.map((file) => file.path), join("tools", markdownViewer)]) {
     const source = join(repo, path);
 
     if (!existsSync(source) || !statSync(source).isFile()) {
@@ -270,10 +230,6 @@ function main(): void {
       names.map((name) => ({ source: join(repo, "skills", name), destination: join(base, name) })),
     ),
     {
-      source: join(repo, "tools", budgetHook),
-      destination: join(home, ".claude", "hooks", budgetHook),
-    },
-    {
       source: join(repo, "skills", "factory", "assets", "task-board", "bin.js"),
       destination: join(home, ".local", "bin", "production-line"),
     },
@@ -285,7 +241,6 @@ function main(): void {
 
   const settingsPath = join(home, ".claude", "settings.json");
   const settings = readSettings(settingsPath);
-  const hookCommand = `${quote(process.execPath)} ${quote(join(home, ".claude", "hooks", budgetHook))}`;
 
   const legacy = join(home, "dev", "Amirreza.md");
 
@@ -376,6 +331,16 @@ function main(): void {
     }
   }
 
+  const oldHook = join(home, ".claude", "hooks", budgetHook);
+
+  if (
+    present(oldHook) &&
+    lstatSync(oldHook).isSymbolicLink() &&
+    resolve(dirname(oldHook), readlinkSync(oldHook)) === join(repo, "tools", budgetHook)
+  ) {
+    removals.push(oldHook);
+  }
+
   for (const destination of removals) {
     console.log(`remove retired link ${destination}`);
 
@@ -395,7 +360,7 @@ function main(): void {
     }
   }
 
-  registerBudgetHook(settingsPath, settings, hookCommand, !options.has("--dry-run"));
+  retireBudgetHook(settingsPath, settings, !options.has("--dry-run"));
 }
 
 try {
