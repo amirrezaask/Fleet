@@ -44,6 +44,11 @@ function main(): void {
   );
 
   if (!registered) {
+    // Quitting clears the vaults' open flags; restore them so they reopen with the new one.
+    const wasOpen = Object.entries(readRegistry().vaults)
+      .filter(([, vault]) => vault.open)
+      .map(([id]) => id);
+
     if (running()) {
       console.log("restart Obsidian to register the vault");
 
@@ -55,6 +60,8 @@ function main(): void {
     if (!dryRun) {
       // Read after quitting: Obsidian saves its registry on quit.
       const registry = readRegistry();
+
+      for (const id of wasOpen) if (registry.vaults[id]) registry.vaults[id].open = true;
       registry.vaults[randomBytes(8).toString("hex")] = {
         path: target,
         ts: Date.now(),
