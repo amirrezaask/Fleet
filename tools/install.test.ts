@@ -67,13 +67,15 @@ test("installs individual skills and globals; repeated installs preserve unrelat
     assert.equal(readlinkSync(join(base, skill)), join(root, "skills", skill));
     assert.equal(readlinkSync(join(home, ".codex", "AGENTS.md")), join(root, "AGENTS.md"));
     assert.equal(readlinkSync(join(home, ".local", "bin", "md")), join(root, "tools", "md.ts"));
-    assert.equal(
-      readlinkSync(join(home, ".local", "bin", "obsidian")),
-      join(root, "tools", "obsidian.ts"),
-    );
+
+    for (const name of ["obsidian", "recall", "tasks-index"])
+      assert.equal(
+        readlinkSync(join(home, ".local", "bin", name)),
+        join(root, "tools", `${name}.ts`),
+      );
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
-    assert.equal(existsSync(join(home, ".agents", "memory", "MEMORY.md")), true);
+    assert.equal(existsSync(join(home, ".agents", "MEMORY.md")), true);
     assert.equal(existsSync(join(home, ".agents", ".gitignore")), true);
     assert.equal(invoke(home).status, 0);
     assert.equal(readFileSync(join(base, "unrelated"), "utf8"), "keep");
@@ -180,7 +182,7 @@ const factoryTemplate = (name: string) =>
 
 test("seeds the vault without replacing files agents or Obsidian changed", () =>
   isolated((home) => {
-    const index = join(home, ".agents", "memory", "MEMORY.md");
+    const index = join(home, ".agents", "MEMORY.md");
     mkdirSync(dirname(index), { recursive: true });
     writeFileSync(index, "mine");
     assert.equal(invoke(home).status, 0);
@@ -246,7 +248,9 @@ test("missing bundled file or required skill fails before any home mutation", ()
       writeFileSync(join(fixture, "AGENTS.md"), "global");
 
       if (missing !== "md") writeFileSync(join(fixture, "tools", "md.ts"), "viewer");
-      writeFileSync(join(fixture, "tools", "obsidian.ts"), "opener");
+
+      for (const file of ["obsidian.ts", "recall.ts", "tasks-index.ts", "vault.ts"])
+        writeFileSync(join(fixture, "tools", file), "tool");
 
       for (const name of ["agentic-memory", "change-review"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });

@@ -63,7 +63,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
 ## Agent memory vault
-`~/.agents` is an Obsidian vault and a Git repository shared by every agent: `memory/` holds one fact per note indexed by `memory/MEMORY.md`, and `projects/<project>/` holds each project's notes and tasks. Read `memory/MEMORY.md` at the start of a task, write memories and task documents there, and commit only the paths you changed. The `agentic-memory` skill (`~/.agents/skills/agentic-memory/`) holds the conventions and the document templates.
+`~/.agents` is an Obsidian vault and a Git repository shared by every agent. `~/.agents/MEMORY.md` is ADMIN's long-term memory (agents write to it only when ADMIN asks); each `projects/<project>/` holds the project's `MEMORY.md` (rules and decisions), a generated `TASKS.md` index and its `tasks/`. Run `recall <keywords>` at the start of a task, record project rules and decisions in the project's `MEMORY.md`, and commit only the vault paths you changed. The `agentic-memory` skill (`~/.agents/skills/agentic-memory/`) holds the conventions and the document templates.
 
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
