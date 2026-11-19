@@ -63,7 +63,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
 ## Agent memory vault
-`~/.agents` is an Obsidian vault and a Git repository shared by every agent. `~/.agents/MEMORY.md` is ADMIN's long-term memory (agents write to it only when ADMIN asks); each `projects/<project>/` holds the project's `MEMORY.md` (rules and decisions), a generated `TASKS.md` index and its `tasks/`. Run `recall <keywords>` at the start of a task, record project rules and decisions in the project's `MEMORY.md`, and commit only the vault paths you changed. The `agentic-memory` skill (`~/.agents/skills/agentic-memory/`) holds the conventions and the document templates.
+`~/.agents` is an Obsidian vault and a Git repository shared by every agent. `~/.agents/memory/` is the one memory every agent shares, in Claude Code's auto-memory format (one fact per file, indexed by `memory/MEMORY.md`; Claude's own memory folders link to it); each `projects/<project>/` holds a generated `TASKS.md` index and its `tasks/`. Read `~/.agents/memory/MEMORY.md` and run `recall <keywords>` at the start of a task, save what is worth remembering across sessions as a memory, and commit only the vault paths you changed. The `agentic-memory` skill (`~/.agents/skills/agentic-memory/`) holds the conventions and the document templates.
 
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:

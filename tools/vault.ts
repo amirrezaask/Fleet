@@ -10,14 +10,14 @@ export const projectsRoot = join(vault, "projects");
 const inside = (path: string, root: string) => path.startsWith(root + sep);
 
 // The project key of a directory. Inside the vault it is the projects/ folder holding it
-// (the nearest ancestor with MEMORY.md, TASKS.md or tasks/); elsewhere it is the main
+// (the nearest ancestor with TASKS.md or tasks/); elsewhere it is the main
 // checkout's path relative to home, e.g. dev/GameBox.
 export function projectOf(directory: string): string | undefined {
   const start = resolve(directory);
 
   if (inside(start, projectsRoot)) {
     for (let path = start; inside(path, projectsRoot); path = dirname(path)) {
-      if (["MEMORY.md", "TASKS.md", "tasks"].some((name) => existsSync(join(path, name))))
+      if (["TASKS.md", "tasks"].some((name) => existsSync(join(path, name))))
         return relative(projectsRoot, path);
     }
 

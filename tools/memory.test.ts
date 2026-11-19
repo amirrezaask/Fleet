@@ -32,17 +32,22 @@ function write(path: string, text: string) {
 
 function seed(home: string) {
   const project = join(home, ".agents", "projects", "dev", "app");
+  const memory = join(home, ".agents", "memory");
   write(
-    join(home, ".agents", "MEMORY.md"),
-    "# Memory\n\n## Rules\n\n- Always use Effect in TypeScript.\n- Prefer pnpm.\n",
+    join(memory, "MEMORY.md"),
+    "# Memory\n\n- [Effect everywhere](effect.md) — TypeScript rule\n\n## dev/app\n\n- [Launcher](launcher.md) — Electron decision\n",
   );
   write(
-    join(project, "MEMORY.md"),
-    "# App memory\n\n## Decisions\n\n- 2026-11-19 Use Electron for the launcher:\n  pinned Chromium.\n\nLauncher builds run on CI only.\n",
+    join(memory, "effect.md"),
+    "---\nname: effect\ndescription: Always use Effect in TypeScript\nmetadata:\n  type: feedback\n---\n\nUse Effect in every TypeScript project.\n\n**Why:** ADMIN's stack rule.\n",
   );
   write(
-    join(home, ".agents", "projects", "dev", "other", "MEMORY.md"),
-    "# Other\n\n- Electron is banned here.\n",
+    join(memory, "launcher.md"),
+    '---\nname: launcher\ndescription: "dev/app: the launcher uses Electron"\nmetadata:\n  type: project\n---\n\n- 2026-11-19 Use Electron for the launcher:\n  pinned Chromium.\n\nLauncher builds run on CI only.\n',
+  );
+  write(
+    join(home, ".agents", "projects", "dev", "other", "TASKS.md"),
+    "# dev/other tasks\n\n- [001-ban](tasks/001-ban/TASK.md) · done · Electron is banned here\n",
   );
   write(
     join(project, "tasks", "001-launcher", "TASK.md"),
@@ -79,25 +84,25 @@ test("tasks-index writes one line per task and subtask from TASK.md frontmatter"
     );
   }));
 
-test("recall returns matching bullets and paragraphs from global and current project memory, best first", () =>
+test("recall returns matching chunks from every memory and the current project's tasks, best first", () =>
   isolated((home) => {
     const project = seed(home);
+    invoke(home, project, "tasks-index.ts");
     const result = invoke(home, project, "recall.ts", "electron", "launcher");
     assert.equal(result.status, 0, result.stderr);
-    const [first, second] = result.stdout.split("\n\n");
     assert.equal(
-      first,
-      "projects/dev/app/MEMORY.md:5 › App memory › Decisions\n- 2026-11-19 Use Electron for the launcher:\n  pinned Chromium.",
+      result.stdout.split("\n\n")[0],
+      "memory/launcher.md:8 › launcher: dev/app: the launcher uses Electron\n- 2026-11-19 Use Electron for the launcher:\n  pinned Chromium.",
     );
-    assert.match(
-      second ?? "",
-      /^projects\/dev\/app\/MEMORY.md:8 .*\nLauncher builds run on CI only\.$/,
-    );
-    assert.doesNotMatch(result.stdout, /banned/);
+    assert.match(result.stdout, /memory\/MEMORY.md:7 › Memory › dev\/app\n- \[Launcher\]/);
+    assert.match(result.stdout, /projects\/dev\/app\/TASKS.md:5 /);
+    assert.doesNotMatch(result.stdout, /banned|type: project/);
 
-    const global = invoke(home, project, "recall.ts", "EFFECT");
-    assert.match(global.stdout, /^MEMORY.md:5 › Memory › Rules\n- Always use Effect/);
-    assert.doesNotMatch(global.stdout, /pnpm/);
+    const effect = invoke(home, project, "recall.ts", "EFFECT");
+    assert.match(
+      effect.stdout,
+      /memory\/effect.md:8 › effect: Always use Effect in TypeScript\nUse Effect/,
+    );
   }));
 
 test("recall --all searches every project; a git checkout maps to its project", () =>
@@ -111,9 +116,6 @@ test("recall --all searches every project; a git checkout maps to its project", 
       invoke(home, join(checkout, "src"), "recall.ts", "chromium").stdout,
       /pinned Chromium/,
     );
-    assert.match(
-      invoke(home, home, "recall.ts", "nothing-here").stdout,
-      /^No matches in MEMORY.md/,
-    );
+    assert.match(invoke(home, home, "recall.ts", "nothing-here").stdout, /^No matches in memory\//);
     assert.notEqual(invoke(home, home, "recall.ts").status, 0);
   }));

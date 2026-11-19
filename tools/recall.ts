@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // recall <keyword...> [--all]: print the bullets and paragraphs of the agent memory vault
 // that match the keywords, best first, each with its file, line and heading path. Searches
-// ~/.agents/MEMORY.md and the current project's MEMORY.md and TASKS.md; --all searches
-// every project.
+// every memory in ~/.agents/memory/ and the current project's TASKS.md; --all searches
+// every project's TASKS.md.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { projectOf, projectsRoot, vault } from "./vault.ts";
@@ -16,20 +16,23 @@ interface Chunk {
   text: string;
 }
 
-// Every project's MEMORY.md and TASKS.md, without descending into task folders.
-function projectFiles(directory: string): string[] {
+const memories = join(vault, "memory");
+
+// Every project's TASKS.md, without descending into task folders.
+function taskIndexes(directory: string): string[] {
   if (!existsSync(directory)) return [];
 
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
 
-    if (entry.isDirectory()) return entry.name === "tasks" ? [] : projectFiles(path);
+    if (entry.isDirectory()) return entry.name === "tasks" ? [] : taskIndexes(path);
 
-    return ["MEMORY.md", "TASKS.md"].includes(entry.name) ? [path] : [];
+    return entry.name === "TASKS.md" ? [path] : [];
   });
 }
 
-// A chunk is one top-level bullet (with its continuation lines) or one paragraph.
+// A chunk is one top-level bullet (with its continuation lines) or one paragraph. A
+// memory's frontmatter is not a chunk: its name and description head the file's chunks.
 function chunks(path: string): Chunk[] {
   const found: Chunk[] = [];
   const headings: string[] = [];
@@ -47,7 +50,26 @@ function chunks(path: string): Chunk[] {
     current = undefined;
   };
 
-  for (const [index, line] of readFileSync(path, "utf8").split("\n").entries()) {
+  const lines = readFileSync(path, "utf8").split("\n");
+  let start = 0;
+
+  const end = lines[0] === "---" ? lines.indexOf("---", 1) : -1;
+
+  if (end > 0) {
+    const field = (key: string) =>
+      lines
+        .slice(1, end)
+        .find((line) => line.startsWith(`${key}:`))
+        ?.slice(key.length + 1)
+        .trim()
+        .replace(/^"(.*)"$/, "$1");
+
+    headings[0] = [field("name"), field("description")].filter(Boolean).join(": ");
+    start = end + 1;
+  }
+
+  for (const [index, line] of lines.entries()) {
+    if (index < start) continue;
     const fence = /^\s*```/.test(line);
 
     if (fenced || fence) {
@@ -62,7 +84,7 @@ function chunks(path: string): Chunk[] {
 
     if (heading) {
       flush();
-      const level = heading[1]!.length;
+      const level = heading[1]!.length + (start ? 1 : 0);
       headings.length = level - 1;
       headings[level - 1] = heading[2]!.trim();
     } else if (!line.trim()) flush();
@@ -86,11 +108,18 @@ function main(): void {
   const project = projectOf(process.cwd());
 
   const sources = [
-    join(vault, "MEMORY.md"),
+    ...(existsSync(memories)
+      ? readdirSync(memories)
+          .filter((name) => name.endsWith(".md"))
+          .sort(
+            (a, b) => Number(b === "MEMORY.md") - Number(a === "MEMORY.md") || a.localeCompare(b),
+          )
+          .map((name) => join(memories, name))
+      : []),
     ...(args.includes("--all")
-      ? projectFiles(projectsRoot)
+      ? taskIndexes(projectsRoot)
       : project
-        ? ["MEMORY.md", "TASKS.md"].map((name) => join(projectsRoot, project, name))
+        ? [join(projectsRoot, project, "TASKS.md")]
         : []),
   ].filter((path) => existsSync(path));
 
@@ -106,7 +135,9 @@ function main(): void {
     .sort((a, b) => b.hits - a.hits || b.count - a.count || a.order - b.order);
 
   if (!matches.length) {
-    console.log(`No matches in ${sources.map((path) => relative(vault, path)).join(", ")}`);
+    console.log(
+      `No matches in ${["memory/", ...sources.flatMap((path) => (path.startsWith(memories) ? [] : [relative(vault, path)]))].join(", ")}`,
+    );
 
     return;
   }

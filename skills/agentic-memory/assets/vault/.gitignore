@@ -1,7 +1,7 @@
-# The vault tracks memory and projects only; skills/, tools/ and AGENTS.md are installed links.
+# The vault tracks memory/ and projects/ only; skills/, tools/ and AGENTS.md are installed links.
 /*
 !/.gitignore
-!/MEMORY.md
+!/memory/
 !/projects/
 !/.obsidian/
 /.obsidian/*

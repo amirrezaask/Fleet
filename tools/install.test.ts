@@ -75,7 +75,7 @@ test("installs individual skills and globals; repeated installs preserve unrelat
       );
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
-    assert.equal(existsSync(join(home, ".agents", "MEMORY.md")), true);
+    assert.equal(existsSync(join(home, ".agents", "memory", "MEMORY.md")), true);
     assert.equal(existsSync(join(home, ".agents", ".gitignore")), true);
     assert.equal(invoke(home).status, 0);
     assert.equal(readFileSync(join(base, "unrelated"), "utf8"), "keep");
@@ -182,12 +182,29 @@ const factoryTemplate = (name: string) =>
 
 test("seeds the vault without replacing files agents or Obsidian changed", () =>
   isolated((home) => {
-    const index = join(home, ".agents", "MEMORY.md");
+    const index = join(home, ".agents", "memory", "MEMORY.md");
     mkdirSync(dirname(index), { recursive: true });
     writeFileSync(index, "mine");
     assert.equal(invoke(home).status, 0);
     assert.equal(readFileSync(index, "utf8"), "mine");
     assert.equal(existsSync(join(home, ".agents", ".obsidian", "app.json")), true);
+  }));
+
+test("points Claude's auto-memory at the vault and links empty memory folders only", () =>
+  isolated((home) => {
+    const projects = join(home, ".claude", "projects");
+    const memory = join(home, ".agents", "memory");
+    mkdirSync(join(projects, "-empty", "memory"), { recursive: true });
+    mkdirSync(join(projects, "-full", "memory"), { recursive: true });
+    writeFileSync(join(projects, "-full", "memory", "fact.md"), "keep");
+    assert.equal(invoke(home, "--dry-run").status, 0);
+    assert.equal(lstatSync(join(projects, "-empty", "memory")).isDirectory(), true);
+    assert.equal(invoke(home).status, 0);
+    assert.equal(readlinkSync(join(projects, "-empty", "memory")), memory);
+    assert.equal(readFileSync(join(projects, "-full", "memory", "fact.md"), "utf8"), "keep");
+    const settings = JSON.parse(readFileSync(join(home, ".claude", "settings.json"), "utf8"));
+    assert.equal(settings.autoMemoryDirectory, "~/.agents/memory");
+    assert.equal(invoke(home).status, 0);
   }));
 
 test("dry-run keeps Factory template aliases and installs retire them; foreign ones stay", () =>

@@ -7,6 +7,7 @@ import {
   readdirSync,
   readlinkSync,
   realpathSync,
+  rmSync,
   statSync,
   symlinkSync,
   unlinkSync,
@@ -60,6 +61,7 @@ interface HookGroup {
 
 interface Settings {
   autoCompactWindow?: number | string;
+  autoMemoryDirectory?: string;
   hooks?: Record<string, HookGroup[]>;
 }
 
@@ -93,6 +95,7 @@ const retiredWorkflowSkills = [
 // Claude Code compacts the session itself once context reaches this many tokens;
 // the "Compact Instructions" section of AGENTS.md steers what the summary keeps.
 const autoCompactWindow = 300_000;
+const autoMemoryDirectory = "~/.agents/memory";
 
 // Events the retired session hook was registered for; reruns remove its entries.
 const retiredHookEvents = ["PostToolUse", "SessionStart", "PreToolUse", "Stop"];
@@ -146,7 +149,41 @@ function retireBudgetHook(path: string, settings: Settings, write: boolean) {
     changed = true;
   }
 
+  if (settings.autoMemoryDirectory === undefined) {
+    console.log(`set autoMemoryDirectory ${autoMemoryDirectory} in ${path}`);
+    settings.autoMemoryDirectory = autoMemoryDirectory;
+    changed = true;
+  }
+
   if (changed && write) writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
+}
+
+// Claude Code's per-project memory folders become links to the vault's one memory folder.
+// A folder that still holds memories is left alone, so nothing is lost.
+function linkClaudeMemory(home: string, write: boolean) {
+  const projects = join(home, ".claude", "projects");
+  const memory = join(home, ".agents", "memory");
+
+  if (!present(projects)) return;
+
+  for (const project of readdirSync(projects).sort()) {
+    const folder = join(projects, project, "memory");
+
+    if (!present(folder)) continue;
+
+    if (lstatSync(folder).isSymbolicLink()) {
+      if (resolve(dirname(folder), readlinkSync(folder)) === memory) continue;
+    } else if (readdirSync(folder).length) {
+      console.log(`keep ${folder}: move its memories into ${memory}, then reinstall`);
+      continue;
+    }
+
+    console.log(`link ${folder} -> ${memory}`);
+
+    if (!write) continue;
+    rmSync(folder, { recursive: true });
+    symlinkSync(memory, folder);
+  }
 }
 
 const vaultSeed = join(repo, "skills", "agentic-memory", "assets", "vault");
@@ -376,6 +413,7 @@ function main(): void {
 
   seedVault(join(home, ".agents"), !options.has("--dry-run"));
   retireBudgetHook(settingsPath, settings, !options.has("--dry-run"));
+  linkClaudeMemory(home, !options.has("--dry-run"));
 }
 
 try {
