@@ -40,7 +40,9 @@ There is no pipeline, stage, gate or board: a task has the documents its size ne
 and ADMIN browses status, links and history in Obsidian. The
 [agentic-memory skill](skills/agentic-memory/SKILL.md) holds the conventions and the
 templates. Plain files mean any agent with file access uses the vault; Git is the
-backup. The installer seeds the vault's `.gitignore`, Obsidian settings and memory
+backup. `obsidian [dir]` (`tools/obsidian.ts`, linked onto PATH as
+`~/.local/bin/obsidian`) opens a directory, default the current one, as a vault on
+macOS; a folder Obsidian has not registered yet makes it restart once. The installer seeds the vault's `.gitignore`, Obsidian settings and memory
 index once and never overwrites them.
 
 ## Markdown documents and `md`
@@ -87,7 +89,7 @@ npm run install:agents -- performance
 
 Selected installs include `agentic-memory`, `change-review` and the global files.
 Templates live in `skills/agentic-memory/templates/`. Installing through `npx skills`
-includes bundled resources; `md`, AGENTS.md and the vault seed require this installer.
+includes bundled resources; `md`, `obsidian`, AGENTS.md and the vault seed require this installer.
 
 Managed `*_TEMPLATE.md` and `*_TEMPLATE.html` aliases in the global directories, and
 the retired Factory board's `~/.local/bin/production-line` link, are removed even

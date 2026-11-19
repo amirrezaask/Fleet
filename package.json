@@ -6,7 +6,7 @@
     "install:agents": "node tools/install.ts",
     "check:skills": "node tools/validate-skills.ts",
     "lint": "NODE_OPTIONS=\"--import tsx\" oxlint tools && oxfmt --check tools package.json .oxlintrc.json",
-    "test": "node --test tools/install.test.ts tools/md.test.ts",
+    "test": "node --test tools/install.test.ts tools/md.test.ts tools/obsidian.test.ts",
     "check:types": "tsc --noEmit --strict --types node --esModuleInterop --module nodenext --target es2023 --allowImportingTsExtensions tools/*.ts"
   },
   "dependencies": {

@@ -68,6 +68,9 @@ const budgetHook = "session-budget-hook.ts";
 // Linked onto PATH as `md`: renders a Markdown document as styled HTML for review.
 const markdownViewer = "md.ts";
 
+// Linked onto PATH as `obsidian`: opens a directory as an Obsidian vault.
+const vaultOpener = "obsidian.ts";
+
 // Skill links superseded by Factory, then by the agentic-memory vault; removed even on
 // selected installs.
 const retiredWorkflowSkills = [
@@ -204,7 +207,7 @@ function main(): void {
 
   const names = selected.length ? [...new Set([...selected, ...requiredSkills])] : skills;
 
-  for (const path of ["AGENTS.md", join("tools", markdownViewer)]) {
+  for (const path of ["AGENTS.md", join("tools", markdownViewer), join("tools", vaultOpener)]) {
     const source = join(repo, path);
 
     if (!existsSync(source) || !statSync(source).isFile()) {
@@ -223,6 +226,10 @@ function main(): void {
     {
       source: join(repo, "tools", markdownViewer),
       destination: join(home, ".local", "bin", "md"),
+    },
+    {
+      source: join(repo, "tools", vaultOpener),
+      destination: join(home, ".local", "bin", "obsidian"),
     },
   ];
 

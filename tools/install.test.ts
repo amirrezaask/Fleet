@@ -67,6 +67,10 @@ test("installs individual skills and globals; repeated installs preserve unrelat
     assert.equal(readlinkSync(join(base, skill)), join(root, "skills", skill));
     assert.equal(readlinkSync(join(home, ".codex", "AGENTS.md")), join(root, "AGENTS.md"));
     assert.equal(readlinkSync(join(home, ".local", "bin", "md")), join(root, "tools", "md.ts"));
+    assert.equal(
+      readlinkSync(join(home, ".local", "bin", "obsidian")),
+      join(root, "tools", "obsidian.ts"),
+    );
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
     assert.equal(existsSync(join(home, ".agents", "memory", "MEMORY.md")), true);
@@ -242,6 +246,7 @@ test("missing bundled file or required skill fails before any home mutation", ()
       writeFileSync(join(fixture, "AGENTS.md"), "global");
 
       if (missing !== "md") writeFileSync(join(fixture, "tools", "md.ts"), "viewer");
+      writeFileSync(join(fixture, "tools", "obsidian.ts"), "opener");
 
       for (const name of ["agentic-memory", "change-review"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });
