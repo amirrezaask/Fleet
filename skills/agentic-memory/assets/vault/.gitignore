@@ -1,0 +1,10 @@
+# The vault tracks memory and projects only; skills/, tools/ and AGENTS.md are installed links.
+/*
+!/.gitignore
+!/memory/
+!/projects/
+!/.obsidian/
+/.obsidian/*
+!/.obsidian/app.json
+evidence/
+.DS_Store

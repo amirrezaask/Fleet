@@ -1,4 +1,5 @@
 import {
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -31,7 +32,6 @@ const skills = readdirSync(join(repo, "skills"), { withFileTypes: true })
 interface Link {
   source: string;
   destination: string;
-  previousSources?: string[];
 }
 
 function present(path: string): boolean {
@@ -68,9 +68,10 @@ const budgetHook = "session-budget-hook.ts";
 // Linked onto PATH as `md`: renders a Markdown document as styled HTML for review.
 const markdownViewer = "md.ts";
 
-// Skill links superseded by Factory and Markdown documents; removed even on selected installs.
-// The factory-<stage> skills became `/factory <stage>` subcommands of the factory skill.
+// Skill links superseded by Factory, then by the agentic-memory vault; removed even on
+// selected installs.
 const retiredWorkflowSkills = [
+  "factory",
   "communication",
   "specification",
   "atlas",
@@ -141,6 +142,24 @@ function retireBudgetHook(path: string, settings: Settings, write: boolean) {
   if (changed && write) writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
+const vaultSeed = join(repo, "skills", "agentic-memory", "assets", "vault");
+
+// Copies the vault scaffold into ~/.agents and never replaces an existing file:
+// Obsidian and agents edit these files after the first install.
+function seedVault(vault: string, write: boolean) {
+  for (const path of readdirSync(vaultSeed, { recursive: true, encoding: "utf8" }).sort()) {
+    const source = join(vaultSeed, path);
+    const destination = join(vault, path);
+
+    if (statSync(source).isDirectory() || present(destination)) continue;
+    console.log(`seed ${destination}`);
+
+    if (!write) continue;
+    mkdirSync(dirname(destination), { recursive: true });
+    copyFileSync(source, destination);
+  }
+}
+
 function main(): void {
   for (const option of options) {
     if (!supported.has(option)) throw new Error(`Unknown option: ${option}`);
@@ -172,8 +191,8 @@ function main(): void {
     join(home, ".cursor", "skills-cursor"),
   ];
 
-  // Factory's Review stage runs the reviewers that change-review defines.
-  const requiredSkills = ["factory", "change-review"];
+  // Installed on every run: the vault conventions and the reviewers every task can call.
+  const requiredSkills = ["agentic-memory", "change-review"];
 
   for (const name of requiredSkills) {
     const source = join(repo, "skills", name, "SKILL.md");
@@ -185,17 +204,7 @@ function main(): void {
 
   const names = selected.length ? [...new Set([...selected, ...requiredSkills])] : skills;
 
-  const globalFiles = [
-    { name: "AGENTS.md", path: "AGENTS.md" },
-    { name: "INTENT_TEMPLATE.md", path: "skills/factory/templates/INTENT_TEMPLATE.md" },
-    { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
-    { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
-    { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
-    { name: "REVIEW_TEMPLATE.md", path: "skills/factory/templates/REVIEW_TEMPLATE.md" },
-    { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
-  ];
-
-  for (const path of [...globalFiles.map((file) => file.path), join("tools", markdownViewer)]) {
+  for (const path of ["AGENTS.md", join("tools", markdownViewer)]) {
     const source = join(repo, path);
 
     if (!existsSync(source) || !statSync(source).isFile()) {
@@ -204,35 +213,13 @@ function main(): void {
   }
 
   const links: Link[] = [
-    ...globals.flatMap((base) =>
-      globalFiles.map(({ name, path }) => ({
-        source: join(repo, path),
-        destination: join(base, name),
-        previousSources: [
-          join(repo, name),
-          ...(name === "SPEC_TEMPLATE.md"
-            ? [
-                join(repo, "skills/factory/templates/SPEC_TEMPLATE.md"),
-                join(repo, "skills/atlas/templates/AREA_TEMPLATE.md"),
-              ]
-            : []),
-          join(
-            repo,
-            "skills",
-            name === "SPEC_TEMPLATE.md" ? "specification" : "communication",
-            "templates",
-            name,
-          ),
-        ],
-      })),
-    ),
+    ...globals.map((base) => ({
+      source: join(repo, "AGENTS.md"),
+      destination: join(base, "AGENTS.md"),
+    })),
     ...destinations.flatMap((base) =>
       names.map((name) => ({ source: join(repo, "skills", name), destination: join(base, name) })),
     ),
-    {
-      source: join(repo, "skills", "factory", "assets", "task-board", "bin.js"),
-      destination: join(home, ".local", "bin", "production-line"),
-    },
     {
       source: join(repo, "tools", markdownViewer),
       destination: join(home, ".local", "bin", "md"),
@@ -274,26 +261,29 @@ function main(): void {
     }
   }
 
-  for (const { source, destination, previousSources } of links) {
+  for (const { source, destination } of links) {
     if (!present(destination)) continue;
 
     if (!lstatSync(destination).isSymbolicLink())
       throw new Error(`Refusing to replace existing path: ${destination}`);
     const target = resolve(dirname(destination), readlinkSync(destination));
 
-    if (!managed(target, source) && !previousSources?.includes(target))
+    if (!managed(target, source))
       throw new Error(`Refusing unrelated symlink: ${destination} -> ${target}`);
   }
 
-  // HTML template aliases were replaced by Markdown ones and the brief by the intent;
-  // each is removed only when it points at a location this repository managed, even if
-  // the target no longer exists.
+  // Template aliases in the global directories are retired: agents read templates from
+  // the agentic-memory skill. Each is removed only when it points at a location this
+  // repository managed, even if the target no longer exists.
   const retiredTemplates = [
-    "BRIEF_TEMPLATE.md",
-    ...["BRIEF", "INTENT", "DESIGN", "PLAN", "DEBRIEF", "REVIEW", "SPEC"].map(
-      (kind) => `${kind}_TEMPLATE.html`,
-    ),
-  ];
+    "BRIEF",
+    "INTENT",
+    "DESIGN",
+    "PLAN",
+    "DEBRIEF",
+    "REVIEW",
+    "SPEC",
+  ].flatMap((kind) => [`${kind}_TEMPLATE.md`, `${kind}_TEMPLATE.html`]);
 
   for (const base of globals) {
     for (const name of retiredTemplates) {
@@ -305,11 +295,13 @@ function main(): void {
       const formerTargets = [
         join(repo, name),
         join(repo, "skills", "factory", "templates", name),
+        join(repo, "skills", "factory", "templates", "AREA_TEMPLATE.md"),
         join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.html"),
+        join(repo, "skills", "atlas", "templates", "AREA_TEMPLATE.md"),
         join(
           repo,
           "skills",
-          name === "SPEC_TEMPLATE.html" ? "specification" : "communication",
+          name.startsWith("SPEC_TEMPLATE") ? "specification" : "communication",
           "templates",
           name,
         ),
@@ -329,6 +321,17 @@ function main(): void {
     ) {
       removals.push(oldInstaller);
     }
+  }
+
+  const oldBoard = join(home, ".local", "bin", "production-line");
+
+  if (
+    present(oldBoard) &&
+    lstatSync(oldBoard).isSymbolicLink() &&
+    resolve(dirname(oldBoard), readlinkSync(oldBoard)) ===
+      join(repo, "skills", "factory", "assets", "task-board", "bin.js")
+  ) {
+    removals.push(oldBoard);
   }
 
   const oldHook = join(home, ".claude", "hooks", budgetHook);
@@ -360,6 +363,7 @@ function main(): void {
     }
   }
 
+  seedVault(join(home, ".agents"), !options.has("--dry-run"));
   retireBudgetHook(settingsPath, settings, !options.has("--dry-run"));
 }
 

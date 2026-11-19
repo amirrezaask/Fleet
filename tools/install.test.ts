@@ -22,7 +22,11 @@ const installer = join(root, "tools", "install.ts");
 
 const skill = readdirSync(join(root, "skills"))
   .sort()
-  .find((name) => name !== "factory" && existsSync(join(root, "skills", name, "SKILL.md")));
+  .find(
+    (name) =>
+      !["agentic-memory", "change-review"].includes(name) &&
+      existsSync(join(root, "skills", name, "SKILL.md")),
+  );
 
 assert.ok(skill);
 
@@ -65,6 +69,8 @@ test("installs individual skills and globals; repeated installs preserve unrelat
     assert.equal(readlinkSync(join(home, ".local", "bin", "md")), join(root, "tools", "md.ts"));
     assert.equal(existsSync(join(home, ".agents", "tools")), false);
     assert.equal(existsSync(join(home, ".agents", ".git")), false);
+    assert.equal(existsSync(join(home, ".agents", "memory", "MEMORY.md")), true);
+    assert.equal(existsSync(join(home, ".agents", ".gitignore")), true);
     assert.equal(invoke(home).status, 0);
     assert.equal(readFileSync(join(base, "unrelated"), "utf8"), "keep");
   }));
@@ -104,7 +110,7 @@ test("selected install includes global workflow skills; foreign symlinks are pre
     assert.equal(invoke(home, skill).status, 0);
     assert.deepEqual(
       readdirSync(join(home, ".agents", "skills")).sort(),
-      [...new Set([skill, "factory", "change-review"])].sort(),
+      [skill, "agentic-memory", "change-review"].sort(),
     );
     const destination = join(home, ".codex", "skills", skill);
     rmSync(destination);
@@ -153,82 +159,80 @@ test("removes any retired old-source skill link but preserves unrelated links an
     assert.equal(lstatSync(join(base, "typescript-performance")).isDirectory(), true);
   }));
 
-const templateSources = [
-  { name: "INTENT_TEMPLATE.md", path: "skills/factory/templates/INTENT_TEMPLATE.md" },
-  { name: "DESIGN_TEMPLATE.md", path: "skills/factory/templates/DESIGN_TEMPLATE.md" },
-  { name: "PLAN_TEMPLATE.md", path: "skills/factory/templates/PLAN_TEMPLATE.md" },
-  { name: "DEBRIEF_TEMPLATE.md", path: "skills/factory/templates/DEBRIEF_TEMPLATE.md" },
-  { name: "REVIEW_TEMPLATE.md", path: "skills/factory/templates/REVIEW_TEMPLATE.md" },
-  { name: "SPEC_TEMPLATE.md", path: "skills/factory/templates/AREA_TEMPLATE.md" },
-];
-
 const globalDirectories = [".agents", ".codex", ".claude"];
 
-test("full and selected installs provide every readable global template alias", () =>
-  isolated((home) => {
-    for (const args of [[], [skill], [skill]]) {
-      assert.equal(invoke(home, ...args).status, 0);
+const templateNames = ["INTENT", "DESIGN", "PLAN", "DEBRIEF", "REVIEW", "SPEC"].map(
+  (kind) => `${kind}_TEMPLATE.md`,
+);
 
-      for (const directory of globalDirectories) {
-        for (const { name, path } of templateSources) {
-          const alias = join(home, directory, name);
-          assert.equal(readlinkSync(alias), join(root, path));
-          assert.equal(readFileSync(alias, "utf8"), readFileSync(join(root, path), "utf8"));
-        }
-      }
-    }
+const factoryTemplate = (name: string) =>
+  join(
+    root,
+    "skills",
+    "factory",
+    "templates",
+    name === "SPEC_TEMPLATE.md" ? "AREA_TEMPLATE.md" : name,
+  );
+
+test("seeds the vault without replacing files agents or Obsidian changed", () =>
+  isolated((home) => {
+    const index = join(home, ".agents", "memory", "MEMORY.md");
+    mkdirSync(dirname(index), { recursive: true });
+    writeFileSync(index, "mine");
+    assert.equal(invoke(home).status, 0);
+    assert.equal(readFileSync(index, "utf8"), "mine");
+    assert.equal(existsSync(join(home, ".agents", ".obsidian", "app.json")), true);
   }));
 
-test("dry-run preserves old root aliases and actual install migrates exact managed aliases", () =>
+test("dry-run keeps Factory template aliases and installs retire them; foreign ones stay", () =>
   isolated((home) => {
+    const foreign = join(home, "foreign.md");
+    writeFileSync(foreign, "mine");
+
     for (const directory of globalDirectories) {
       mkdirSync(join(home, directory));
 
-      for (const { name } of templateSources)
-        symlinkSync(join(root, name), join(home, directory, name));
+      for (const name of templateNames)
+        symlinkSync(factoryTemplate(name), join(home, directory, name));
     }
+
+    rmSync(join(home, ".claude", "PLAN_TEMPLATE.md"));
+    symlinkSync(foreign, join(home, ".claude", "PLAN_TEMPLATE.md"));
 
     assert.equal(invoke(home, "--dry-run", skill).status, 0);
-
-    for (const directory of globalDirectories) {
-      for (const { name } of templateSources)
-        assert.equal(readlinkSync(join(home, directory, name)), join(root, name));
-      assert.equal(existsSync(join(home, directory, "AGENTS.md")), false);
-      assert.equal(existsSync(join(home, directory, "skills")), false);
-    }
-
+    assert.equal(
+      readlinkSync(join(home, ".agents", "INTENT_TEMPLATE.md")),
+      factoryTemplate("INTENT_TEMPLATE.md"),
+    );
     assert.equal(invoke(home, skill).status, 0);
 
     for (const directory of globalDirectories) {
-      for (const { name, path } of templateSources)
-        assert.equal(readlinkSync(join(home, directory, name)), join(root, path));
+      for (const name of templateNames) {
+        if (directory === ".claude" && name === "PLAN_TEMPLATE.md") continue;
+        assert.throws(() => lstatSync(join(home, directory, name)));
+      }
     }
+
+    assert.equal(readlinkSync(join(home, ".claude", "PLAN_TEMPLATE.md")), foreign);
   }));
 
-test("foreign template aliases and regular files fail preflight without partial installation", () => {
-  for (const collision of ["symlink", "file"])
-    isolated((home) => {
-      const base = join(home, ".claude");
-      mkdirSync(base);
-      const alias = join(base, "SPEC_TEMPLATE.md");
-      const foreign = join(home, "foreign.md");
-      writeFileSync(foreign, "saved");
+test("retires the managed task board link but keeps a foreign one", () =>
+  isolated((home) => {
+    const bin = join(home, ".local", "bin");
+    mkdirSync(bin, { recursive: true });
+    symlinkSync(
+      join(root, "skills", "factory", "assets", "task-board", "bin.js"),
+      join(bin, "production-line"),
+    );
+    assert.equal(invoke(home).status, 0);
+    assert.throws(() => lstatSync(join(bin, "production-line")));
+    symlinkSync(join(home, "foreign"), join(bin, "production-line"));
+    assert.equal(invoke(home).status, 0);
+    assert.equal(readlinkSync(join(bin, "production-line")), join(home, "foreign"));
+  }));
 
-      if (collision === "symlink") symlinkSync(foreign, alias);
-      else writeFileSync(alias, "saved");
-      const result = invoke(home, skill);
-      assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /Refusing/);
-      assert.equal(readFileSync(alias, "utf8"), "saved");
-
-      if (collision === "symlink") assert.equal(readlinkSync(alias), foreign);
-      assert.equal(existsSync(join(home, ".agents")), false);
-      assert.equal(existsSync(join(base, "AGENTS.md")), false);
-    });
-});
-
-test("missing template or required skill fails before any home mutation", () => {
-  for (const missing of ["template", "factory", "change-review"])
+test("missing bundled file or required skill fails before any home mutation", () => {
+  for (const missing of ["md", "agentic-memory", "change-review"])
     isolated((temporary) => {
       const fixture = join(temporary, "fixture");
       const home = join(temporary, "home");
@@ -237,17 +241,12 @@ test("missing template or required skill fails before any home mutation", () => 
       writeFileSync(join(fixture, "tools", "install.ts"), readFileSync(installer));
       writeFileSync(join(fixture, "AGENTS.md"), "global");
 
-      for (const name of ["factory", "change-review"]) {
+      if (missing !== "md") writeFileSync(join(fixture, "tools", "md.ts"), "viewer");
+
+      for (const name of ["agentic-memory", "change-review"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });
 
         if (missing !== name) writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
-      }
-
-      for (const { name, path } of templateSources) {
-        mkdirSync(dirname(join(fixture, path)), { recursive: true });
-
-        if (missing !== "template" || name !== "SPEC_TEMPLATE.md")
-          writeFileSync(join(fixture, path), "template");
       }
 
       const result = spawnSync(process.execPath, [join(fixture, "tools", "install.ts")], {
@@ -265,6 +264,7 @@ test("missing template or required skill fails before any home mutation", () => 
 });
 
 const retiredSkills = [
+  "factory",
   "communication",
   "specification",
   "atlas",
@@ -285,7 +285,7 @@ test("migrates former nested template aliases and retires old workflow skills on
       for (const name of retiredSkills)
         symlinkSync(join(root, "skills", name), join(base, "skills", name));
 
-      for (const { name } of templateSources) {
+      for (const name of templateNames) {
         const old = name === "SPEC_TEMPLATE.md" ? "specification" : "communication";
         symlinkSync(join(root, "skills", old, "templates", name), join(base, name));
       }
@@ -301,13 +301,8 @@ test("migrates former nested template aliases and retires old workflow skills on
     for (const directory of globalDirectories) {
       for (const name of retiredSkills)
         assert.throws(() => lstatSync(join(home, directory, "skills", name)));
-      assert.equal(
-        readlinkSync(join(home, directory, "skills", "factory")),
-        join(root, "skills", "factory"),
-      );
 
-      for (const { name, path } of templateSources)
-        assert.equal(readlinkSync(join(home, directory, name)), join(root, path));
+      for (const name of templateNames) assert.throws(() => lstatSync(join(home, directory, name)));
     }
   }));
 
@@ -337,16 +332,17 @@ test("retires managed HTML template aliases on selected installs, including dang
     assert.equal(invoke(home, skill).status, 0);
 
     for (const directory of globalDirectories) {
-      for (const name of ["SPEC_TEMPLATE.html", "INTENT_TEMPLATE.html", "BRIEF_TEMPLATE.md"])
+      for (const name of [
+        "SPEC_TEMPLATE.html",
+        "INTENT_TEMPLATE.html",
+        "BRIEF_TEMPLATE.md",
+        "SPEC_TEMPLATE.md",
+      ])
         assert.throws(() => lstatSync(join(home, directory, name)));
       assert.equal(
         readlinkSync(join(home, directory, "PLAN_TEMPLATE.html")),
         foreign,
         "foreign link kept",
-      );
-      assert.equal(
-        readlinkSync(join(home, directory, "SPEC_TEMPLATE.md")),
-        join(templates, "AREA_TEMPLATE.md"),
       );
       assert.throws(() => lstatSync(join(home, directory, "skills", "atlas")));
     }
@@ -372,10 +368,7 @@ test("retires the managed BRIEF_TEMPLATE.html alias but keeps foreign ones", () 
       assert.throws(() => lstatSync(join(home, directory, "BRIEF_TEMPLATE.html")));
 
     for (const directory of globalDirectories)
-      assert.equal(
-        readlinkSync(join(home, directory, "INTENT_TEMPLATE.md")),
-        join(root, "skills", "factory", "templates", "INTENT_TEMPLATE.md"),
-      );
+      assert.equal(existsSync(join(home, directory, "INTENT_TEMPLATE.md")), false);
   }));
 
 const budgetHook = "session-budget-hook.ts";

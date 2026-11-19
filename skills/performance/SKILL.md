@@ -41,5 +41,5 @@ correctness risk, and verification. A local optimization does not need a large t
 
 Benchmarks and load tests are heavy runs: do them after the change is complete, under
 [resource-bounded runs](../resource-bounded-runs/SKILL.md) when they are large. Write
-the result as a Markdown summary in `docs/reports/<date>-<title>` (or the Factory task's
+the result as a Markdown summary in `docs/reports/<date>-<title>` (or the task's
 `REVIEW.md`), with raw output gitignored.

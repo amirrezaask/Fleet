@@ -22,7 +22,7 @@ Review · task `<task-name>` · revision <sha> · created <YYYY-MM-DD HH:mm> · 
 
 ## Review
 
-_Written by `/factory review`: one section per reviewer subagent. Mark a lens "Skipped: <reason>" when it does not apply (UI and UX when no interface changed). Add a round heading when a later round re-runs a reviewer (at most 3 rounds, then `blocked`). Each reviewer's reply begins with the line `VERDICT: PASS` or `VERDICT: CHANGES`; the verdict below mirrors it._
+_One section per reviewer subagent (the change-review skill). Mark a lens "Skipped: <reason>" when it does not apply (UI and UX when no interface changed). Add a round heading when a later round re-runs a reviewer (at most 3 rounds, then `status: blocked`). Each reviewer's reply begins with the line `VERDICT: PASS` or `VERDICT: CHANGES`; the verdict below mirrors it._
 
 ### Code
 

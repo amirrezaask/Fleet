@@ -62,18 +62,21 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
+## Agent memory vault
+`~/.agents` is an Obsidian vault and a Git repository shared by every agent: `memory/` holds one fact per note indexed by `memory/MEMORY.md`, and `projects/<project>/` holds each project's notes and tasks. Read `memory/MEMORY.md` at the start of a task, write memories and task documents there, and commit only the paths you changed. The `agentic-memory` skill (`~/.agents/skills/agentic-memory/`) holds the conventions and the document templates.
+
 ## Directory structure
 Never add a top-level directory without asking. Beyond the stack's own source layout, every project has:
 
-- `~/.agents/factory/<project>/<NNN>-<task-name>/` : Factory tasks, kept outside the repository so every worktree, agent and the board see one live copy (`<project>` is the main checkout's path relative to home, e.g. `dev/GameBox`), numbered `001`, `002`, ... in creation order so directories always sort, with `TASK.md` frontmatter metadata (including `status`: `backlog`, `inprogress`, `blocked`, `done`), approved `INTENT.md`, accepted `DESIGN.md` with its artifacts in the task's `design/` folder, mutable `PLAN.md`, `DEBRIEF.md`, and the test `REVIEW.md` (raw evidence in the task's gitignored `evidence/` folder). `~/.agents/factory/<project>/` lists every Factory task and is its own Git repository; a project has no `.factory/` or `docs/tasks/`. The directory name never changes; status lives in `TASK.md`. Subtasks are directories `<NNN>-<subtask-name>/`, numbered within the task's `subtasks/` folder, with the same files and need no ADMIN approval. Historical briefs and plans stay in place unless migration is requested.
-- `docs/reports/`: benchmark, test and verification results not tied to a Factory task (a task's report and debrief live in its Factory directory), one dir or `.md` per run, `$date-$title`. Track only Markdown summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
+- `~/.agents/projects/<project>/tasks/<NNN>-<task-name>/` : tasks, kept in the agent memory vault outside the repository so every worktree and agent sees one live copy (`<project>` is the main checkout's path relative to home, e.g. `dev/GameBox`), numbered `001`, `002`, ... in creation order. `TASK.md` holds the frontmatter (`status`: `backlog`, `inprogress`, `blocked`, `done`) and the current state; the task has only the documents its size needs: `INTENT.md` (approved by ADMIN before code), `DESIGN.md` with its `design/` folder, `PLAN.md`, `DEBRIEF.md` and `REVIEW.md` (raw evidence in the task's gitignored `evidence/` folder). There is no pipeline, stage or board. The directory name never changes; subtasks are `<NNN>-<subtask-name>/` in the task's `subtasks/` folder and need no ADMIN approval. A project has no `.factory/` or `docs/tasks/`.
+- `docs/reports/`: benchmark, test and verification results not tied to a task (a task's report and debrief live in its task directory), one dir or `.md` per run, `$date-$title`. Track only Markdown summaries; raw output (json, png, logs, traces) is gitignored. Playwright and playthrough output is written here by the config.
 - `docs/README.md`, `docs/architecture.md`, `docs/domain.md`, `docs/data-model.md`, `docs/quality.md`, and `docs/operations.md`: system purpose/navigation, structure, shared concepts, data ownership, quality requirements, and operational behavior. These documents live directly under `docs/`.
 - `docs/areas/<area-name>.md`: ground rules, state ownership, and relevant contracts for each software area.
 - `docs/workflows/<flow-name>.md`: actor goals, triggers, steps, outcomes, and failure/recovery behavior across areas. Actors include users, external systems, jobs, and operators.
 - Keep specification facts in one owning document and link related documents. Contracts belong in areas; consequential decisions and their reasoning belong in task plans/debriefs, linked from the relevant specification. No mandatory `contracts/` or `decisions/` directories. Keep historical specs in place unless migration is requested.
 - `tools/`: all scripts, build/install tooling, benchmark drivers, checks, generators and their fixtures. Nothing executable at the repo root or in `scripts/`.
 - `.work/`: gitignored scratch space.
-- `.worktrees/`: every git worktree of the project, Factory task or not, at `.worktrees/<branch-name>/`.
+- `.worktrees/`: every git worktree of the project, task or not, at `.worktrees/<branch-name>/`.
 
 ## Rules
 ### Version Control

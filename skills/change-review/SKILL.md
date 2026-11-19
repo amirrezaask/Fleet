@@ -6,15 +6,15 @@ description: Review a diff, branch, commit range or pull request through indepen
 # Change review
 
 A review judges a finished change: is it correct, safe and fit to ship. It reports. It
-fixes only when the request says so ("review and fix") or a caller such as Factory's
-Review stage owns the fixing.
+fixes only when the request says so ("review and fix") or the calling agent
+asks for fixes.
 
 ## Scope the change
 
 1. **Pin the base.** Use the ref the user named; otherwise the merge-base with the
    default branch (`git diff <base>...HEAD`), or `git diff HEAD` for uncommitted work.
    Confirm the ref resolves and the diff is not empty before starting any reviewer.
-2. **Find what the change is judged against:** the request, issue or Factory `INTENT.md`,
+2. **Find what the change is judged against:** the request, issue or the task's `INTENT.md`,
    `DESIGN.md` and `PLAN.md`; the area specs under `docs/`; the project's
    `AGENTS.md`/`CLAUDE.md` and lint configuration. With no stated intent, judge it
    against its commit messages and say so in the result.

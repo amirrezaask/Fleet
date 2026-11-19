@@ -19,7 +19,7 @@ import { Match } from "effect";
 import { Marked } from "marked";
 
 const repo = realpathSync(join(dirname(fileURLToPath(import.meta.url)), ".."));
-const fonts = join(repo, "skills", "factory", "assets", "task-board");
+const fonts = join(repo, "tools", "fonts");
 const usage = "Usage: md <file.md> [--out <dir>] [--no-open]";
 
 // Linked documents are rendered too so links work offline; this bounds a runaway crawl.
