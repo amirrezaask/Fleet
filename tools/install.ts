@@ -77,10 +77,9 @@ const commands = {
   "tasks-index": "tasks-index.ts",
 };
 
-// Skill links superseded by Factory, then by the agentic-memory vault; removed even on
-// selected installs.
+// Skill links superseded by Factory; removed even on selected installs. The
+// factory-<stage> skills became `/factory <stage>` subcommands of the factory skill.
 const retiredWorkflowSkills = [
-  "factory",
   "communication",
   "specification",
   "atlas",
@@ -235,8 +234,9 @@ function main(): void {
     join(home, ".cursor", "skills-cursor"),
   ];
 
-  // Installed on every run: the vault conventions and the reviewers every task can call.
-  const requiredSkills = ["agentic-memory", "change-review"];
+  // Installed on every run: the vault conventions, Factory, and the reviewers Factory's
+  // Review stage runs.
+  const requiredSkills = ["agentic-memory", "factory", "change-review"];
 
   for (const name of requiredSkills) {
     const source = join(repo, "skills", name, "SKILL.md");
@@ -321,7 +321,7 @@ function main(): void {
   }
 
   // Template aliases in the global directories are retired: agents read templates from
-  // the agentic-memory skill. Each is removed only when it points at a location this
+  // the factory skill. Each is removed only when it points at a location this
   // repository managed, even if the target no longer exists.
   const retiredTemplates = [
     "BRIEF",

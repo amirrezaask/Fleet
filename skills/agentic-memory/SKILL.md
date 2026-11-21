@@ -1,13 +1,13 @@
 ---
 name: agentic-memory
-description: The agent-agnostic memory vault at ~/.agents (an Obsidian vault and a Git repository) that every agent shares. Use at the start of any task to read the memory index and `recall` what is known, whenever something is worth remembering across sessions, and whenever a task needs documents (intent, design, plan, debrief, review).
+description: The agent-agnostic memory vault at ~/.agents (an Obsidian vault and a Git repository) that every agent shares. Use at the start of any task to read the memory index and `recall` what is known, and whenever something is worth remembering across sessions.
 ---
 
 # Agentic memory
 
 `~/.agents` is one vault shared by every agent (Claude Code, Codex, Cursor, ...) and
 by ADMIN in Obsidian. It is plain Markdown in one Git repository: no server, plugin or
-MCP is needed, only file access and the `recall` and `tasks-index` commands on PATH.
+MCP is needed, only file access and the `recall` command on PATH.
 Git is the backup and the history.
 
 ```text
@@ -17,8 +17,7 @@ Git is the backup and the history.
     MEMORY.md                    # index: one line per memory
     <memory-name>.md             # one memory per file
   projects/<project>/            # <project> = main checkout path relative to home, e.g. dev/GameBox
-    TASKS.md                     # generated index: one line per task
-    tasks/<NNN>-<task-name>/     # one task: TASK.md plus the documents it needs
+    TASKS.md  tasks/             # the project's Factory tasks, owned by the factory skill
   skills/  tools/                # installed by tools, not tracked by the vault
 ```
 
@@ -59,7 +58,7 @@ loaded into every Claude session, so it holds pointers only, never memory conten
   instead of writing a duplicate, and delete memories that turn out to be wrong.
 - Do not save what the repository already records (code structure, past fixes, Git
   history, AGENTS.md), what matters only to the current conversation, task state (that
-  is `TASK.md`), secrets, credentials or other people's personal data. When ADMIN asks to
+  belongs in the task's documents), secrets, credentials or other people's personal data. When ADMIN asks to
   remember one of those, ask what was non-obvious about it and save that.
 - A memory reflects what was true when written. Before relying on a file, flag or
   command it names, check that it still exists, and fix the memory when it is wrong.
@@ -68,39 +67,11 @@ loaded into every Claude session, so it holds pointers only, never memory conten
 
 At the start of a task, run `recall <keywords>` with the words that name the work
 (feature, area, tool, file). It prints the matching bullets and paragraphs of every
-memory and of the current project's `TASKS.md`, best first, each as
+memory and of the current project's `TASKS.md` (the task index the
+[factory skill](../factory/SKILL.md) generates), best first, each as
 `<file>:<line> › <memory or headings>`; `--all` adds every project's `TASKS.md`. Run it
 from the project's checkout or worktree, or anywhere under its `projects/` folder. Open
 the files it names for the full context.
-
-## Tasks
-
-A task is `projects/<project>/tasks/<NNN>-<task-name>/`, with `<NNN>` the next
-three-digit number in that folder. Claim it with `mkdir` (no `-p`): if the directory
-exists, another agent took the number, so take the next one. The name never changes.
-
-`TASK.md` (from [the template](templates/TASK_TEMPLATE.md)) holds the frontmatter
-(`title`, `created`, `updated`, `status: backlog | inprogress | blocked | done`,
-`branch`) and a short current state. There are no stages and no gates: write only
-the documents the work needs, sized to the task.
-
-| Document | Write it when | Template |
-| --- | --- | --- |
-| `INTENT.md` | The request has requirements worth agreeing on; ADMIN approves it before code | [intent](templates/INTENT_TEMPLATE.md) |
-| `DESIGN.md` + `design/` | A product or architecture decision is open | [design](templates/DESIGN_TEMPLATE.md) |
-| `PLAN.md` | The work has more than a few steps or will be split between agents | [plan](templates/PLAN_TEMPLATE.md) |
-| `DEBRIEF.md` | The work is done: what was built, what was decided and why, follow-ups | [debrief](templates/DEBRIEF_TEMPLATE.md) |
-| `REVIEW.md` | Verification ran: gates, evidence and reviewer verdicts | [review](templates/REVIEW_TEMPLATE.md) |
-
-A one-line fix needs only `TASK.md`, or no task at all. Subtasks are
-`<task>/subtasks/<NNN>-<name>/` with the same files. Raw output (logs, screenshots,
-traces) goes in the task's `evidence/` folder, which Git ignores. Project
-specifications stay in the project's own `docs/` ([area](templates/AREA_TEMPLATE.md),
-[workflow](templates/WORKFLOW_TEMPLATE.md) templates).
-
-`TASKS.md` is generated, never edited: after creating a task, adding a document or
-changing a `status`, run `tasks-index` (or `tasks-index <project>`) and commit
-`TASKS.md` with the task.
 
 ## Writing to the vault
 

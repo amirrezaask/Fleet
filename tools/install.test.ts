@@ -24,7 +24,7 @@ const skill = readdirSync(join(root, "skills"))
   .sort()
   .find(
     (name) =>
-      !["agentic-memory", "change-review"].includes(name) &&
+      !["agentic-memory", "factory", "change-review"].includes(name) &&
       existsSync(join(root, "skills", name, "SKILL.md")),
   );
 
@@ -116,7 +116,7 @@ test("selected install includes global workflow skills; foreign symlinks are pre
     assert.equal(invoke(home, skill).status, 0);
     assert.deepEqual(
       readdirSync(join(home, ".agents", "skills")).sort(),
-      [skill, "agentic-memory", "change-review"].sort(),
+      [skill, "agentic-memory", "factory", "change-review"].sort(),
     );
     const destination = join(home, ".codex", "skills", skill);
     rmSync(destination);
@@ -255,7 +255,7 @@ test("retires the managed task board link but keeps a foreign one", () =>
   }));
 
 test("missing bundled file or required skill fails before any home mutation", () => {
-  for (const missing of ["md", "agentic-memory", "change-review"])
+  for (const missing of ["md", "agentic-memory", "factory", "change-review"])
     isolated((temporary) => {
       const fixture = join(temporary, "fixture");
       const home = join(temporary, "home");
@@ -269,7 +269,7 @@ test("missing bundled file or required skill fails before any home mutation", ()
       for (const file of ["obsidian.ts", "recall.ts", "tasks-index.ts", "vault.ts"])
         writeFileSync(join(fixture, "tools", file), "tool");
 
-      for (const name of ["agentic-memory", "change-review"]) {
+      for (const name of ["agentic-memory", "factory", "change-review"]) {
         mkdirSync(join(fixture, "skills", name), { recursive: true });
 
         if (missing !== name) writeFileSync(join(fixture, "skills", name, "SKILL.md"), "skill");
@@ -290,7 +290,6 @@ test("missing bundled file or required skill fails before any home mutation", ()
 });
 
 const retiredSkills = [
-  "factory",
   "communication",
   "specification",
   "atlas",
